@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Up-Rigger — Bridle Training</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;600;700&family=Titillium+Web:wght@300;400;600&display=swap">
+<style>
+  /* Up-Rigger — holodeck lobby, same LCARS palette as the Phaser Range so the two programs feel
+     like one deck. Palette: void #07070c · grid-gold #f2c14e · LCARS amber #ff9c00 ·
+     lavender #cc99cc · pale blue #99ccff · alert #e5484d · warm ink #e8e4d8 */
+  :root{
+    --void:#07070c; --panel:#0c0c13; --edge:#1c1c28;
+    --grid:#f2c14e; --amber:#ff9c00; --lav:#cc99cc; --pale:#99ccff;
+    --alert:#e5484d; --ok:#5ad38a; --ink:#e8e4d8; --dim:#8d8a7b;
+    --display:'Antonio', 'Arial Narrow', sans-serif;
+    --body:'Titillium Web', 'Segoe UI', sans-serif;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{height:100%}
+  body{margin:0;background:var(--void);color:var(--ink);font-family:var(--body);overflow:hidden}
+  canvas{display:block}
+
+  /* ——— Lobby: the arch ——— */
+  #lobby{position:fixed;inset:0;display:flex;align-items:flex-start;justify-content:center;
+    background:radial-gradient(ellipse at 50% 120%, #101018 0%, var(--void) 60%);z-index:20;
+    padding:24px;overflow-y:auto;overscroll-behavior:contain}
+  .arch{margin:auto 0;display:flex;gap:14px;max-width:700px;width:100%;flex:0 0 auto}
+  .rail{display:flex;flex-direction:column;gap:6px;width:64px;flex:none}
+  .rail span{display:block;border-radius:20px 0 0 20px}
+  .rail .b1{height:120px;background:var(--amber)}
+  .rail .b2{height:34px;background:var(--lav)}
+  .rail .b3{height:70px;background:var(--pale)}
+  .rail .b4{flex:1;min-height:40px;background:var(--grid)}
+  .rail .b5{height:26px;background:var(--alert)}
+  .arch-body{flex:1;border-top:3px solid var(--amber);border-bottom:3px solid var(--amber);
+    padding:22px 8px 22px 22px;min-width:0}
+  .eyebrow{font-family:var(--display);letter-spacing:.28em;font-size:13px;color:var(--lav);
+    text-transform:uppercase;margin:0 0 6px}
+  h1{font-family:var(--display);font-weight:700;font-size:clamp(40px,8vw,66px);line-height:.95;
+    margin:0 0 14px;color:var(--grid);text-transform:uppercase;letter-spacing:.01em;text-wrap:balance}
+  .brief{max-width:56ch;font-size:15.5px;font-weight:300;line-height:1.55;color:var(--ink);margin:0 0 18px}
+  .brief b{color:var(--pale);font-weight:600}
+  .progpick{display:flex;gap:0;margin:0 0 10px;border:1px solid var(--edge);border-radius:24px;
+    overflow:hidden;width:fit-content;max-width:100%}
+  .prog{font-family:var(--display);text-transform:uppercase;letter-spacing:.14em;font-size:16px;
+    padding:11px 22px;border:none;background:transparent;color:var(--dim);cursor:pointer;transition:background .12s,color .12s}
+  .prog:hover{color:var(--ink)}
+  .prog.is-on{background:var(--lav);color:#180d18}
+  .prog:focus-visible{outline:2px solid var(--pale);outline-offset:-2px}
+  #xrstatus{font-size:13px;color:var(--dim);margin:0 0 14px}
+  #xrstatus.ok{color:var(--ok)}
+  .actions{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}
+  button.lcars,a.lcars{font-family:var(--display);text-transform:uppercase;letter-spacing:.12em;
+    font-size:20px;font-weight:600;border:none;cursor:pointer;border-radius:26px;
+    padding:16px 30px;background:var(--amber);color:#140b00;transition:filter .12s;
+    display:inline-block;text-decoration:none;text-align:center}
+  button.lcars:hover,a.lcars:hover,button.lcars:focus-visible{filter:brightness(1.18)}
+  button.lcars.alt,a.lcars.alt{background:transparent;color:var(--pale);box-shadow:inset 0 0 0 2px var(--pale)}
+  button.lcars:disabled{background:var(--edge);color:var(--dim);cursor:default}
+  #settings{margin:0 0 18px;padding:16px 18px;border-left:3px solid var(--lav);background:rgba(204,153,204,.05)}
+  #settings h2{font-family:var(--display);text-transform:uppercase;letter-spacing:.2em;font-size:13px;
+    color:var(--lav);margin:0 0 12px;font-weight:400}
+  #settings h2:not(:first-child){margin-top:18px}
+  .row{display:grid;grid-template-columns:12ch 1fr 6ch;align-items:center;gap:12px;margin-bottom:9px}
+  .row label{font-family:var(--display);text-transform:uppercase;letter-spacing:.1em;font-size:12.5px;color:var(--ink)}
+  .row output{font-family:var(--display);font-size:16px;color:var(--grid);text-align:right;font-variant-numeric:tabular-nums}
+  .row input[type=range]{width:100%;accent-color:var(--amber);background:transparent}
+  .hint{font-size:11.5px;color:var(--dim);margin:-4px 0 8px}
+  .racklist{display:flex;flex-wrap:wrap;gap:8px 18px}
+  .racklist label{display:flex;align-items:center;gap:7px;font-size:13.5px;color:var(--ink);cursor:pointer}
+  .racklist input{accent-color:var(--amber);width:16px;height:16px}
+  .legend{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13.5px;color:var(--dim);max-width:56ch}
+  .legend dt{font-family:var(--display);text-transform:uppercase;letter-spacing:.14em;color:var(--lav);font-size:12px;padding-top:1px}
+  .legend dd{margin:0}
+  .footnote{margin-top:16px;font-size:12px;color:var(--dim);max-width:56ch;line-height:1.5}
+  ol.steps{margin:0 0 18px;padding-left:22px;font-size:14px;line-height:1.5;color:var(--ink);max-width:56ch}
+  ol.steps li{margin-bottom:4px}
+  ol.steps b{color:var(--grid);font-family:var(--display);letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+
+  /* ——— HUD (desktop and the flat mirror while in VR) ——— */
+  #hud{position:fixed;inset:0;pointer-events:none;display:none;z-index:10;font-variant-numeric:tabular-nums}
+  #hud .top{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:26px;align-items:center;
+    background:rgba(12,12,19,.72);border:1px solid var(--edge);border-radius:22px;padding:8px 24px}
+  .stat{text-align:center}
+  .stat .lab{font-family:var(--display);text-transform:uppercase;letter-spacing:.2em;font-size:10px;color:var(--lav)}
+  .stat .val{font-family:var(--display);font-size:24px;color:var(--grid);line-height:1.05}
+  .stat .val.bad{color:var(--alert)}
+  .stat .val.good{color:var(--ok)}
+  #card{position:absolute;left:18px;bottom:18px;width:min(380px,calc(100vw - 36px));
+    background:rgba(12,12,19,.8);border-left:3px solid var(--amber);padding:14px 16px;border-radius:0 12px 12px 0}
+  #card .eyebrow{margin-bottom:2px}
+  #card h3{font-family:var(--display);text-transform:uppercase;letter-spacing:.06em;font-size:22px;color:var(--grid);margin:0 0 6px}
+  #card p{margin:0;font-size:13.5px;line-height:1.5;color:var(--ink)}
+  #card ul{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--dim)}
+  #card li.done{color:var(--ok);text-decoration:line-through}
+  #card li.bad{color:var(--alert)}
+  #reticle{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;
+    border:1.5px solid var(--grid);opacity:.85;transition:transform .1s,border-color .1s}
+  #reticle.hit{transform:scale(1.9);border-color:#fff}
+  #vignette{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .5s;
+    background:radial-gradient(ellipse at center, transparent 52%, rgba(229,72,77,.6) 100%)}
+  #vignette.on{opacity:1;transition:opacity .05s}
+  #toast{position:absolute;bottom:14vh;left:50%;transform:translateX(-50%);text-align:center;
+    font-family:var(--display);text-transform:uppercase;letter-spacing:.2em;font-size:16px;
+    color:var(--pale);opacity:0;transition:opacity .3s;max-width:80vw}
+  #toast.alert{color:var(--alert)}
+  #radio{position:absolute;right:18px;bottom:18px;width:min(340px,calc(100vw - 36px));
+    background:rgba(12,12,19,.8);border-right:3px solid var(--pale);padding:12px 16px;border-radius:12px 0 0 12px;
+    font-size:13px;line-height:1.5;color:var(--dim);text-align:right}
+  #radio b{color:var(--pale);font-family:var(--display);letter-spacing:.1em;text-transform:uppercase;font-weight:400}
+  #radio .me b{color:var(--grid)}
+
+  /* pause / result overlay */
+  #pause{position:fixed;inset:0;z-index:15;display:flex;align-items:center;justify-content:center;
+    background:rgba(7,7,12,.85)}
+  .pausecard{border-left:3px solid var(--amber);padding:22px 26px;background:var(--panel);max-width:460px}
+  .pausecard h2{font-family:var(--display);text-transform:uppercase;letter-spacing:.06em;
+    font-size:32px;color:var(--grid);margin:0 0 10px;font-weight:700}
+  .pausecard h2.bad{color:var(--alert)}
+  .pausecard p{font-size:14px;line-height:1.5;color:var(--ink);margin:0 0 14px}
+  .pausecard .actions{margin-bottom:12px}
+  .pausecard dl{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:13px;color:var(--dim);margin:0 0 14px}
+  .pausecard dt{font-family:var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--lav);font-size:12px}
+  .pausecard dd{margin:0;color:var(--ink)}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+
+<div id="lobby">
+  <div class="arch">
+    <div class="rail" aria-hidden="true"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span><span class="b5"></span></div>
+    <div class="arch-body">
+      <p class="eyebrow">Holodeck · Training Program</p>
+      <h1 id="progtitle">Up-Rigger</h1>
+      <p class="brief">The holodeck stays at its default until you pick a program at the arch. Then the grid gives way to an
+        arena: a catwalk and a <b>24-inch ladder beam 108 feet over the floor</b>, a ground rigger below building a bridle,
+        another up-rigger on the beam across from you. You have a 150-foot rope, a progress capture device, and a job:
+        get your leg of the bridle up, around the beam, mated, squared and checked &mdash; without dropping anything.
+        <b>Gravity is always on. Gravity is the opponent.</b></p>
+      <div class="progpick" role="group" aria-label="Bridle build">
+        <button type="button" class="prog is-on" data-prog="split15">Split 15</button>
+        <button type="button" class="prog" data-prog="basket10">10 Basket</button>
+      </div>
+      <p class="hint" id="prog-hint">A 5 and a 10 shackled together. The 5 wraps the beam; the 10 swings under and its shackle mates to the eye of the 5. The ground rigger's bowline is a 12-inch loop in the eye of the 5.</p>
+      <p id="xrstatus">Checking headset support&hellip;</p>
+      <div class="actions">
+        <button class="lcars" id="btn-vr" disabled>Enter the holodeck</button>
+        <a class="lcars alt" id="btn-pop" target="_blank" rel="noopener" hidden>Open standalone</a>
+        <button class="lcars alt" id="btn-desk">Desktop walkthrough</button>
+        <button class="lcars alt" id="btn-settings" aria-expanded="false">Settings</button>
+      </div>
+
+      <div id="settings" hidden>
+        <h2>Body</h2>
+        <div class="racklist">
+          <label><input type="checkbox" id="s-body" checked> Use headset body tracking for the feet when the browser offers it</label>
+        </div>
+        <p class="hint">Quest exposes 83 body joints to the page; the legs are Meta's generative estimate, so your feet land about where they should. Off, the feet follow your head.</p>
+        <div class="row"><label for="s-edge">Beam tolerance</label>
+          <input type="range" id="s-edge" min="0" max="0.3" step="0.05"><output id="o-edge"></output></div>
+        <p class="hint">How far past the beam's edge your head (or a foot) can hang before you are off it. Real steel is zero.</p>
+        <h2>Haul</h2>
+        <div class="row"><label for="s-haul">Pull assist</label>
+          <input type="range" id="s-haul" min="1" max="6" step="0.5"><output id="o-haul"></output></div>
+        <p class="hint">Metres of rope per metre of arm travel. 1 is real hand-over-hand — about ninety pulls to the beam.</p>
+        <div class="row"><label for="s-pace">Partner pace</label>
+          <input type="range" id="s-pace" min="0.15" max="0.8" step="0.05"><output id="o-pace"></output></div>
+        <p class="hint">How fast the other up-rigger hauls once you are pulling together. Match it or the bridle drifts.</p>
+        <h2>Knots</h2>
+        <div class="row"><label for="s-turns">Hitch turns</label>
+          <input type="range" id="s-turns" min="1" max="3" step="1"><output id="o-turns"></output></div>
+        <p class="hint">Full turns around the rail that count as a clove hitch. Two is the knot.</p>
+        <h2>Hands</h2>
+        <div class="racklist">
+          <label><input type="radio" name="dom" id="dom-right" value="right"> Right-handed</label>
+          <label><input type="radio" name="dom" id="dom-left" value="left"> Left-handed</label>
+        </div>
+        <h2>Audio</h2>
+        <div class="row"><label for="s-vol">Volume</label>
+          <input type="range" id="s-vol" min="0" max="1" step="0.05"><output id="o-vol"></output></div>
+        <button id="btn-reset" type="button" class="linkish">Restore defaults</button>
+      </div>
+
+      <ol class="steps">
+        <li><b>Gear</b> — harness, rope, PCD, two triple-action lockers, 4' and 6' slings, helmet, radio. Pockets empty.</li>
+        <li><b>Rope</b> — deploy it to the floor, clove hitch and a half hitch on the catwalk rail. Clip your 6' double lanyard to the lifeline or the top rail before you touch the beam.</li>
+        <li><b>PCD</b> — untie, keep hold of the rope (or stand on it), walk out to the sling, hang the PCD, feed the rope the right way.</li>
+        <li><b>Haul</b> — on the ground rigger's call: leg to the apex, together to the hook eye, then the load, matching the other rigger's pace.</li>
+        <li><b>Beam</b> — burlap out, wrap the beam, mate it (Pin · Rope · Cable · Shackle), burlap under, steel down, square up, check for fouls.</li>
+        <li><b>Point check</b> — radio down.</li>
+      </ol>
+
+      <dl class="legend">
+        <dt>Grip</dt><dd>Hold the grip button to hold things &mdash; gear, the rope, the knot, a leg of steel. Let go over the void and it goes in</dd>
+        <dt>Trigger</dt><dd>Act on what is under your hand: pick a program, dress a knot, hang the PCD, mate a shackle</dd>
+        <dt>Knots</dt><dd>Hold the rope end at the rail and <b>circle your hand around the rail</b> &mdash; the game counts the turns. Trigger to dress it</dd>
+        <dt>Haul</dt><dd>Grip the rope below the PCD and <b>pull down</b>, hand over hand</dd>
+        <dt>B / Y</dt><dd>Key the radio</dd>
+        <dt>Thumbstick</dt><dd>Walk the catwalk and the beam (or just walk). <b>Hold A / X 0.6&thinsp;s to pause</b></dd>
+        <dt>Feet</dt><dd>Where the headset says they are. Stand on the rope to hold it; step off the beam and gravity has you</dd>
+        <dt>Desktop</dt><dd>Mouse look · WASD walk · <b>left mouse = grip</b> · right mouse / F = trigger · mouse wheel wraps a knot or hauls · E reach · R radio · P pause</dd>
+      </dl>
+      <p class="footnote">M0.1 first iteration &mdash; the whole six-step flow in simplified form. On Quest, open this page in the headset browser.
+        If the Enter button stays unavailable inside an embedded viewer, open the page in its own tab.</p>
+      <p class="footnote" id="diag" style="font-family:monospace;font-size:11px;color:#6a6a5c;line-height:1.6"></p>
+    </div>
+  </div>
+</div>
+
+<div id="pause" hidden>
+  <div class="pausecard">
+    <p class="eyebrow" id="p-eyebrow">Holodeck</p>
+    <h2 id="p-title">Program suspended</h2>
+    <p id="p-body"></p>
+    <dl id="p-stats" hidden></dl>
+    <div class="actions">
+      <button class="lcars" id="btn-resume">Resume</button>
+      <button class="lcars alt" id="btn-retry" hidden>Run it again</button>
+      <button class="lcars alt" id="btn-quit">Back to the arch</button>
+    </div>
+    <p class="footnote">Desktop: P pauses. Headset: hold A / X 0.6&thinsp;s to pause; trigger resumes, a fresh A / X press returns to the arch.</p>
+  </div>
+</div>
+
+<div id="hud">
+  <div class="top">
+    <div class="stat"><div class="lab">Step</div><div class="val" id="h-step">—</div></div>
+    <div class="stat"><div class="lab">Height</div><div class="val" id="h-alt">0 ft</div></div>
+    <div class="stat"><div class="lab">Fall arrest</div><div class="val bad" id="h-clip">OPEN</div></div>
+    <div class="stat"><div class="lab">Rope</div><div class="val" id="h-rope">COIL</div></div>
+    <div class="stat"><div class="lab">Drops</div><div class="val" id="h-drops">0</div></div>
+    <div class="stat"><div class="lab">Time</div><div class="val" id="h-time">0:00</div></div>
+  </div>
+  <div id="vignette"></div>
+  <div id="reticle"></div>
+  <div id="card"><p class="eyebrow" id="c-eyebrow">Step</p><h3 id="c-title"></h3><p id="c-body"></p><ul id="c-list"></ul></div>
+  <div id="radio"><b>Radio</b><div id="radio-log"></div></div>
+  <div id="toast"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// Primary CDN missed — pull the engine from the backup before anything else runs.
+if (!window.THREE) document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"><\/script>');
+</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   UP-RIGGER · M0.1
+   One file. three.js r128. The holodeck is the lobby; pick a bridle build at the arch and the
+   room becomes an arena. Everything you let go of falls. Units are metres inside the engine;
+   the HUD talks feet because riggers do.
+   ═══════════════════════════════════════════════════════════════════ */
+const FT = 0.3048;
+const WORLD = {
+  beamHeight: 108 * FT,        // 32.9 m — the 24" ladder beam
+  beamWidth: 24 * 0.0254,      // 0.61 m
+  beamLen: 26,                 // how far it runs out over the floor from the catwalk
+  beamGap: 20 * FT,            // 6.1 m between the two beams the bridle spans
+  railHeight: 42 * 0.0254,     // 1.07 m top rail
+  catwalkDepth: 1.2,
+  lifelineHeight: 2.1,         // above the beam surface
+  slingZ: -14,                 // where the sling hangs over the beam
+  slingBottom: 1.9,            // above the beam surface — reach up for it
+  ropeLen: 150 * FT,           // 45.7 m
+  ropeDia: 0.5 * 0.0254,
+  legSplit: 15 * FT, leg10: 10 * FT, leg5: 5 * FT,
+  lanyard: 6 * FT,
+  g: 9.81,
+};
+const DEFAULTS = { body: true, edge: 0.1, haul: 3, pace: 0.4, turns: 2, dom: 'right', vol: 0.7 };
+const SETTINGS = Object.assign({}, DEFAULTS);
+try { Object.assign(SETTINGS, JSON.parse(localStorage.getItem('uprigger.settings') || '{}')); } catch (e) {}
+function saveSettings() { try { localStorage.setItem('uprigger.settings', JSON.stringify(SETTINGS)); } catch (e) {} }
+
+/* ─── tiny synth: every sound is WebAudio, no assets ─── */
+const AudioKit = (() => {
+  let ctx = null, master = null;
+  function unlock() {
+    if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); master = ctx.createGain(); master.connect(ctx.destination); } catch (e) { return; } }
+    if (ctx.state === 'suspended') ctx.resume();
+    master.gain.value = SETTINGS.vol;
+  }
+  function tone(f, t, type, g, slideTo) {
+    if (!ctx) return; const o = ctx.createOscillator(), a = ctx.createGain();
+    o.type = type || 'sine'; o.frequency.value = f;
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, ctx.currentTime + t);
+    a.gain.setValueAtTime(g || 0.2, ctx.currentTime); a.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t);
+    o.connect(a); a.connect(master); o.start(); o.stop(ctx.currentTime + t);
+  }
+  function noise(t, g, hp) {
+    if (!ctx) return; const n = ctx.sampleRate * t, b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const s = ctx.createBufferSource(); s.buffer = b; const a = ctx.createGain(); a.gain.value = g || 0.2;
+    const f = ctx.createBiquadFilter(); f.type = hp ? 'highpass' : 'lowpass'; f.frequency.value = hp || 600;
+    s.connect(f); f.connect(a); a.connect(master); s.start();
+  }
+  return {
+    unlock, setVol: v => { if (master) master.gain.value = v; },
+    chirp() { tone(880, 0.08, 'sine', 0.12); setTimeout(() => tone(1320, 0.1, 'sine', 0.1), 70); },
+    ack() { tone(1200, 0.06, 'square', 0.05); },
+    deny() { tone(180, 0.25, 'sawtooth', 0.12, 120); },
+    radioKey() { noise(0.05, 0.12, 2000); tone(600, 0.04, 'square', 0.04); },
+    radioTx() { noise(0.09, 0.08, 3000); },
+    grab() { tone(320, 0.04, 'triangle', 0.08); },
+    click() { tone(2200, 0.02, 'square', 0.06); },
+    rope() { noise(0.25, 0.08, 300); },
+    haul() { noise(0.12, 0.1, 400); tone(90, 0.1, 'triangle', 0.05); },
+    chain() { for (let i = 0; i < 4; i++) setTimeout(() => tone(1800 + Math.random() * 600, 0.03, 'square', 0.03), i * 45); },
+    steel() { tone(420, 0.35, 'triangle', 0.15, 380); noise(0.08, 0.1, 1200); },
+    thud() { tone(60, 0.5, 'sine', 0.5, 30); noise(0.3, 0.3); },
+    alarm() { tone(660, 0.15, 'square', 0.12); setTimeout(() => tone(520, 0.2, 'square', 0.12), 160); },
+    whoosh() { noise(0.6, 0.15, 900); },
+    program() { tone(440, 0.12, 'sine', 0.1); setTimeout(() => tone(660, 0.12, 'sine', 0.1), 110); setTimeout(() => tone(880, 0.25, 'sine', 0.1), 220); },
+  };
+})();
+
+/* ─────────────────────────── scene ─────────────────────────── */
+const scene = new THREE.Scene();
+scene.name = 'Scene';
+scene.background = new THREE.Color(0x07070c);
+const camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.05, 400);
+camera.name = 'Camera';
+camera.position.set(0, 1.6, 0);
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.xr.enabled = true;
+renderer.outputEncoding = THREE.sRGBEncoding;
+document.body.appendChild(renderer.domElement);
+addEventListener('resize', () => { if (renderer.xr.isPresenting) return;
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+const playerRig = new THREE.Group(); playerRig.name = 'PlayerRig'; playerRig.add(camera); scene.add(playerRig);
+
+/* materials — named, and coloured the way the real thing is coloured */
+const MAT = {
+  void: new THREE.MeshBasicMaterial({ color: 0x07070c, name: 'Mat_HolodeckVoid' }),
+  gridGold: new THREE.MeshBasicMaterial({ color: 0xf2c14e, name: 'Mat_HolodeckGrid', transparent: true, opacity: 0.9 }),
+  archFrame: new THREE.MeshStandardMaterial({ color: 0x9ea1a8, roughness: 0.5, metalness: 0.4, name: 'Mat_ArchFrame' }),
+  archDark: new THREE.MeshStandardMaterial({ color: 0x4c4f57, roughness: 0.7, name: 'Mat_ArchDark' }),
+  lcarsAmber: new THREE.MeshBasicMaterial({ color: 0xff9c00, name: 'Mat_LCARS_Amber' }),
+  lcarsLav: new THREE.MeshBasicMaterial({ color: 0xcc99cc, name: 'Mat_LCARS_Lavender' }),
+  lcarsPale: new THREE.MeshBasicMaterial({ color: 0x99ccff, name: 'Mat_LCARS_PaleBlue' }),
+  steel: new THREE.MeshStandardMaterial({ color: 0x8a8f96, roughness: 0.55, metalness: 0.7, name: 'Mat_StructuralSteel' }),
+  steelDark: new THREE.MeshStandardMaterial({ color: 0x3b3e44, roughness: 0.7, metalness: 0.5, name: 'Mat_SteelDark' }),
+  grating: new THREE.MeshStandardMaterial({ color: 0x5a5e66, roughness: 0.8, metalness: 0.4, name: 'Mat_CatwalkGrating' }),
+  railYellow: new THREE.MeshStandardMaterial({ color: 0xe6b800, roughness: 0.5, metalness: 0.3, name: 'Mat_SafetyRail' }),
+  wireRope: new THREE.MeshStandardMaterial({ color: 0xb8bcc2, roughness: 0.35, metalness: 0.9, name: 'Mat_WireRope' }),
+  rope: new THREE.MeshStandardMaterial({ color: 0xd9b46a, roughness: 0.9, name: 'Mat_Rope_HalfInch' }),
+  ropeHot: new THREE.MeshStandardMaterial({ color: 0xff6a3d, roughness: 0.9, name: 'Mat_Rope_Alert' }),
+  shackle: new THREE.MeshStandardMaterial({ color: 0xc9ccd1, roughness: 0.3, metalness: 0.9, name: 'Mat_Shackle_Galv' }),
+  pin: new THREE.MeshStandardMaterial({ color: 0xd4a017, roughness: 0.35, metalness: 0.8, name: 'Mat_ShacklePin_Gold' }),
+  hoist: new THREE.MeshStandardMaterial({ color: 0x1f1f24, roughness: 0.6, metalness: 0.4, name: 'Mat_ChainHoist' }),
+  chain: new THREE.MeshStandardMaterial({ color: 0x55585e, roughness: 0.5, metalness: 0.8, name: 'Mat_Chain' }),
+  burlap: new THREE.MeshStandardMaterial({ color: 0xa8895a, roughness: 1, name: 'Mat_Burlap' }),
+  floor: new THREE.MeshStandardMaterial({ color: 0x2a2620, roughness: 0.95, name: 'Mat_ArenaFloor' }),
+  court: new THREE.MeshStandardMaterial({ color: 0x7a5a36, roughness: 0.6, name: 'Mat_CourtHardwood' }),
+  seats: new THREE.MeshStandardMaterial({ color: 0x5a1e22, roughness: 0.9, name: 'Mat_Seating_Red' }),
+  seatsDark: new THREE.MeshStandardMaterial({ color: 0x24161a, roughness: 0.9, name: 'Mat_Seating_Dark' }),
+  concrete: new THREE.MeshStandardMaterial({ color: 0x4a4a4c, roughness: 0.95, name: 'Mat_Concrete' }),
+  harness: new THREE.MeshStandardMaterial({ color: 0xff7a00, roughness: 0.8, name: 'Mat_Harness_Orange' }),
+  webbing: new THREE.MeshStandardMaterial({ color: 0x2f5fbf, roughness: 0.8, name: 'Mat_Webbing_Blue' }),
+  webbingRed: new THREE.MeshStandardMaterial({ color: 0xc03030, roughness: 0.8, name: 'Mat_Webbing_Red' }),
+  helmet: new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.4, name: 'Mat_Helmet_White' }),
+  carabiner: new THREE.MeshStandardMaterial({ color: 0x8fa0b8, roughness: 0.3, metalness: 0.9, name: 'Mat_Carabiner_Alu' }),
+  pcd: new THREE.MeshStandardMaterial({ color: 0xd8471f, roughness: 0.4, metalness: 0.6, name: 'Mat_PCD_Red' }),
+  radio: new THREE.MeshStandardMaterial({ color: 0x151517, roughness: 0.6, name: 'Mat_Radio_Black' }),
+  pocket: new THREE.MeshStandardMaterial({ color: 0xbfc3c8, roughness: 0.4, metalness: 0.6, name: 'Mat_PocketJunk' }),
+  skin: new THREE.MeshStandardMaterial({ color: 0xc9a27e, roughness: 0.8, name: 'Mat_Skin' }),
+  shirt: new THREE.MeshStandardMaterial({ color: 0x222226, roughness: 0.9, name: 'Mat_CrewBlack' }),
+  ghost: new THREE.MeshBasicMaterial({ color: 0x99ccff, transparent: true, opacity: 0.35, name: 'Mat_Hologram' }),
+  ok: new THREE.MeshBasicMaterial({ color: 0x5ad38a, name: 'Mat_Marker_OK' }),
+  bad: new THREE.MeshBasicMaterial({ color: 0xe5484d, name: 'Mat_Marker_Bad' }),
+  target: new THREE.MeshBasicMaterial({ color: 0xf2c14e, transparent: true, opacity: 0.5, name: 'Mat_PointTarget' }),
+  foot: new THREE.MeshBasicMaterial({ color: 0x99ccff, transparent: true, opacity: 0.55, name: 'Mat_FootMarker' }),
+};
+function box(w, h, d, mat, name) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.name = name || 'Box'; return m; }
+function cyl(r, h, mat, name, seg) { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg || 12), mat); m.name = name || 'Cyl'; return m; }
+function torus(r, t, mat, name) { const m = new THREE.Mesh(new THREE.TorusGeometry(r, t, 8, 24), mat); m.name = name || 'Torus'; return m; }
+
+/* lights: the holodeck is flat and even; the arena is show-lit from above */
+const hemi = new THREE.HemisphereLight(0xdfe6f0, 0x2a2420, 0.9); hemi.name = 'Light_Hemi'; scene.add(hemi);
+const key = new THREE.DirectionalLight(0xfff1dc, 0.9); key.name = 'Light_Key'; key.position.set(-8, 40, 10); scene.add(key);
+
+/* ───────────────────── the holodeck (lobby) ───────────────────── */
+const holodeck = new THREE.Group(); holodeck.name = 'Holodeck'; scene.add(holodeck);
+const HD = { size: 8, height: 4 };
+function buildHolodeckProcedural() {
+  const g = new THREE.Group(); g.name = 'Holodeck_Procedural';
+  const s = HD.size, h = HD.height;
+  // matte black room
+  const room = new THREE.Mesh(new THREE.BoxGeometry(s, h, s), new THREE.MeshBasicMaterial({ color: 0x0a0a10, side: THREE.BackSide, name: 'Mat_HolodeckWall' }));
+  room.name = 'Holodeck_Room'; room.position.y = h / 2; g.add(room);
+  // the emitter grid: gold lines on every face
+  const lines = []; const step = 1;
+  for (let x = -s / 2; x <= s / 2 + 1e-6; x += step) { lines.push(x, 0, -s / 2, x, 0, s / 2, x, h, -s / 2, x, h, s / 2, x, 0, -s / 2, x, h, -s / 2, x, 0, s / 2, x, h, s / 2); }
+  for (let z = -s / 2; z <= s / 2 + 1e-6; z += step) { lines.push(-s / 2, 0, z, s / 2, 0, z, -s / 2, h, z, s / 2, h, z, -s / 2, 0, z, -s / 2, h, z, s / 2, 0, z, s / 2, h, z); }
+  for (let y = 0; y <= h + 1e-6; y += step) { lines.push(-s / 2, y, -s / 2, s / 2, y, -s / 2, -s / 2, y, s / 2, s / 2, y, s / 2, -s / 2, y, -s / 2, -s / 2, y, s / 2, s / 2, y, -s / 2, s / 2, y, s / 2); }
+  const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lines, 3));
+  const grid = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0xf2c14e, transparent: true, opacity: 0.85, name: 'Mat_HolodeckGridLine' }));
+  grid.name = 'Holodeck_GridEmitters'; g.add(grid);
+  g.add(buildArch());
+  return g;
+}
+function buildArch() {
+  // the arch on the -Z wall: two posts, a lintel, the LCARS control panel on the right post
+  const a = new THREE.Group(); a.name = 'Holodeck_Arch'; a.position.set(0, 0, -HD.size / 2 + 0.06);
+  const post = (x) => { const p = box(0.22, 2.82, 0.26, MAT.archFrame, 'Arch_Post'); p.position.set(x, 1.41, 0); return p; };
+  a.add(post(-1.11), post(1.11));
+  const lintel = box(2.44, 0.24, 0.26, MAT.archFrame, 'Arch_Lintel'); lintel.position.set(0, 2.82 - 0.12, 0); a.add(lintel);
+  const sill = box(2.0, 0.01, 0.13, MAT.archDark, 'Arch_Threshold'); sill.position.set(0, 0.005, 0); a.add(sill);
+  const doorway = box(2.0, 2.7, 0.02, MAT.void, 'Arch_Doorway'); doorway.position.set(0, 1.35, -0.1); a.add(doorway);
+  const panel = box(0.18, 0.4, 0.02, MAT.archDark, 'Arch_ControlPanel'); panel.position.set(1.11, 1.3, 0.14); a.add(panel);
+  const b1 = box(0.12, 0.08, 0.005, MAT.lcarsAmber, 'LCARS_Bar_Amber'); b1.position.set(1.11, 1.42, 0.155); a.add(b1);
+  const b2 = box(0.12, 0.05, 0.005, MAT.lcarsLav, 'LCARS_Bar_Lavender'); b2.position.set(1.11, 1.33, 0.155); a.add(b2);
+  const b3 = box(0.12, 0.1, 0.005, MAT.lcarsPale, 'LCARS_Bar_PaleBlue'); b3.position.set(1.11, 1.22, 0.155); a.add(b3);
+  return a;
+}
+/* Try the Onshape export first (Z-up, metres, arch on its -Y wall); fall back to the procedural room if it
+   isn't beside the page. Onshape's MTL names carry the face colour as r_g_b_…, so the colours come straight
+   from the export and every part keeps its appearance. */
+function objMaterialFor(src) {
+  const parts = String(src && src.name || '').split('_').map(parseFloat);
+  if (parts.length < 3 || parts.slice(0, 3).some(isNaN)) return MAT.archDark;
+  const c = new THREE.Color(parts[0], parts[1], parts[2]); const bright = parts[0] + parts[1] + parts[2] > 1.6;
+  const m = bright ? new THREE.MeshBasicMaterial({ color: c }) : new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, metalness: 0.2 });
+  m.name = 'Mat_OBJ_' + parts.slice(0, 3).map(v => v.toFixed(2)).join('_'); m.side = THREE.DoubleSide; return m;
+}
+function loadHolodeckOBJ() {
+  if (!THREE.OBJLoader) return;
+  new THREE.OBJLoader().load('assets/Holodeck.obj', obj => {
+    obj.name = 'Holodeck_OBJ'; obj.rotation.set(-Math.PI / 2, 0, Math.PI);   // Z-up → Y-up, and the arch wall lands on -Z
+    obj.traverse(m => { if (m.isMesh) m.material = Array.isArray(m.material) ? m.material.map(objMaterialFor) : objMaterialFor(m.material); });
+    const proc = holodeck.getObjectByName('Holodeck_Procedural'); if (proc) proc.visible = false;
+    holodeck.add(obj);
+  }, undefined, () => {});
+}
+holodeck.add(buildHolodeckProcedural());
+loadHolodeckOBJ();
+
+/* program pedestals: two builds and a settings post, standing in front of the arch */
+const pedestals = [];
+function makeLabel(text, w, h, big, colour) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512 * h / w);
+  const x = c.getContext('2d'); x.fillStyle = 'rgba(12,12,19,0.85)'; x.fillRect(0, 0, c.width, c.height);
+  x.fillStyle = colour || '#ff9c00'; x.fillRect(0, 0, 14, c.height);
+  x.fillStyle = '#e8e4d8'; x.font = (big ? '700 ' + Math.round(c.height * 0.42) : '400 ' + Math.round(c.height * 0.18)) + 'px Antonio, Arial Narrow, sans-serif';
+  const lines = String(text).split('\n'); const lh = big ? c.height * 0.5 : c.height * 0.22;
+  lines.forEach((l, i) => x.fillText(l, 36, c.height * (big ? 0.62 : 0.3) + i * lh));
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, transparent: true, name: 'Mat_Label' }));
+  m.name = 'Label_' + String(text).split('\n')[0].replace(/\W+/g, '_'); m.userData.canvas = c; m.userData.tex = t; return m;
+}
+function makePedestal(x, z, title, prog, colour) {
+  const p = new THREE.Group(); p.name = 'Pedestal_' + prog; p.position.set(x, 0, z);
+  const stem = cyl(0.06, 1.0, MAT.archDark, 'Pedestal_Stem'); stem.position.y = 0.5; p.add(stem);
+  const top = box(0.5, 0.04, 0.3, MAT.archFrame, 'Pedestal_Top'); top.position.y = 1.02; top.rotation.x = -0.4; p.add(top);
+  const face = makeLabel(title, 0.46, 0.22, true, colour); face.position.set(0, 1.043, -0.01); face.rotation.set(1.17, Math.PI, 0); p.add(face);   // lies on the tilted top, reading toward the arch
+  const ring = torus(0.14, 0.012, new THREE.MeshBasicMaterial({ color: colour || 0xff9c00, name: 'Mat_PedestalRing' }), 'Pedestal_Ring'); ring.rotation.x = Math.PI / 2; ring.position.y = 0.02; p.add(ring);
+  p.userData = { prog, hot: false, ring };
+  holodeck.add(p); pedestals.push(p); return p;
+}
+makePedestal(-0.9, -2.3, 'SPLIT 15', 'split15', '#cc99cc');
+makePedestal(0.9, -2.3, '10 BASKET', 'basket10', '#99ccff');
+const archSign = makeLabel('UP-RIGGER · BRIDLE TRAINING\nPoint at a build and pull the trigger.\nGravity is the opponent.', 2.0, 0.6, false, '#f2c14e');
+archSign.position.set(0, 2.1, -1.4); archSign.rotation.y = Math.PI; holodeck.add(archSign);   // over the pedestals, facing the arch
+
+/* ───────────────────── the arena ─────────────────────
+   Catwalk along X at z ∈ [0, 1.2] at beam height. Beam A (yours) runs from the catwalk edge
+   out over the floor along -Z at x = 0. Beam B (the other up-rigger's) is 20 ft over at +X.
+   The point on the floor sits between them under the sling. */
+const arena = new THREE.Group(); arena.name = 'Arena'; arena.visible = false; scene.add(arena);
+const H = WORLD.beamHeight, BW = WORLD.beamWidth, BL = WORLD.beamLen, GAP = WORLD.beamGap;
+const POINT = { x: GAP / 2, z: WORLD.slingZ };        // where the bridle apex should land
+function buildArena() {
+  // floor and court
+  const floor = box(90, 0.2, 70, MAT.floor, 'Arena_Floor'); floor.position.set(GAP / 2, -0.1, -12); arena.add(floor);
+  const court = box(29, 0.02, 16, MAT.court, 'Arena_Court'); court.position.set(GAP / 2, 0.01, -14); arena.add(court);
+  const target = torus(1.2, 0.05, MAT.target, 'Point_Target'); target.rotation.x = Math.PI / 2; target.position.set(POINT.x, 0.05, POINT.z); arena.add(target);
+  const tx = box(2.6, 0.01, 0.1, MAT.target, 'Point_Target_X1'); tx.position.set(POINT.x, 0.04, POINT.z); arena.add(tx);
+  const tz = box(0.1, 0.01, 2.6, MAT.target, 'Point_Target_X2'); tz.position.set(POINT.x, 0.04, POINT.z); arena.add(tz);
+  // seating bowl: stepped tiers on both long sides and the far end
+  for (let t = 0; t < 14; t++) {
+    const y = 1 + t * 1.6, d = 20 + t * 1.5;
+    const side = (sign) => { const s = box(70, 1.6, 1.5, t % 2 ? MAT.seats : MAT.seatsDark, 'Seating_Tier'); s.position.set(GAP / 2, y - 0.8, -12 + sign * d); arena.add(s); };
+    side(1); side(-1);
+    const endS = box(1.5, 1.6, 2 * d, t % 2 ? MAT.seats : MAT.seatsDark, 'Seating_Tier_End'); endS.position.set(GAP / 2 - 35 - t * 1.5, y - 0.8, -12); arena.add(endS);
+    const endN = endS.clone(); endN.position.x = GAP / 2 + 35 + t * 1.5; arena.add(endN);
+  }
+  // roof: a dark lid with trusses across at beam height + 3
+  const lid = box(120, 0.5, 100, MAT.steelDark, 'Arena_Roof'); lid.position.set(GAP / 2, H + 6, -12); arena.add(lid);
+  for (let i = -3; i <= 4; i++) {
+    const tr = box(0.5, 1.2, 80, MAT.steel, 'Roof_Truss'); tr.position.set(GAP / 2 + i * 8, H + 4, -12); arena.add(tr);
+  }
+  const trX = box(90, 1.2, 0.5, MAT.steel, 'Roof_Truss_X'); trX.position.set(GAP / 2, H + 4, WORLD.slingZ); arena.add(trX);
+  // catwalk: grating, kick plate, posts and a yellow top rail — with a gap where each beam meets it
+  const cw = box(44, 0.06, WORLD.catwalkDepth, MAT.grating, 'Catwalk_Grating'); cw.position.set(GAP / 2, H - 0.03, WORLD.catwalkDepth / 2); arena.add(cw);
+  const cwBack = box(44, 1.1, 0.04, MAT.steelDark, 'Catwalk_BackWall'); cwBack.position.set(GAP / 2, H + 0.55, WORLD.catwalkDepth); arena.add(cwBack);
+  const kick = box(44, 0.15, 0.03, MAT.railYellow, 'Catwalk_KickPlate'); kick.position.set(GAP / 2, H + 0.075, 0.015); arena.add(kick);
+  const railSegs = [[-22 + GAP / 2, -0.5], [0.5, GAP - 0.5], [GAP + 0.5, 22 + GAP / 2]];
+  railSegs.forEach(([a, b]) => {
+    const r = cyl(0.025, b - a, MAT.railYellow, 'Catwalk_TopRail'); r.rotation.z = Math.PI / 2; r.position.set((a + b) / 2, H + WORLD.railHeight, 0.02); arena.add(r);
+    const m = cyl(0.02, b - a, MAT.railYellow, 'Catwalk_MidRail'); m.rotation.z = Math.PI / 2; m.position.set((a + b) / 2, H + WORLD.railHeight / 2, 0.02); arena.add(m);
+    for (let x = a; x <= b; x += 2.5) { const p = box(0.05, WORLD.railHeight, 0.05, MAT.railYellow, 'Catwalk_RailPost'); p.position.set(Math.min(x, b), H + WORLD.railHeight / 2, 0.02); arena.add(p); }
+  });
+  // the two ladder beams: top and bottom chords with rungs — you walk the top chord
+  [0, GAP].forEach((x, i) => {
+    const g = new THREE.Group(); g.name = i ? 'LadderBeam_B' : 'LadderBeam_A'; g.position.set(x, 0, 0);
+    const top = box(BW, 0.08, BL, MAT.steel, 'Beam_TopChord'); top.position.set(0, H - 0.04, -BL / 2); g.add(top);
+    const bot = box(BW, 0.08, BL, MAT.steel, 'Beam_BottomChord'); bot.position.set(0, H - 0.7, -BL / 2); g.add(bot);
+    for (let z = -0.5; z > -BL; z -= 1.0) { const r = box(0.06, 0.62, 0.06, MAT.steelDark, 'Beam_Rung'); r.position.set(-BW / 2 + 0.03, H - 0.37, z); g.add(r);
+      const r2 = r.clone(); r2.position.x = BW / 2 - 0.03; g.add(r2); }
+    const endBrace = box(BW, 0.7, 0.08, MAT.steel, 'Beam_EndPlate'); endBrace.position.set(0, H - 0.37, -BL); g.add(endBrace);
+    arena.add(g);
+  });
+  // horizontal lifeline over beam A, from the catwalk out to the end, on stanchions
+  const ll = cyl(0.008, BL + 1, MAT.wireRope, 'Lifeline_Cable'); ll.rotation.x = Math.PI / 2; ll.position.set(0, H + WORLD.lifelineHeight, -BL / 2 + 0.5); arena.add(ll);
+  [0.3, -BL + 0.3].forEach(z => { const st = box(0.06, WORLD.lifelineHeight + 0.6, 0.06, MAT.steelDark, 'Lifeline_Stanchion'); st.position.set(0.35, H + WORLD.lifelineHeight / 2, z); arena.add(st);
+    const arm = box(0.4, 0.04, 0.04, MAT.steelDark, 'Lifeline_Arm'); arm.position.set(0.15, H + WORLD.lifelineHeight, z); arena.add(arm); });
+  // the sling: a blue basket sling off the roof truss, hanging over beam A at the sling station
+  const slingTop = H + 4 - 0.6, slingBot = H + WORLD.slingBottom;
+  const slingA = cyl(0.02, slingTop - slingBot, MAT.webbing, 'Sling_Leg_A'); slingA.position.set(-0.05, (slingTop + slingBot) / 2, WORLD.slingZ); arena.add(slingA);
+  const slingB = slingA.clone(); slingB.name = 'Sling_Leg_B'; slingB.position.x = 0.05; arena.add(slingB);
+  const slingEye = torus(0.06, 0.02, MAT.webbing, 'Sling_Eye'); slingEye.position.set(0, slingBot, WORLD.slingZ); arena.add(slingEye);
+  // a second sling over beam B for the other rigger, and their PCD, already hung
+  const s2 = slingA.clone(); s2.position.x = GAP; arena.add(s2); const s2e = slingEye.clone(); s2e.position.x = GAP; arena.add(s2e);
+  const pcdB = box(0.08, 0.18, 0.05, MAT.pcd, 'PCD_OtherRigger'); pcdB.position.set(GAP, slingBot - 0.14, WORLD.slingZ); arena.add(pcdB);
+  // show lighting rig on the far truss, for scale
+  for (let i = 0; i < 6; i++) { const l = cyl(0.18, 0.5, MAT.steelDark, 'Lighting_Fixture'); l.position.set(GAP / 2 - 10 + i * 4, H + 3.2, -30); arena.add(l); }
+}
+buildArena();
+const SLING_POINT = new THREE.Vector3(0, H + WORLD.slingBottom, WORLD.slingZ);
+const RAIL_Y = H + WORLD.railHeight, RAIL_Z = 0.02;
+/* the rail segment left of beam A where the hitch goes */
+const HITCH_RAIL = { x0: -3.0, x1: -0.5, y: RAIL_Y, z: RAIL_Z };
+
+/* ───────────────────── people: ground rigger and the other up-rigger ───────────────────── */
+function makeRigger(name, harnessMat) {
+  const g = new THREE.Group(); g.name = name;
+  const legs = box(0.34, 0.85, 0.22, MAT.shirt, 'Rigger_Legs'); legs.position.y = 0.43; g.add(legs);
+  const torso = box(0.42, 0.6, 0.26, MAT.shirt, 'Rigger_Torso'); torso.position.y = 1.15; g.add(torso);
+  const strapL = box(0.06, 0.6, 0.28, harnessMat, 'Rigger_HarnessStrap_L'); strapL.position.set(-0.12, 1.15, 0); g.add(strapL);
+  const strapR = strapL.clone(); strapR.name = 'Rigger_HarnessStrap_R'; strapR.position.x = 0.12; g.add(strapR);
+  const belt = box(0.46, 0.08, 0.3, harnessMat, 'Rigger_Belt'); belt.position.y = 0.88; g.add(belt);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), MAT.skin); head.name = 'Rigger_Head'; head.position.y = 1.58; g.add(head);
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.125, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), MAT.helmet); helmet.name = 'Rigger_Helmet'; helmet.position.y = 1.6; g.add(helmet);
+  const armL = box(0.09, 0.6, 0.09, MAT.shirt, 'Rigger_Arm_L'); armL.position.set(-0.27, 1.15, 0); g.add(armL);
+  const armR = armL.clone(); armR.name = 'Rigger_Arm_R'; armR.position.x = 0.27; g.add(armR);
+  g.userData = { armL, armR };
+  return g;
+}
+const groundRigger = makeRigger('GroundRigger', MAT.webbingRed); groundRigger.position.set(POINT.x + 1.5, 0, POINT.z + 1.5); groundRigger.rotation.y = -0.8; arena.add(groundRigger);
+const otherRigger = makeRigger('UpRigger_B', MAT.harness); otherRigger.position.set(GAP, H, WORLD.slingZ + 0.6); otherRigger.rotation.y = Math.PI / 2; arena.add(otherRigger);
+// their fall-arrest, clipped to their lifeline — the example to follow
+const llB = cyl(0.008, BL + 1, MAT.wireRope, 'Lifeline_Cable_B'); llB.rotation.x = Math.PI / 2; llB.position.set(GAP, H + WORLD.lifelineHeight, -BL / 2 + 0.5); arena.add(llB);
+const lanB = cyl(0.012, WORLD.lifelineHeight - 1.0, MAT.webbingRed, 'Lanyard_B'); lanB.position.set(GAP, H + 1.0 + (WORLD.lifelineHeight - 1.0) / 2, WORLD.slingZ + 0.6); arena.add(lanB);
+// chain hoist on the floor under the point, with its hook up
+const hoist = new THREE.Group(); hoist.name = 'ChainHoist'; arena.add(hoist);
+const hoistBody = cyl(0.16, 0.34, MAT.hoist, 'Hoist_Body'); hoistBody.position.y = 0.17; hoist.add(hoistBody);
+const hoistHook = torus(0.05, 0.014, MAT.chain, 'Hoist_Hook'); hoistHook.position.y = 0.44; hoist.add(hoistHook);
+const hoistChainBag = box(0.2, 0.3, 0.14, MAT.burlap, 'Hoist_ChainBag'); hoistChainBag.position.set(0.2, 0.15, 0); hoist.add(hoistChainBag);
+hoist.position.set(POINT.x, 0, POINT.z);
+
+/* ───────────────────── the player's kit ─────────────────────
+   Every piece of gear is a grabbable. Bring it to your chest and it goes on; the checklist ticks.
+   Pocket junk goes the other way: out of the harness pocket and into the bin. */
+const gearTable = new THREE.Group(); gearTable.name = 'GearTable'; arena.add(gearTable);
+const GEAR_X = -4.5;
+const tableTop = box(2.4, 0.04, 0.6, MAT.steelDark, 'GearTable_Top'); tableTop.position.set(GEAR_X, H + 0.9, 0.7); gearTable.add(tableTop);
+[-1.1, 1.1].forEach(x => { const l = box(0.05, 0.9, 0.5, MAT.steelDark, 'GearTable_Leg'); l.position.set(GEAR_X + x, H + 0.45, 0.7); gearTable.add(l); });
+const binMesh = box(0.34, 0.3, 0.34, MAT.concrete, 'PocketBin'); binMesh.position.set(GEAR_X - 1.6, H + 0.15, 0.85); gearTable.add(binMesh);
+const binLabel = makeLabel('POCKETS', 0.34, 0.1, false, '#99ccff'); binLabel.position.set(GEAR_X - 1.6, H + 0.36, 0.85); binLabel.rotation.x = -Math.PI / 2; gearTable.add(binLabel);
+
+const grabbables = [];          // {mesh, kind, name, r, onGrab, onRelease, held}
+function registerGrab(mesh, kind, r, extra) { const g = Object.assign({ mesh, kind, r: r || 0.14, held: null, home: mesh.position.clone(), homeParent: mesh.parent }, extra || {}); grabbables.push(g); mesh.userData.grab = g; return g; }
+
+const GEAR_DEFS = [
+  { id: 'harness', label: '7-point harness', build: () => { const g = new THREE.Group(); const b = box(0.28, 0.16, 0.12, MAT.harness, 'Harness_Bundle'); g.add(b); const s = box(0.3, 0.04, 0.14, MAT.webbing, 'Harness_Strap'); s.position.y = 0.08; g.add(s); return g; } },
+  { id: 'rope', label: '150\' × 1/2" rope', build: () => { const t = torus(0.14, 0.05, MAT.rope, 'Rope_Coil'); t.rotation.x = Math.PI / 2; const g = new THREE.Group(); g.add(t); return g; } },
+  { id: 'pcd', label: 'Progress capture device', build: () => { const g = new THREE.Group(); const b = box(0.08, 0.18, 0.05, MAT.pcd, 'PCD_Body'); g.add(b); const cam = cyl(0.03, 0.06, MAT.steel, 'PCD_Cam'); cam.rotation.x = Math.PI / 2; cam.position.y = -0.02; g.add(cam);
+      const eye = torus(0.03, 0.008, MAT.steel, 'PCD_Eye'); eye.position.y = 0.12; g.add(eye); const arrow = box(0.02, 0.06, 0.005, MAT.helmet, 'PCD_ArrowUp'); arrow.position.set(0, 0.03, 0.028); g.add(arrow); return g; } },
+  { id: 'biner1', label: 'Triple-action locker #1', build: () => { const t = torus(0.05, 0.008, MAT.carabiner, 'Carabiner_Body'); const g = new THREE.Group(); g.add(t); const lock = cyl(0.012, 0.03, MAT.steelDark, 'Carabiner_Lock'); lock.position.set(0.05, -0.02, 0); g.add(lock); return g; } },
+  { id: 'biner2', label: 'Triple-action locker #2', build: () => { const t = torus(0.05, 0.008, MAT.carabiner, 'Carabiner_Body'); const g = new THREE.Group(); g.add(t); const lock = cyl(0.012, 0.03, MAT.steelDark, 'Carabiner_Lock'); lock.position.set(0.05, -0.02, 0); g.add(lock); return g; } },
+  { id: 'sling4', label: "4' sling", build: () => { const t = torus(0.09, 0.012, MAT.webbing, 'Sling_4ft'); const g = new THREE.Group(); g.add(t); return g; } },
+  { id: 'sling6', label: "6' sling", build: () => { const t = torus(0.12, 0.012, MAT.webbingRed, 'Sling_6ft'); const g = new THREE.Group(); g.add(t); return g; } },
+  { id: 'helmet', label: 'Helmet', build: () => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), MAT.helmet); m.name = 'Helmet_Shell'; const g = new THREE.Group(); g.add(m); return g; } },
+  { id: 'radio', label: 'Radio', build: () => { const g = new THREE.Group(); const b = box(0.06, 0.12, 0.03, MAT.radio, 'Radio_Body'); g.add(b); const a = cyl(0.005, 0.1, MAT.radio, 'Radio_Antenna'); a.position.set(0.02, 0.11, 0); g.add(a); return g; } },
+];
+const POCKET_DEFS = [
+  { id: 'phone', label: 'Phone', build: () => box(0.07, 0.14, 0.01, MAT.radio, 'Pocket_Phone') },
+  { id: 'keys', label: 'Keys', build: () => { const t = torus(0.02, 0.005, MAT.pocket, 'Pocket_Keyring'); const g = new THREE.Group(); g.add(t); const k = box(0.01, 0.05, 0.003, MAT.pocket, 'Pocket_Key'); k.position.y = -0.04; g.add(k); return g; } },
+  { id: 'coins', label: 'Loose change', build: () => cyl(0.014, 0.01, MAT.pocket, 'Pocket_Coins') },
+];
+const gear = {};      // id -> {def, mesh, grab, worn}
+const pocket = {};    // id -> {def, mesh, grab, cleared}
+GEAR_DEFS.forEach((def, i) => {
+  const mesh = def.build(); mesh.name = 'Gear_' + def.id; mesh.position.set(GEAR_X - 1.05 + i * 0.27, H + 0.98, 0.7); gearTable.add(mesh);
+  const grab = registerGrab(mesh, 'gear', 0.16, { id: def.id });
+  gear[def.id] = { def, mesh, grab, worn: false };
+});
+// pocket junk starts on the table's near edge, as if just pulled from the harness pocket
+POCKET_DEFS.forEach((def, i) => {
+  const mesh = def.build(); mesh.name = 'Pocket_' + def.id; mesh.position.set(GEAR_X - 0.9 + i * 0.16, H + 0.96, 0.92); gearTable.add(mesh);
+  const grab = registerGrab(mesh, 'pocket', 0.12, { id: def.id });
+  pocket[def.id] = { def, mesh, grab, cleared: false };
+});
+/* worn kit on the body: a harness belt at the hips, the lanyard hooks on the hips, PCD/biners on the gear loops */
+const body = new THREE.Group(); body.name = 'PlayerBody'; playerRig.add(body);
+const belt = torus(0.2, 0.025, MAT.harness, 'Worn_HarnessBelt'); belt.rotation.x = Math.PI / 2; belt.position.y = 0.95; belt.visible = false; body.add(belt);
+/* the body rides under the head: roomscale walking carries your hips, holsters and lanyard with you */
+function bodyTick() { body.position.set(camera.position.x, 0, camera.position.z); const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ'); body.rotation.set(0, e.y, 0); }
+const wornHelmet = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), MAT.helmet); wornHelmet.name = 'Worn_Helmet'; wornHelmet.visible = false; camera.add(wornHelmet); wornHelmet.position.set(0, 0.08, 0.02);
+const lanyardHook = new THREE.Group(); lanyardHook.name = 'Lanyard_SnapHook'; const lhBody = torus(0.045, 0.012, MAT.carabiner, 'SnapHook_Body'); lanyardHook.add(lhBody); const lhGate = box(0.02, 0.07, 0.02, MAT.steelDark, 'SnapHook_Gate'); lhGate.position.x = 0.045; lanyardHook.add(lhGate);
+lanyardHook.visible = false; body.add(lanyardHook);
+const lanyardHookGrab = registerGrab(lanyardHook, 'hook', 0.14);
+const lanyardLine = cyl(0.01, 1, MAT.webbingRed, 'Lanyard_Line'); lanyardLine.visible = false; scene.add(lanyardLine);
+const wornPCD = gear.pcd.mesh; // moves to the hip when worn, then to the sling when hung
+
+/* ───────────────────── game state ───────────────────── */
+const game = { mode: null, phase: 'lobby', running: false, paused: false, over: false, prog: 'split15',
+  step: 0, t: 0, drops: 0, earlyPulls: 0, unclippedOnBeam: 0, falls: 0, ropeDrops: 0, fouls: 0, procsMisses: 0, bestDrift: 0, result: null };
+const perfNow = () => performance.now() / 1000;
+let hudDirty = true;
+
+/* toasts + radio log (DOM for desktop, mirrored into the VR panel) */
+const toastEl = document.getElementById('toast'); let toastT = null;
+function toast(msg, bad) { toastEl.textContent = msg; toastEl.className = bad ? 'alert' : ''; toastEl.style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => toastEl.style.opacity = 0, bad ? 3200 : 2200); vrPanelDirty = true; lastToast = { msg, bad, t: perfNow() }; }
+let lastToast = null;
+const radioLogEl = document.getElementById('radio-log'); const radioLines = [];
+function radio(who, text, delay) {
+  const say = () => { radioLines.push({ who, text }); if (radioLines.length > 4) radioLines.shift();
+    radioLogEl.innerHTML = radioLines.map(l => '<div class="' + (l.who === 'You' ? 'me' : '') + '"><b>' + l.who + '</b> — ' + l.text + '</div>').join('');
+    AudioKit.radioTx(); vrPanelDirty = true; };
+  if (delay) setTimeout(say, delay * 1000); else say();
+}
+
+/* ───────────────────── the rope ─────────────────────
+   One 150' × 1/2" line. It is either a coil on your hip, or deployed: a standing part down to the
+   floor and a working end that must ALWAYS be held by something — a hitch, a hand, a foot, or the
+   PCD. Nothing holding it and the weight of 108 feet of hanging rope takes the rest in. */
+const rope = { state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, pcdFed: false, pcdDir: 'ok', hauled: 0,
+  bowline: false, looseT: 0, droppedIn: false, deployT: -1, groundEnd: new THREE.Vector3(-1.5, 0, -0.4), tail: new THREE.Vector3(), edge: new THREE.Vector3(),
+  pullHand: -1, lastPullY: 0 };
+const ropeGroup = new THREE.Group(); ropeGroup.name = 'Rope'; arena.add(ropeGroup);
+let ropeMesh = null;
+const ropeEnd = cyl(0.02, 0.16, MAT.rope, 'Rope_WorkingEnd'); ropeEnd.visible = false; arena.add(ropeEnd);
+const ropeEndGrab = registerGrab(ropeEnd, 'ropeEnd', 0.16);
+const ropePull = cyl(0.018, 0.5, MAT.rope, 'Rope_PullSide'); ropePull.visible = false; arena.add(ropePull);
+const ropePullGrab = registerGrab(ropePull, 'ropePull', 0.2);
+const knotMesh = torus(0.045, 0.02, MAT.rope, 'Rope_Hitch'); knotMesh.visible = false; arena.add(knotMesh);
+const knotGrab = registerGrab(knotMesh, 'knot', 0.14);
+const ropePile = torus(0.22, 0.05, MAT.rope, 'Rope_Flake'); ropePile.rotation.x = Math.PI / 2; ropePile.visible = false; arena.add(ropePile);
+const ropeSlack = new THREE.Vector3();
+
+function ropeRebuild(points) {
+  if (ropeMesh) { ropeGroup.remove(ropeMesh); ropeMesh.geometry.dispose(); }
+  if (points.length < 2) { ropeMesh = null; return; }
+  const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal', 0.0);
+  ropeMesh = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.min(120, points.length * 18), WORLD.ropeDia * 1.6, 5, false), rope.looseT > 0 ? MAT.ropeHot : MAT.rope);
+  ropeMesh.name = 'Rope_Line'; ropeGroup.add(ropeMesh);
+}
+/* where the working end sits when nothing holds it: the pile on the deck under the last anchor */
+function ropePilePoint(out) {
+  if (rope.anchor === 'pcd' || rope.pcdFed) return out.set(0.2, H + 0.02, WORLD.slingZ + 0.5);
+  if (rope.knot !== 'none') return out.set(rope.hitchX, H + 0.02, 0.6);
+  return out.copy(rope.tail).setY(Math.max(rope.tail.y, H + 0.02));
+}
+const _rp = [];
+function ropeTick(dt) {
+  if (rope.state !== 'deployed') { ropeGroup.visible = false; ropeEnd.visible = ropePull.visible = knotMesh.visible = ropePile.visible = false; return; }
+  ropeGroup.visible = true;
+  // the standing part: from the ground end up to whatever it runs over
+  const pts = [];
+  const g = rope.groundEnd;
+  if (rope.deployT >= 0) { // still falling to the floor
+    const fallY = Math.max(0, H - 0.5 * WORLD.g * rope.deployT * rope.deployT); rope.deployT += dt;
+    if (fallY <= 0) { rope.deployT = -1; AudioKit.thud(); toast('Rope is on the floor'); radio('Ground', 'Rope\'s down. I\'ve got the end.', 1); }
+    pts.push(new THREE.Vector3(g.x, fallY, g.z));
+  } else pts.push(g.clone());
+  if (rope.pcdFed) {
+    pts.push(new THREE.Vector3(0, SLING_POINT.y - 0.2, WORLD.slingZ - 0.02), new THREE.Vector3(0, SLING_POINT.y - 0.34, WORLD.slingZ + 0.06));
+    // the pull side hangs from the PCD to a hand, a foot, or the deck
+    const held = grabbables.find(x => x.kind === 'ropePull' && x.held !== null);
+    const hp = held ? handPoint(held.held) : null;
+    if (hp) pts.push(hp.clone()); else pts.push(new THREE.Vector3(0.1, H + 0.6, WORLD.slingZ + 0.3));
+    ropePilePoint(ropeSlack); pts.push(ropeSlack.clone());
+    ropePull.visible = !held; ropePull.position.set(0.1, H + 0.6, WORLD.slingZ + 0.3);
+    ropeEnd.visible = false; knotMesh.visible = false; ropePile.visible = true; ropePile.position.copy(ropeSlack);
+  } else {
+    // over the rail (hitched) or straight up to the hand holding the end
+    const endHeld = ropeEndGrab.held !== null, knotHeld = knotGrab.held !== null;
+    if (rope.knot !== 'none') {
+      pts.push(new THREE.Vector3(rope.hitchX, RAIL_Y + 0.03, RAIL_Z - 0.03));
+      knotMesh.visible = true; knotMesh.position.set(rope.hitchX, RAIL_Y, RAIL_Z); knotMesh.rotation.y = Math.PI / 2;
+      ropePilePoint(ropeSlack); pts.push(new THREE.Vector3(rope.hitchX, RAIL_Y - 0.1, RAIL_Z + 0.1), ropeSlack.clone());
+      ropeEnd.visible = false; ropePile.visible = true; ropePile.position.copy(ropeSlack);
+    } else {
+      const hp = endHeld ? handPoint(ropeEndGrab.held) : knotHeld ? handPoint(knotGrab.held) : null;
+      if (hp) { rope.tail.copy(hp); pts.push(hp.clone()); }
+      else pts.push(rope.tail.clone());
+      knotMesh.visible = false; ropeEnd.visible = !hp; ropeEnd.position.copy(rope.tail);
+      ropePile.visible = false;
+    }
+  }
+  ropeRebuild(pts);
+  // is anything holding the working end?
+  const heldByHand = ropeEndGrab.held !== null || knotGrab.held !== null || ropePullGrab.held !== null;
+  const underFoot = footOnRope();
+  const anchored = rope.knot !== 'none' || (rope.pcdFed && rope.pcdDir === 'ok') || heldByHand || underFoot;
+  rope.anchor = rope.knot !== 'none' ? 'hitch' : rope.pcdFed && rope.pcdDir === 'ok' ? 'pcd' : heldByHand ? 'hand' : underFoot ? 'foot' : null;
+  if (!anchored && rope.deployT < 0 && !rope.droppedIn) {
+    rope.looseT += dt;
+    if (rope.looseT > 0.2 && rope.looseT < 0.35) { AudioKit.rope(); toast('THE ROPE IS RUNNING — GRAB IT', true); }
+    // the tail slides toward the edge
+    const edge = rope.pcdFed ? new THREE.Vector3(0, H + 0.05, WORLD.slingZ) : new THREE.Vector3(rope.tail.x, H + 0.05, -0.2);
+    rope.tail.lerp(edge, Math.min(1, dt * 1.5)); ropeEnd.position.copy(rope.tail);
+    if (rope.looseT > 2.2) ropeDroppedIn();
+  } else rope.looseT = 0;
+  hudDirty = true;
+}
+function ropeDroppedIn() {
+  rope.droppedIn = true; rope.state = 'gone'; game.ropeDrops++; AudioKit.whoosh(); setTimeout(() => AudioKit.thud(), 2400);
+  radio('Ground', 'HEADS UP! Rope coming in!', 0.2);
+  endProgram(false, 'The rope went in', 'Nothing was holding the working end. 108 feet of hanging rope took the rest over the edge — and anyone under it is lucky. Tie it off, stand on it, or keep it in your hand.');
+}
+function deployRope(handIndex) {
+  rope.state = 'deployed'; rope.deployT = 0; rope.groundEnd.set(rope.tail.x, 0, -0.4);
+  gear.rope.mesh.visible = false; releaseAll(gear.rope.grab);
+  if (handIndex !== undefined) ropeEndGrab.held = handIndex;   // the end stays in the hand that threw the coil AudioKit.rope(); toast('Rope deployed — hold the end'); radio('You', 'Rope coming down!'); hudDirty = true;
+}
+
+/* ───────────────────── knots: turns around the rail ─────────────────────
+   Hold the working end near the rail and circle it. The angle of your hand around the rail's axis is
+   accumulated; each 2π is a turn. Trigger dresses whatever you have: 2 turns = clove hitch; one more
+   on top = the half hitch that finishes it; a single wrap is a wrap, and a wrap slips under load. */
+function nearHitchRail(p) { return p.x > HITCH_RAIL.x0 - 0.3 && p.x < HITCH_RAIL.x1 + 0.3 && Math.hypot(p.y - RAIL_Y, p.z - RAIL_Z) < 0.5; }
+let knotPrevAngle = null;
+function knotTick(hp) {
+  if (!hp || !nearHitchRail(hp)) { knotPrevAngle = null; return; }
+  const a = Math.atan2(hp.y - RAIL_Y, hp.z - RAIL_Z);
+  if (knotPrevAngle !== null) { let d = a - knotPrevAngle; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; rope.acc += d;
+    const t = Math.floor((Math.abs(rope.acc) + 0.6) / (2 * Math.PI)); if (t !== rope.turns) { rope.turns = t; AudioKit.click(); toast(t + (t === 1 ? ' turn' : ' turns') + ' on the rail'); } }
+  knotPrevAngle = a;
+}
+function dressKnot(hp) {
+  if (!nearHitchRail(hp)) { toast('Bring the end to the rail'); return; }
+  const need = SETTINGS.turns;
+  if (rope.knot === 'none') {
+    if (rope.turns >= need) { rope.knot = 'clove'; toast('CLOVE HITCH'); AudioKit.ack(); }
+    else if (rope.turns >= 1) { rope.knot = 'wrap'; toast('That is a single wrap — it will slip', true); AudioKit.deny(); }
+    else { toast('No turns on the rail yet'); return; }
+  } else if (rope.knot === 'clove' && rope.turns >= 1) { rope.knot = 'clove+half'; toast('HALF HITCH — finished'); AudioKit.ack(); }
+  else if (rope.knot === 'wrap' && rope.turns >= need) { rope.knot = 'clove'; toast('CLOVE HITCH'); AudioKit.ack(); }
+  else { toast('Put a turn on first'); return; }
+  rope.hitchX = Math.min(HITCH_RAIL.x1, Math.max(HITCH_RAIL.x0, hp.x)); rope.acc = 0; rope.turns = 0;
+  releaseAll(ropeEndGrab); hudDirty = true;
+}
+function untieKnot(hand) {
+  if (rope.knot === 'none') return;
+  rope.knot = 'none'; rope.turns = 0; rope.acc = 0; AudioKit.rope(); toast('Untied — you are holding the rope now');
+  // the working end is in the hand that untied it
+  releaseAll(knotGrab); ropeEndGrab.held = hand; ropeEnd.visible = false; hudDirty = true;
+}
+
+/* ───────────────────── the PCD ─────────────────────
+   Hangs from the sling. It has a load side, marked with the white arrow. Feed the rope in from the
+   load side and the cam holds every inch you gain. Feed it backwards and it holds nothing. */
+const pcd = { hung: false, yaw: 0 };
+function hangPCD() {
+  pcd.hung = true; pcd.yaw = Math.random() < 0.5 ? 0 : Math.PI;
+  const m = gear.pcd.mesh; releaseAll(gear.pcd.grab); scene.attach(m); arena.attach(m);
+  m.position.set(0, SLING_POINT.y - 0.16, WORLD.slingZ); m.rotation.set(0, pcd.yaw, 0); m.visible = true;
+  gear.pcd.grab.locked = true; AudioKit.chain(); toast('PCD on the sling — now feed the rope. Mind the arrow.'); hudDirty = true;
+}
+function pcdLoadSide() { return new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), pcd.yaw); }
+function feedPCD(hp) {
+  if (!pcd.hung) { toast('Hang the PCD first'); return; }
+  const rel = hp.clone().sub(gear.pcd.mesh.position); rel.y = 0;
+  const ok = rel.dot(pcdLoadSide()) > 0;
+  rope.pcdFed = true; rope.pcdDir = ok ? 'ok' : 'back'; rope.knot = 'none';
+  rope.groundEnd.set(0.3, 0, WORLD.slingZ);
+  releaseAll(ropeEndGrab); releaseAll(knotGrab); AudioKit.click(); AudioKit.ack();
+  toast(ok ? 'Rope through the PCD — cam holds' : 'Rope through the PCD');
+  hudDirty = true;
+}
+function unfeedPCD(hand) { rope.pcdFed = false; rope.pcdDir = 'ok'; rope.hauled = 0; ropeEndGrab.held = hand; toast('Rope out of the PCD'); hudDirty = true; }
+
+/* ───────────────────── the bridle and the haul ─────────────────────
+   Two legs meet at an apex shackle; a short deck chain to the hoist hook below it. Your rope is
+   bowlined into the top of your leg. Metres of rope through the PCD = metres your leg's eye has
+   risen. The other up-rigger does the same on the other beam, at their pace. */
+const bridle = { legLen: WORLD.legSplit, hauledB: 0, stage: 'idle', togetherCalled: false, continueCalled: false, drift: 0, fouled: false, foulT: 0, twist: false,
+  arrived: false, burlapOff: false, wrapStage: 0, mated: false, burlapUnder: false, steelDown: false, squared: false, foulChecked: false, zB: WORLD.slingZ, zA: WORLD.slingZ, pointChecked: false, holdT: 0 };
+const bridleGroup = new THREE.Group(); bridleGroup.name = 'Bridle'; arena.add(bridleGroup);
+const legA = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1, 6), MAT.wireRope); legA.name = 'Bridle_Leg_A'; bridleGroup.add(legA);
+const legB = legA.clone(); legB.name = 'Bridle_Leg_B'; bridleGroup.add(legB);
+const apexShackle = torus(0.06, 0.016, MAT.shackle, 'Bridle_ApexShackle'); bridleGroup.add(apexShackle);
+const apexPin = cyl(0.014, 0.16, MAT.pin, 'Bridle_ApexPin'); apexPin.rotation.z = Math.PI / 2; bridleGroup.add(apexPin);
+const deckChain = cyl(0.01, 1, MAT.chain, 'Bridle_DeckChain');   // unit length; placeCyl scales it bridleGroup.add(deckChain);
+const eyeA = new THREE.Group(); eyeA.name = 'Bridle_Eye_A'; bridleGroup.add(eyeA);
+const thimbleA = torus(0.035, 0.01, MAT.wireRope, 'Bridle_Thimble_A'); eyeA.add(thimbleA);
+const burlap = box(0.16, 0.12, 0.1, MAT.burlap, 'Bridle_BurlapBag'); eyeA.add(burlap); burlap.position.y = -0.02;
+const burlapGrab = registerGrab(burlap, 'burlap', 0.16);
+const midShackleA = torus(0.045, 0.012, MAT.shackle, 'Bridle_MidShackle_A'); bridleGroup.add(midShackleA);   // the 5-to-10 shackle on a split 15
+const eyeB = torus(0.035, 0.01, MAT.wireRope, 'Bridle_Eye_B'); bridleGroup.add(eyeB);
+const ropeB = cyl(0.01, 1, MAT.rope, 'Rope_OtherRigger'); bridleGroup.add(ropeB);
+// the mating shackle under the beam on your side: pin end (gold) toward +Z, bow toward -Z
+const mate = new THREE.Group(); mate.name = 'Bridle_MateShackle'; bridleGroup.add(mate);
+const mateBow = torus(0.055, 0.014, MAT.shackle, 'MateShackle_Bow'); mateBow.rotation.y = Math.PI / 2; mate.add(mateBow);
+const matePin = cyl(0.014, 0.17, MAT.pin, 'MateShackle_Pin'); matePin.rotation.x = Math.PI / 2; matePin.position.z = 0.0; mate.add(matePin);
+const matePinHead = cyl(0.024, 0.03, MAT.pin, 'MateShackle_PinHead'); matePinHead.rotation.x = Math.PI / 2; matePinHead.position.z = 0.1; mate.add(matePinHead);
+const wrapHandle = torus(0.035, 0.012, MAT.wireRope, 'Bridle_WrapEye'); wrapHandle.visible = false; arena.add(wrapHandle);
+const wrapGrab = registerGrab(wrapHandle, 'wrap', 0.18);
+const wrapLine = new THREE.Group(); wrapLine.name = 'Bridle_WrapLine'; arena.add(wrapLine); let wrapMesh = null;
+const connGrab = registerGrab(mate, 'conn', 0.2);
+const squareGhost = cyl(0.006, GAP, MAT.ghost, 'Square_GhostLine'); squareGhost.rotation.z = Math.PI / 2; squareGhost.visible = false; arena.add(squareGhost);
+const wrapPts = [];
+function placeCyl(m, a, b) { m.position.copy(a).add(b).multiplyScalar(0.5); m.scale.y = a.distanceTo(b) || 0.001; m.lookAt(b); m.rotateX(Math.PI / 2); }
+const MATE_POS = new THREE.Vector3(BW / 2 + 0.2, H - 0.45, WORLD.slingZ);
+function eyeAPos(out) { return out.set(BW / 2 + 0.15, Math.min(rope.hauled, H - 0.1), WORLD.slingZ); }
+const _ea = new THREE.Vector3(), _eb = new THREE.Vector3(), _ap = new THREE.Vector3();
+function bridleTick(dt) {
+  bridleGroup.visible = rope.state === 'deployed' && rope.bowline;
+  if (!bridleGroup.visible) return;
+  const L = bridle.legLen;
+  eyeAPos(_ea); _eb.set(GAP - BW / 2 - 0.15, Math.min(bridle.hauledB, H - 0.1), WORLD.slingZ);
+  bridle.drift = rope.hauled - bridle.hauledB;
+  // apex: pulled toward the side that is ahead
+  const ax = GAP / 2 + Math.max(-2.2, Math.min(2.2, bridle.drift * 0.6));
+  const dropA = Math.sqrt(Math.max(0, L * L - (ax - _ea.x) ** 2)), dropB = Math.sqrt(Math.max(0, L * L - (_eb.x - ax) ** 2));
+  const ay = Math.max(0.42, Math.min(_ea.y - dropA, _eb.y - dropB));
+  _ap.set(ax, ay, WORLD.slingZ);
+  placeCyl(legA, bridle.mated ? MATE_POS : _ea, _ap); placeCyl(legB, _eb, _ap);
+  apexShackle.position.copy(_ap); apexPin.position.copy(_ap).y -= 0.06;
+  eyeA.position.copy(_ea); eyeA.visible = !bridle.arrived; burlap.visible = !bridle.burlapOff && !bridle.arrived ? true : burlap.visible;
+  eyeB.position.copy(_eb);
+  if (game.prog === 'split15') { midShackleA.visible = !bridle.mated; midShackleA.position.lerpVectors(_ea, _ap, WORLD.leg5 / L); } else midShackleA.visible = false;
+  // hoist: hangs on the deck chain once the apex is off the floor
+  const hoistY = Math.max(0, ay - 1.05);
+  hoist.position.set(ax, hoistY, WORLD.slingZ);
+  deckChain.visible = ay > 0.5; placeCyl(deckChain, _ap, new THREE.Vector3(ax, hoistY + 0.44, WORLD.slingZ));
+  // the other rigger's rope: from their PCD down to their eye
+  placeCyl(ropeB, new THREE.Vector3(GAP, SLING_POINT.y - 0.3, WORLD.slingZ), _eb);
+  mate.visible = bridle.arrived; mate.position.copy(MATE_POS); mate.position.z = bridle.zA;
+  if (bridle.steelDown) mate.position.set(0, H + 0.08, bridle.zA);
+  else if (bridle.mated && connGrab.held !== null) mate.position.copy(handPoint(connGrab.held));
+  // sling-side leg while wrapping: shackle → checkpoints → hand
+  if (bridle.arrived && !bridle.mated) {
+    const pts = [mate.position.clone()]; wrapPts.forEach(p => pts.push(p));
+    const hp = wrapGrab.held !== null ? handPoint(wrapGrab.held) : null;
+    if (hp) pts.push(hp.clone()); else pts.push(wrapHandle.position.clone());
+    if (wrapMesh) { wrapLine.remove(wrapMesh); wrapMesh.geometry.dispose(); }
+    wrapMesh = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'centripetal'), 40, 0.012, 5, false), MAT.wireRope); wrapMesh.name = 'Bridle_Wrap_Live'; wrapLine.add(wrapMesh);
+    wrapHandle.visible = !hp;
+  } else if (bridle.mated) {
+    if (wrapMesh) { wrapLine.remove(wrapMesh); wrapMesh.geometry.dispose(); wrapMesh = null; }
+    wrapHandle.visible = false;
+    if (!wrapLine.getObjectByName('Bridle_Wrap_Set')) {
+      const z = bridle.zA, pts = [new THREE.Vector3(BW / 2 + 0.2, H - 0.45, z), new THREE.Vector3(BW / 2 + 0.05, H + 0.05, z), new THREE.Vector3(-BW / 2 - 0.05, H + 0.05, z),
+        new THREE.Vector3(-BW / 2 - 0.05, H - 0.72, z), new THREE.Vector3(BW / 2 + 0.05, H - 0.72, z), new THREE.Vector3(BW / 2 + 0.2, H - 0.45, z)];
+      const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'centripetal', 0.2), 48, 0.012, 5, false), MAT.wireRope); m.name = 'Bridle_Wrap_Set'; wrapLine.add(m);
+      if (bridle.twist) { const t = torus(0.05, 0.012, MAT.wireRope, 'Bridle_Twist'); t.position.set(BW / 2 + 0.25, H - 0.9, z); t.rotation.y = 0.7; wrapLine.add(t); }
+    }
+    const set = wrapLine.getObjectByName('Bridle_Wrap_Set'); if (set) set.position.z = bridle.zA - WORLD.slingZ;
+    const tw = wrapLine.getObjectByName('Bridle_Twist'); if (tw) { tw.position.z = bridle.zA; tw.visible = bridle.twist; }
+  }
+  squareGhost.visible = bridle.steelDown && !bridle.squared; squareGhost.position.set(GAP / 2, H + 0.1, bridle.zB);
+  // hauling stages and the other rigger
+  haulTick(dt);
+}
+function haulTick(dt) {
+  const L = bridle.legLen, top = H - 0.1;
+  const atApexA = rope.hauled >= L - 0.05, atApexB = bridle.hauledB >= L - 0.05;
+  // the other rigger: works at their own pace to the apex, then only on the calls
+  let rateB = 0;
+  if (bridle.stage === 'apex') rateB = atApexB ? 0 : SETTINGS.pace * 0.9;
+  else if (bridle.stage === 'hook') rateB = bridle.hauledB < L + 0.6 ? SETTINGS.pace * 0.8 : 0;
+  else if (bridle.stage === 'load') { const wobble = 1 + 0.3 * Math.sin(game.t * 0.7) * Math.sin(game.t * 0.23);
+    // a competent partner: works at their pace, eases off when they notice they are ahead, digs in when behind
+    rateB = SETTINGS.pace * wobble * (bridle.drift < -0.5 ? 0.25 : 1) + 0.25 * Math.max(-1, Math.min(1, bridle.drift)); rateB = Math.max(0, rateB); if (bridle.hauledB >= top) rateB = 0;
+    if (bridle.fouled) rateB = bridle.drift > 0 ? SETTINGS.pace * 1.4 : 0; }   // fouled: whoever is behind catches up, the other holds
+  if (rateB > 0) { bridle.hauledB = Math.min(top, bridle.hauledB + rateB * dt); otherRigger.userData.armL.position.y = 1.15 + 0.12 * Math.sin(game.t * 6); otherRigger.userData.armR.position.y = 1.15 - 0.12 * Math.sin(game.t * 6); }
+  if (bridle.stage === 'apex') {
+    if (atApexA && !bridle.calledApexA) { bridle.calledApexA = true; radio('You', 'Split at the apex.'); }
+    if (atApexA && atApexB && !bridle.togetherCalled) { bridle.togetherCalled = true; bridle.stage = 'hook';
+      radio('Ground', 'Both legs at the apex. TOGETHER — pull to the hook.', 1.2); toast('TOGETHER — pull to the hook eye'); }
+  } else if (bridle.stage === 'hook') {
+    if (rope.hauled >= L + 0.6 && bridle.hauledB >= L + 0.6 && !bridle.continueCalled) { bridle.continueCalled = true; bridle.stage = 'load';
+      radio('Ground', 'Hook\'s taut. CONTINUE — bring it up, match each other.', 1.0); toast('CONTINUE — haul the load, match the other rigger'); AudioKit.chain(); }
+  } else if (bridle.stage === 'load') {
+    const d = Math.abs(bridle.drift); game.bestDrift = Math.max(game.bestDrift, d);
+    if (d > 1.5 && !bridle.fouled) { bridle.fouled = true; bridle.twist = true; game.fouls++; AudioKit.alarm();
+      radio('Ground', bridle.drift > 0 ? 'WHOA — hold on! You\'re way ahead, it\'s bellying and fouling at the apex. Stop and let them catch up.' : 'Hold on — you\'re behind, it\'s drifting to their side. Pick it up.');
+      toast('FOUL AT THE APEX — stop pulling', true); }
+    if (bridle.fouled) { if (d < 0.4) { bridle.fouled = false; radio('Ground', 'Clear. Continue, together.', 0.3); toast('Cleared — continue together'); } }
+    else if (d > 0.7 && !bridle.warned) { bridle.warned = true; toast(bridle.drift > 0 ? 'Drifting your way — slow down' : 'Bellying on your side — pick up the pace', true); }
+    else if (d < 0.4) bridle.warned = false;
+    if (rope.hauled >= top && !bridle.arrived) { bridle.arrived = true; bridle.stage = 'beam'; AudioKit.steel();
+      wrapPts.length = 0; wrapHandle.position.set(BW / 2 + 0.15, H + 0.05, WORLD.slingZ); wrapHandle.visible = true;
+      burlap.visible = true; arena.attach(burlap); burlap.position.set(BW / 2 + 0.15, H + 0.12, WORLD.slingZ);
+      bridle.zB = WORLD.slingZ + (Math.random() < 0.5 ? -1 : 1) * (0.35 + Math.random() * 0.4);
+      radio('Ground', 'Your leg\'s at the beam. Steel looks clean coming up' + (bridle.twist ? ' — check it though, it fouled once.' : '.'), 0.5);
+      toast('At the beam — burlap out, then wrap it'); }
+  }
+}
+/* one pull: the hand moved down while gripping the pull side */
+function haulBy(dy) {
+  if (!rope.pcdFed) return;
+  const L = bridle.legLen;
+  if (bridle.stage === 'idle') { if (!bridle.earlyToast) { bridle.earlyToast = true; game.earlyPulls++; toast('Wait for the ground rigger\'s GO', true); radio('Ground', 'Hold on — I\'m not done tying in.', 0.3); } return; }
+  if (rope.pcdDir !== 'ok') { rope.hauled = Math.min(H - 0.1, rope.hauled + dy); return; } // it goes up... until you let go
+  if (bridle.fouled && bridle.drift > 0) { toast('STOP — it is fouled. Let them catch up.', true); return; }
+  // the calls gate the stages: past the apex only on TOGETHER, past the hook only on CONTINUE
+  let cap = H - 0.1;
+  if (bridle.stage === 'apex') cap = L;
+  else if (bridle.stage === 'hook') cap = L + 0.6;
+  if (rope.hauled >= cap - 1e-6) { if (!bridle.capToast || game.t - bridle.capToast > 3) { bridle.capToast = game.t; toast(bridle.stage === 'apex' ? 'Leg is at the apex — wait for TOGETHER' : 'Hook is taut — wait for CONTINUE'); } return; }
+  rope.hauled = Math.min(cap, rope.hauled + dy); hudDirty = true;
+}
+/* let go with the rope fed backwards and the cam holds nothing */
+function pullReleased() {
+  if (rope.pcdFed && rope.pcdDir !== 'ok' && rope.hauled > 0.2) {
+    const lost = rope.hauled; rope.hauled = 0; AudioKit.whoosh(); AudioKit.alarm(); game.drops++; bridle.stage = 'idle'; bridle.calledApexA = false;
+    radio('Ground', 'WHOA — it ran back! Everything you had just hit the floor. Check your PCD — it\'s in backwards.', 0.2);
+    toast('THE ROPE RAN THROUGH THE PCD — IT IS FED BACKWARDS', true);
+    setTimeout(() => AudioKit.thud(), 600);
+  }
+}
+/* the ground rigger, once the rope is at the sling, ties in */
+function groundTiesIn() {
+  if (rope.bowline) return; rope.bowline = true; bridle.legLen = game.prog === 'split15' ? WORLD.legSplit : WORLD.leg10;
+  radio('Ground', game.prog === 'split15' ? 'Tying in — twelve-inch bowline into the eye of the 5.' : 'Tying in — three-foot bowline into the shackle on the 10.', 0.5);
+  radio('Ground', 'You\'re tied. Ready when you are.', 4);
+  bridle.readyT = game.t + 4.5;
+}
+
+/* ───────────────────── step 5: over, under, mate ───────────────────── */
+function wrapTick(hp) {
+  if (!hp || !bridle.arrived || bridle.mated) return;
+  const z = WORLD.slingZ, near = Math.abs(hp.z - z) < 1.2;
+  if (!near) return;
+  const st = bridle.wrapStage;
+  if (st === 0 && hp.x < -BW / 2 - 0.05 && hp.y > H - 0.1) { bridle.wrapStage = 1; wrapPts.push(new THREE.Vector3(0, H + 0.08, z)); toast('Over the beam'); AudioKit.click(); }
+  else if (st === 1 && hp.y < H - 0.5 && hp.x < 0) { bridle.wrapStage = 2; wrapPts.push(new THREE.Vector3(-BW / 2 - 0.05, H - 0.72, z)); toast('Under'); AudioKit.click(); }
+  else if (st === 2 && hp.x > BW / 2 && hp.y < H - 0.1) { bridle.wrapStage = 3; wrapPts.push(new THREE.Vector3(BW / 2 + 0.05, H - 0.72, z)); toast('Around — now mate it to the shackle'); AudioKit.click(); }
+}
+function tryMate(hp) {
+  if (bridle.wrapStage < 3) { toast('Take it over the beam and back under first'); return; }
+  if (hp.distanceTo(mate.position) > 0.3) { toast('Bring the eye to the shackle'); return; }
+  // PROCS: the rope rides the pin, the cable goes in the bow. Which half of the shackle did you bring it to?
+  const pinSide = (hp.z - mate.position.z) > 0.02;
+  if (pinSide) { game.procsMisses++; AudioKit.deny(); toast('PROCS — Pin takes the Rope. Cable goes in the bow of the Shackle.', true); return; }
+  bridle.mated = true; releaseAll(wrapGrab); AudioKit.steel(); toast(game.prog === 'split15' ? 'The 10 is mated to the 5 — PROCS' : 'Basket made — both eyes in the bow — PROCS');
+  radio('Ground', 'That\'s made. Burlap under it and set it down.', 0.8);
+}
+function tryBurlapUnder(hp) {
+  if (!bridle.mated) { toast('Mate the steel first'); return; }
+  if (Math.abs(hp.x) > 0.5 || Math.abs(hp.z - WORLD.slingZ) > 0.8 || Math.abs(hp.y - H) > 0.4) { toast('Fold it under the steel, on top of the beam'); return; }
+  bridle.burlapUnder = true; releaseAll(burlapGrab); burlap.position.set(0, H + 0.03, WORLD.slingZ); burlap.scale.set(1.4, 0.35, 1.2); burlap.rotation.set(0, 0, 0); burlapGrab.locked = true;
+  AudioKit.ack(); toast('Burlap folded under the steel');
+}
+function trySteelDown(hp) {
+  if (!bridle.mated) return;
+  if (!bridle.burlapUnder) { toast('Burlap under it first — the steel does not sit on bare beam', true); AudioKit.deny(); return; }
+  if (Math.abs(hp.x) > 0.5 || Math.abs(hp.y - H) > 0.5) { toast('Set it down on top of the beam'); return; }
+  bridle.steelDown = true; bridle.zA = hp.z; releaseAll(connGrab); AudioKit.steel(); toast('Steel down — now square up with the other side');
+  radio('Rigger B', 'I\'m set on my side. Square to me.', 0.6);
+}
+function squareTick() {
+  if (!bridle.steelDown || bridle.squared) return;
+  if (connGrab.held !== null) { const hp = handPoint(connGrab.held); bridle.zA = Math.max(WORLD.slingZ - 2, Math.min(WORLD.slingZ + 2, hp.z)); }
+  if (Math.abs(bridle.zA - bridle.zB) < 0.12 && connGrab.held === null) { bridle.squared = true; AudioKit.ack(); toast('SQUARE'); radio('Rigger B', 'Square.', 0.3); }
+}
+function clearTwist() { if (!bridle.twist) return; bridle.twist = false; AudioKit.steel(); toast('Foul cleared — the twist is out'); }
+
+/* ───────────────────── gravity: things that fall ───────────────────── */
+const falling = [];
+function startFall(mesh, label, from) {
+  arena.attach(mesh); mesh.position.copy(from); falling.push({ mesh, label, vy: 0 }); AudioKit.whoosh();
+  game.drops++; hudDirty = true; toast('DROPPED — ' + label.toUpperCase(), true);
+  radio('You', 'HEADACHE! ' + label + ' coming in!');
+}
+function fallingTick(dt) {
+  for (let i = falling.length - 1; i >= 0; i--) { const f = falling[i]; f.vy -= WORLD.g * dt; f.mesh.position.y += f.vy * dt;
+    if (f.mesh.position.y <= 0.05) { f.mesh.position.y = 0.05; falling.splice(i, 1); AudioKit.thud(); radio('Ground', 'Got a ' + f.label + ' on the floor here. Everybody OK.', 0.3); f.mesh.userData.landed = true; } }
+}
+/* is a point standing on something? */
+function onCatwalk(x, z) { return z >= -0.02 && z <= WORLD.catwalkDepth && Math.abs(x - GAP / 2) < 22; }
+function onBeam(x, z, tol) { return Math.abs(x) <= BW / 2 + (tol === undefined ? SETTINGS.edge : tol) && z <= 0.05 && z >= -BL; }
+function supported(x, z, tol) { return onCatwalk(x, z) || onBeam(x, z, tol); }
+
+/* ───────────────────── hands ─────────────────────
+   Two in VR, one on desktop (the cursor's reach point). Each has a position, a grip and a trigger. */
+const hands = [];
+function makeHand(i) {
+  const h = { index: i, pos: new THREE.Vector3(), prevPos: new THREE.Vector3(), quat: new THREE.Quaternion(), grip: false, trig: false, prevGrip: false, prevTrig: false,
+    prevUpper: false, prevLower: false, lowerT: 0, lowerFired: false, src: null, active: false, mesh: null, ray: null };
+  const g = new THREE.Group(); g.name = 'Hand_' + i;
+  const palm = box(0.07, 0.03, 0.1, MAT.skin, 'Hand_Palm'); g.add(palm);
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), MAT.lcarsPale); tip.name = 'Hand_GrabPoint'; tip.position.z = -0.06; g.add(tip);
+  const ray = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 3, 4), MAT.ghost); ray.name = 'Hand_Ray'; ray.rotation.x = Math.PI / 2; ray.position.z = -1.5; ray.visible = false; g.add(ray);
+  h.mesh = g; h.ray = ray; g.visible = false; scene.add(g);
+  hands.push(h); return h;
+}
+makeHand(0); makeHand(1);
+const _hp = new THREE.Vector3();
+function handPoint(i) { const h = hands[i]; if (!h) return null; return _hp.copy(h.pos); }
+function heldOf(i) { return grabbables.find(g => g.held === i) || null; }
+function releaseAll(g) { if (g.held !== null) g.held = null; }
+function haptic(h, i, ms) { try { const gp = h.src && h.src.gamepad; if (gp && gp.hapticActuators && gp.hapticActuators[0]) gp.hapticActuators[0].pulse(i, ms); } catch (e) {} }
+
+/* what a hand can pick up right now */
+function grabCandidate(h) {
+  let best = null, bd = 1e9;
+  const reach = game.mode === 'desk' ? 0.45 : 0.22;
+  for (const g of grabbables) {
+    if (g.held !== null || g.locked || !g.mesh.visible && g.kind !== 'ropeEnd') continue;
+    if (!g.mesh.parent) continue;
+    // a worn piece of gear lives on the body; it is grabbable from the hip
+    const p = new THREE.Vector3(); g.mesh.getWorldPosition(p);
+    const d = p.distanceTo(h.pos); if (d < reach + g.r && d < bd) { bd = d; best = g; }
+  }
+  return best;
+}
+function grabStart(h) {
+  const g = grabCandidate(h); if (!g) return;
+  // rules per kind
+  if (g.kind === 'gear' && gear[g.id] && gear[g.id].worn && g.id !== 'pcd' && g.id !== 'rope') return; // it's on you; leave it
+  if (g.kind === 'ropeEnd' && rope.state !== 'deployed') return;
+  if (g.kind === 'knot' && rope.knot === 'none') return;
+  if (g.kind === 'conn' && !bridle.mated) return;
+  g.held = h.index; AudioKit.grab(); haptic(h, 0.5, 40);
+  if (g.kind === 'ropePull') { rope.pullHand = h.index; rope.lastPullY = h.pos.y; }
+  if (g.kind === 'hook') { lanyard.hookHeld = true; }
+  hudDirty = true;
+}
+function grabEnd(h) {
+  const g = heldOf(h.index); if (!g) return;
+  g.held = null;
+  if (g.kind === 'ropePull') { pullReleased(); rope.pullHand = -1; return; }
+  if (g.kind === 'ropeEnd' || g.kind === 'knot') { rope.tail.copy(h.pos); return; }
+  if (g.kind === 'wrap') { wrapHandle.position.copy(h.pos); return; }
+  if (g.kind === 'hook') { lanyard.hookHeld = false; return; }
+  if (g.kind === 'conn') return;
+  // gear, pocket junk, burlap: it is wherever your hand is. Over the void, that is a drop.
+  const p = h.pos.clone();
+  if (g.kind === 'gear' && wearZone(p) && !gear[g.id].worn) { wearGear(g.id); return; }
+  if (g.kind === 'pocket' && p.distanceTo(binMesh.getWorldPosition(new THREE.Vector3())) < 0.4) { clearPocket(g.id); return; }
+  if (g.kind === 'gear' && gear[g.id].worn) { // worn kit taken off the hip and let go: back on the hip over steel, gone over the void
+    if (supported(p.x, p.z, 0)) placeWorn(g.id); else { gear[g.id].worn = false; startFall(g.mesh, gear[g.id].def.label, p); }
+    return; }
+  if (supported(p.x, p.z, 0)) { arena.attach(g.mesh); g.mesh.position.set(p.x, H + 0.06, p.z); }
+  else startFall(g.mesh, g.kind === 'gear' ? gear[g.id].def.label : g.kind === 'pocket' ? pocket[g.id].def.label : 'burlap', p);
+}
+/* the chest: bring gear here to put it on */
+function wearZone(p) { const c = new THREE.Vector3(); camera.getWorldPosition(c); return Math.hypot(p.x - c.x, p.z - c.z) < 0.35 && p.y < c.y - 0.15 && p.y > c.y - 0.9; }
+function wearGear(id) { const g = gear[id]; g.worn = true; AudioKit.ack(); toast(g.def.label + ' — on'); hudDirty = true; placeWorn(id); }
+function placeWorn(id) {
+  const g = gear[id]; const m = g.mesh;
+  if (id === 'harness') { belt.visible = true; lanyardHook.visible = true; m.visible = false; }
+  else if (id === 'helmet') { wornHelmet.visible = true; m.visible = false; }
+  else if (id === 'rope') { body.attach(m); m.position.set(-0.28, 0.95, 0.05); m.rotation.set(Math.PI / 2, 0, 0); }
+  else if (id === 'pcd') { body.attach(m); m.position.set(0.25, 0.9, 0.1); }
+  else if (id === 'radio') { body.attach(m); m.position.set(0.05, 1.25, -0.16); }
+  else { body.attach(m); const k = ['biner1', 'biner2', 'sling4', 'sling6'].indexOf(id); m.position.set(-0.22 + k * 0.14, 0.86, 0.14); }
+}
+function clearPocket(id) { const p = pocket[id]; p.cleared = true; p.mesh.visible = false; AudioKit.ack(); toast(p.def.label + ' — in the bin'); hudDirty = true; }
+function gearReady() { return GEAR_DEFS.every(d => gear[d.id].worn) && POCKET_DEFS.every(d => pocket[d.id].cleared); }
+
+/* ───────────────────── fall arrest ─────────────────────
+   The lanyard hook on your hip. Clip it to the lifeline (it rides along) or the top rail (it stays put,
+   and 6 feet is 6 feet). Being clipped is what makes a step off the beam survivable. */
+const lanyard = { clipped: false, anchor: 'none', anchorPos: new THREE.Vector3(), hookHeld: false, taut: false };
+function nearAnchor(p) {
+  // lifeline over beam A
+  if (Math.abs(p.x) < 0.35 && Math.abs(p.y - (H + WORLD.lifelineHeight)) < 0.35 && p.z <= 0.3 && p.z >= -BL) return { kind: 'lifeline', pos: new THREE.Vector3(0, H + WORLD.lifelineHeight, p.z) };
+  if (Math.abs(p.y - RAIL_Y) < 0.3 && Math.abs(p.z - RAIL_Z) < 0.3 && p.x > -22 && p.x < 22 + GAP && !(Math.abs(p.x) < 0.5) && !(Math.abs(p.x - GAP) < 0.5)) return { kind: 'rail', pos: new THREE.Vector3(p.x, RAIL_Y, RAIL_Z) };
+  return null;
+}
+function tryClip(hp) {
+  const a = nearAnchor(hp);
+  if (!a) { if (lanyard.clipped) { lanyard.clipped = false; lanyard.anchor = 'none'; toast('UNCLIPPED', true); AudioKit.deny(); hudDirty = true; } else toast('Nothing to clip to here'); return; }
+  lanyard.clipped = true; lanyard.anchor = a.kind; lanyard.anchorPos.copy(a.pos); releaseAll(lanyardHookGrab); AudioKit.click(); AudioKit.ack();
+  toast('CLIPPED — ' + (a.kind === 'lifeline' ? 'lifeline' : 'top rail')); hudDirty = true;
+}
+function lanyardTick() {
+  lanyardLine.visible = lanyard.clipped; lanyardHook.visible = gear.harness.worn;
+  const hip = new THREE.Vector3(); belt.getWorldPosition(hip); hip.x += 0.18;
+  if (lanyard.clipped) {
+    if (lanyard.anchor === 'lifeline') lanyard.anchorPos.z = Math.max(-BL, Math.min(0.3, hip.z));
+    arena.attach(lanyardHook); lanyardHook.position.copy(lanyard.anchorPos);
+    placeCyl(lanyardLine, lanyard.anchorPos, hip);
+    lanyard.taut = lanyard.anchorPos.distanceTo(hip) > WORLD.lanyard;
+  } else if (lanyardHookGrab.held !== null) { arena.attach(lanyardHook); lanyardHook.position.copy(hands[lanyardHookGrab.held].pos); }
+  else { body.attach(lanyardHook); lanyardHook.position.set(0.18, 0.9, 0.0); lanyard.taut = false; }
+}
+
+/* ───────────────────── feet ─────────────────────
+   From the headset's body-tracking joints when the browser gives them; otherwise a pair of prints
+   under your head. Either way they are what you stand on the rope with — and what walks off the beam. */
+const feet = [new THREE.Mesh(new THREE.CircleGeometry(0.11, 14), MAT.foot), new THREE.Mesh(new THREE.CircleGeometry(0.11, 14), MAT.foot)];
+feet.forEach((f, i) => { f.name = i ? 'Foot_R' : 'Foot_L'; f.rotation.x = -Math.PI / 2; f.scale.set(0.6, 1, 1); f.visible = false; scene.add(f); });
+const feetPos = [new THREE.Vector3(), new THREE.Vector3()];
+let bodyTracked = false, bodyJointsSeen = 0;
+function feetTick(frame) {
+  const head = new THREE.Vector3(); camera.getWorldPosition(head);
+  bodyTracked = false;
+  if (frame && SETTINGS.body && frame.body && renderer.xr.getReferenceSpace) {
+    const ref = renderer.xr.getReferenceSpace();
+    ['left-foot-ball', 'right-foot-ball'].forEach((j, i) => {
+      try { const sp = frame.body.get(j); if (!sp) return; const pose = frame.getPose(sp, ref); if (!pose) return;
+        const p = pose.transform.position; feetPos[i].set(p.x, p.y, p.z).applyMatrix4(playerRig.matrixWorld); bodyTracked = true; bodyJointsSeen++; } catch (e) {}
+    });
+  }
+  if (!bodyTracked) {
+    const yaw = new THREE.Euler().setFromQuaternion(camera.getWorldQuaternion(new THREE.Quaternion()), 'YXZ').y;
+    const side = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+    feetPos[0].copy(head).addScaledVector(side, -0.12); feetPos[1].copy(head).addScaledVector(side, 0.12);
+    feetPos[0].y = feetPos[1].y = playerRig.position.y;
+  }
+  feet.forEach((f, i) => { f.visible = game.phase === 'arena'; f.position.copy(feetPos[i]); f.position.y = Math.max(f.position.y, playerRig.position.y) + 0.005; });
+}
+/* standing on the flaked rope holds it */
+function footOnRope() {
+  if (rope.state !== 'deployed') return false;
+  const pile = ropePilePoint(new THREE.Vector3());
+  return feetPos.some(f => Math.hypot(f.x - pile.x, f.z - pile.z) < 0.3 && Math.abs(f.y - pile.y) < 0.4);
+}
+
+/* ───────────────────── the player on the steel ───────────────────── */
+const player = { falling: false, vy: 0, arrested: false, arrestT: 0, safe: new THREE.Vector3(), yaw: 0, pitch: 0, offBeamT: 0 };
+const _head = new THREE.Vector3();
+function moveRig(dx, dz) {
+  // move, but never through the catwalk's back wall or off its ends; the front edge only opens onto the beam
+  const before = playerRig.position.clone(); playerRig.position.x += dx; playerRig.position.z += dz;
+  camera.getWorldPosition(_head);
+  const onB = onBeam(_head.x, _head.z, 0.6);
+  if (!onB) {
+    if (_head.z > WORLD.catwalkDepth - 0.05) playerRig.position.z = before.z;
+    if (_head.z < 0.05 && !(Math.abs(_head.x) < BW / 2 + 0.6)) playerRig.position.z = before.z;
+    if (Math.abs(_head.x - GAP / 2) > 21.5) playerRig.position.x = before.x;
+  } else { if (_head.z < -BL + 0.2) playerRig.position.z = before.z; }
+  // lanyard taut: it holds you back
+  if (lanyard.taut) { const hip = new THREE.Vector3(); belt.getWorldPosition(hip); if (hip.distanceTo(lanyard.anchorPos) > WORLD.lanyard + 0.1) { playerRig.position.copy(before); toast('Lanyard is taut — move your clip'); } }
+}
+function playerTick(dt) {
+  camera.getWorldPosition(_head);
+  if (game.phase !== 'arena') return;
+  if (player.falling) {
+    player.vy -= WORLD.g * dt; playerRig.position.y += player.vy * dt;
+    if (lanyard.clipped && !player.arrested && (lanyard.anchorPos.y - _head.y) > WORLD.lanyard - 0.2) {
+      player.arrested = true; player.vy = 0; player.arrestT = 0; AudioKit.steel(); AudioKit.alarm(); game.falls++;
+      toast('ARRESTED — the lanyard has you. Grip with both hands to climb back on.', true); radio('Rigger B', 'You OK over there?!', 0.8);
+      document.getElementById('vignette').classList.add('on');
+    }
+    if (player.arrested) { player.arrestT += dt; playerRig.position.y += Math.sin(player.arrestT * 2) * 0.002;
+      if (hands[0].grip && hands[1].grip && player.arrestT > 1.5 || (game.mode === 'desk' && hands[0].grip && hands[0].trig && player.arrestT > 1.5)) {
+        player.falling = player.arrested = false; playerRig.position.copy(player.safe); document.getElementById('vignette').classList.remove('on'); toast('Back on the steel'); } }
+    else if (playerRig.position.y <= 0) { playerRig.position.y = 0; player.falling = false; AudioKit.thud();
+      endProgram(false, 'Gravity won', 'You stepped off a 24-inch beam 108 feet up without a fall-arrest connection. Clip in before you touch the steel — the lifeline overhead or the top rail of the catwalk.'); }
+    return;
+  }
+  // support: head, and the feet when we have them
+  const tol = SETTINGS.edge;
+  let ok = supported(_head.x, _head.z, tol);
+  if (ok && bodyTracked) ok = feetPos.some(f => supported(f.x, f.z, tol + 0.15));
+  if (!ok) { player.offBeamT += dt; if (player.offBeamT > 0.12) { player.falling = true; player.vy = 0; AudioKit.whoosh(); toast(lanyard.clipped ? 'OFF THE BEAM' : 'OFF THE BEAM — NOT CLIPPED', true); } }
+  else { player.offBeamT = 0; player.safe.copy(playerRig.position); }
+  if (onBeam(_head.x, _head.z, 0.8) && !lanyard.clipped) { game.unclippedOnBeam += dt; if (Math.floor(game.unclippedOnBeam * 2) % 6 === 0 && game.unclippedOnBeam > 0.5) document.getElementById('vignette').classList.add('on'); }
+  else if (!player.arrested) document.getElementById('vignette').classList.remove('on');
+}
+
+/* ───────────────────── the six steps ───────────────────── */
+const STEPS = [
+  null,
+  { title: 'Assess your gear', body: 'Everything you need is on the table. Grab each piece and bring it to your chest to put it on. Pocket junk goes in the bin.',
+    list: () => GEAR_DEFS.map(d => ({ t: d.label, ok: gear[d.id].worn })).concat(POCKET_DEFS.map(d => ({ t: d.label + ' out of pockets', ok: pocket[d.id].cleared }))),
+    done: () => gearReady() },
+  { title: 'Deploy and tie off', body: 'Take the coil off your hip, hold it over the rail and pull the trigger to send it down. Then tie the working end to the top rail: circle your hand around the rail twice, trigger for the clove hitch, one more turn and trigger for the half hitch. Clip your lanyard to the top rail or the lifeline before you touch the beam.',
+    list: () => [{ t: 'Rope deployed to the floor', ok: rope.state === 'deployed' }, { t: 'Clove hitch on the rail', ok: rope.knot === 'clove' || rope.knot === 'clove+half', bad: rope.knot === 'wrap' }, { t: 'Half hitch finish', ok: rope.knot === 'clove+half' }, { t: 'Fall arrest clipped', ok: lanyard.clipped }],
+    done: () => rope.state === 'deployed' && rope.knot === 'clove+half' && lanyard.clipped && rope.deployT < 0 },
+  { title: 'Out to the sling', body: 'Grab the knot and pull the trigger to untie. Now nothing holds the rope but you — keep it in a hand or stand on it. Walk out to the sling (the blue loop overhead, 46 feet out), hang the PCD on it, then bring the rope end to the PCD and pull the trigger. Feed it from the load side — the white arrow.',
+    list: () => [{ t: 'Hitch untied', ok: rope.knot === 'none' }, { t: 'PCD on the sling', ok: pcd.hung }, { t: 'Rope fed through the PCD', ok: rope.pcdFed }],
+    done: () => rope.knot === 'none' && pcd.hung && rope.pcdFed },
+  { title: 'Haul', body: 'The ground rigger is tying you into your leg. When they say ready, key the radio and take it up: grip the rope below the PCD and pull down, hand over hand. Leg to the apex first. On TOGETHER, up to the hook eye. On CONTINUE, bring the load up matching the other rigger — get ahead and it bellies and fouls at the apex shackle.',
+    list: () => [{ t: 'Tied in (bowline)', ok: rope.bowline }, { t: 'Leg at the apex', ok: rope.hauled >= bridle.legLen - 0.05 }, { t: 'Together — to the hook', ok: bridle.continueCalled }, { t: 'Load to the beam', ok: bridle.arrived }, { t: 'Drift: ' + (bridle.drift * 3.281).toFixed(1) + ' ft', ok: Math.abs(bridle.drift) < 0.7, bad: Math.abs(bridle.drift) > 1.5 }],
+    done: () => bridle.arrived },
+  { title: 'Wrap the beam', body: 'Burlap out of the bowline. Grab the eye, take it OVER the beam, UNDER, and back around to the shackle — the cable goes in the BOW, the rope belongs on the pin (P.Ro.C.S). Then the burlap folded under the steel, set the connection down on the beam, and slide it square to the other rigger. Check it for fouls.',
+    list: () => [{ t: 'Burlap off', ok: bridle.burlapOff }, { t: 'Over, under, around', ok: bridle.wrapStage >= 3 }, { t: 'Mated — cable in the bow', ok: bridle.mated }, { t: 'Burlap under the steel', ok: bridle.burlapUnder }, { t: 'Steel down on the beam', ok: bridle.steelDown }, { t: 'Squared to the other side', ok: bridle.squared }, { t: 'No fouls', ok: bridle.mated && !bridle.twist, bad: bridle.twist }],
+    done: () => bridle.squared && !bridle.twist },
+  { title: 'Point check', body: 'Key the radio and ask the ground rigger for a point check: will the bridle and the chain coming down hit the mark?',
+    list: () => [{ t: 'Radioed for a point check', ok: bridle.pointChecked }], done: () => false },
+];
+function setStep(n) { game.step = n; hudDirty = true; vrPanelDirty = true; AudioKit.chirp(); const s = STEPS[n]; toast('STEP ' + n + ' — ' + s.title); }
+function stepTick(dt) {
+  const s = STEPS[game.step]; if (!s) return;
+  if (game.step === 3 && rope.pcdFed && !rope.bowline) groundTiesIn();
+  if (game.step === 4 && bridle.readyT && game.t > bridle.readyT && !bridle.readyToast) { bridle.readyToast = true; toast('Ground is ready — key the radio (B / Y or R)'); }
+  if (game.step === 5) {
+    if (!bridle.burlapOff && burlapGrab.held !== null) { const hp = handPoint(burlapGrab.held); if (hp.distanceTo(new THREE.Vector3(BW / 2 + 0.15, H + 0.12, WORLD.slingZ)) > 0.35) { bridle.burlapOff = true; toast('Burlap out'); AudioKit.ack(); } }
+    if (wrapGrab.held !== null) wrapTick(handPoint(wrapGrab.held));
+    squareTick();
+  }
+  if (s.done() && game.step < 6) setStep(game.step + 1);
+}
+/* trigger = act on what is in (or under) the hand */
+function triggerAction(h) {
+  const hp = h.pos; const held = heldOf(h.index);
+  if (game.phase === 'lobby') { pickProgramWithRay(h); return; }
+  if (held) {
+    if (held.kind === 'gear' && held.id === 'rope' && rope.state === 'coil') { if (hp.z < 0.25) deployRope(h.index); else toast('Hold it out over the rail first'); return; }
+    if (held.kind === 'ropeEnd') { if (pcd.hung && hp.distanceTo(gear.pcd.mesh.position) < 0.35) feedPCD(hp); else dressKnot(hp); return; }
+    if (held.kind === 'knot') { untieKnot(h.index); return; }
+    if (held.kind === 'gear' && held.id === 'pcd') { if (hp.distanceTo(SLING_POINT) < 0.4) hangPCD(); else toast('Reach up to the sling'); return; }
+    if (held.kind === 'hook') { tryClip(hp); return; }
+    if (held.kind === 'wrap') { tryMate(hp); return; }
+    if (held.kind === 'burlap') { tryBurlapUnder(hp); return; }
+    if (held.kind === 'conn') { if (!bridle.steelDown) trySteelDown(hp); else if (bridle.twist) clearTwist(); return; }
+    if (held.kind === 'ropePull') { if (rope.pcdFed && hp.distanceTo(gear.pcd.mesh.position) < 0.45) unfeedPCD(h.index); return; }
+    return;
+  }
+  // empty hand at the PCD with the rope fed: pull it back out
+  if (rope.pcdFed && pcd.hung && hp.distanceTo(gear.pcd.mesh.position) < 0.3 && rope.hauled < 0.2) { unfeedPCD(h.index); return; }
+  if (bridle.mated && bridle.twist && hp.distanceTo(new THREE.Vector3(BW / 2 + 0.25, H - 0.9, bridle.zA)) < 0.35) { clearTwist(); return; }
+}
+/* the radio */
+function keyRadio() {
+  if (game.phase !== 'arena' || game.over) return;
+  if (!gear.radio.worn) { toast('You left the radio on the table', true); return; }
+  AudioKit.radioKey();
+  if (game.step === 4 && rope.bowline && bridle.stage === 'idle') { radio('You', 'Ready on the ' + (game.prog === 'split15' ? 'split 15' : '10 basket') + '?'); radio('Ground', 'Go ahead and pull. I\'m watching the steel.', 1.4); bridle.stage = 'apex'; return; }
+  if (game.step === 6 && !bridle.pointChecked) { bridle.pointChecked = true; radio('You', 'Point check on the ' + (game.prog === 'split15' ? 'split 15' : '10 basket') + '?');
+    const off = Math.abs(bridle.zA - WORLD.slingZ) * 3.281;
+    radio('Ground', 'Stand by... ' + (off < 1.0 ? 'Point\'s good. Chain\'s coming down.' : 'You\'re about ' + off.toFixed(0) + ' feet off the mark. Both of you slide it ' + (bridle.zA > WORLD.slingZ ? 'upstage' : 'downstage') + '.'), 3.0);
+    setTimeout(() => endProgram(true, 'Point\'s good', 'Bridle up, wrapped, mated, squared and checked — and nothing went in.'), 5200); return; }
+  radio('You', 'Radio check.'); radio('Ground', 'Loud and clear.', 1.0);
+}
+
+/* ───────────────────── program start / end ───────────────────── */
+const lobbyEl = document.getElementById('lobby'), hudEl = document.getElementById('hud'), pauseEl = document.getElementById('pause');
+function resetWorld() {
+  game.step = 0; game.t = 0; game.drops = 0; game.earlyPulls = 0; game.unclippedOnBeam = 0; game.falls = 0; game.ropeDrops = 0; game.fouls = 0; game.procsMisses = 0; game.bestDrift = 0; game.over = false; game.result = null;
+  Object.assign(rope, { state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, pcdFed: false, pcdDir: 'ok', hauled: 0, bowline: false, looseT: 0, droppedIn: false, deployT: -1, pullHand: -1 });
+  rope.groundEnd.set(-1.5, 0, -0.4); rope.tail.set(GEAR_X, H + 1, 0.7);
+  Object.assign(bridle, { hauledB: 0, stage: 'idle', togetherCalled: false, continueCalled: false, drift: 0, fouled: false, twist: false, arrived: false, burlapOff: false, wrapStage: 0, mated: false, burlapUnder: false, steelDown: false, squared: false, zB: WORLD.slingZ, zA: WORLD.slingZ, pointChecked: false, calledApexA: false, readyT: 0, readyToast: false, warned: false, earlyToast: false });
+  wrapPts.length = 0; const set = wrapLine.getObjectByName('Bridle_Wrap_Set'); if (set) wrapLine.remove(set); const tw = wrapLine.getObjectByName('Bridle_Twist'); if (tw) wrapLine.remove(tw);
+  pcd.hung = false; Object.assign(lanyard, { clipped: false, anchor: 'none', hookHeld: false, taut: false });
+  Object.assign(player, { falling: false, vy: 0, arrested: false, offBeamT: 0 });
+  falling.length = 0; grabbables.forEach(g => { g.held = null; g.locked = false; });
+  GEAR_DEFS.forEach(d => { const g = gear[d.id]; g.worn = false; g.mesh.visible = true; gearTable.attach(g.mesh); g.mesh.position.copy(g.grab.home); g.mesh.rotation.set(0, 0, 0); g.mesh.scale.set(1, 1, 1); });
+  POCKET_DEFS.forEach(d => { const p = pocket[d.id]; p.cleared = false; p.mesh.visible = true; gearTable.attach(p.mesh); p.mesh.position.copy(p.grab.home); });
+  belt.visible = false; wornHelmet.visible = false; lanyardHook.visible = false; lanyardLine.visible = false;
+  eyeA.attach(burlap); burlap.position.set(0, -0.02, 0); burlap.scale.set(1, 1, 1); burlap.rotation.set(0, 0, 0); burlap.visible = true;
+  radioLines.length = 0; radioLogEl.innerHTML = ''; document.getElementById('vignette').classList.remove('on');
+  playerRig.position.set(0, 0, 0); player.safe.set(0, 0, 0);
+}
+function enterHolodeck(mode) {
+  game.mode = mode; game.phase = 'lobby'; game.running = true; game.paused = false; game.over = false;
+  holodeck.visible = true; arena.visible = false; scene.background.set(0x07070c); hemi.intensity = 0.9; key.intensity = 0.4;
+  playerRig.position.set(0, mode === 'vr' && refTypeUsed === 'local' ? 1.6 : 0, -HD.size / 2 + 0.9); // stand in the arch, facing into the room
+  playerRig.rotation.y = mode === 'vr' ? Math.PI : 0;
+  if (mode === 'desk') { camera.position.set(0, 1.6, 0); player.yaw = Math.PI; player.pitch = 0; camera.rotation.set(0, 0, 0); }
+  lobbyEl.style.display = 'none'; hudEl.style.display = 'block'; pauseEl.hidden = true;
+  document.getElementById('c-eyebrow').textContent = 'Holodeck'; game.step = 0; hudDirty = true; vrPanelDirty = true;
+  AudioKit.unlock(); AudioKit.program();
+  toast('Point at a build and pull the trigger');
+}
+let programFade = 0;
+function startProgram(prog) {
+  game.prog = prog; document.querySelectorAll('.prog').forEach(b => b.classList.toggle('is-on', b.dataset.prog === prog));
+  programFade = 1; AudioKit.program();
+  setTimeout(() => {
+    resetWorld(); game.phase = 'arena'; holodeck.visible = false; arena.visible = true;
+    scene.background.set(0x0b0a0e); hemi.intensity = 0.55; key.intensity = 1.0;
+    playerRig.position.set(GEAR_X + 1.0, H + (game.mode === 'vr' && refTypeUsed === 'local' ? 1.6 : 0), 0.6); playerRig.rotation.y = 0; player.safe.copy(playerRig.position);
+    if (game.mode === 'desk') { player.yaw = 0; player.pitch = 0; }   // facing out over the arena
+    document.getElementById('c-eyebrow').textContent = (prog === 'split15' ? 'Split 15' : '10 Basket') + ' · 108 ft';
+    setStep(1); radio('Ground', 'Morning. Building your ' + (prog === 'split15' ? 'split 15' : '10 basket') + ' down here. Get your gear on.', 2);
+  }, 700);
+}
+function endProgram(ok, title, body) {
+  if (game.over) return; game.over = true; game.result = ok; game.paused = true;
+  document.getElementById('p-eyebrow').textContent = ok ? 'Program complete' : 'Program halted';
+  const t = document.getElementById('p-title'); t.textContent = title; t.className = ok ? '' : 'bad';
+  document.getElementById('p-body').textContent = body;
+  const st = document.getElementById('p-stats'); st.hidden = false;
+  const m = Math.floor(game.t / 60), s = Math.floor(game.t % 60);
+  st.innerHTML = [['Time', m + ':' + (s < 10 ? '0' : '') + s], ['Things dropped', game.drops], ['Rope dropped in', game.ropeDrops], ['Falls arrested', game.falls], ['Seconds on the beam unclipped', game.unclippedOnBeam.toFixed(0)],
+    ['Worst drift', (game.bestDrift * 3.281).toFixed(1) + ' ft'], ['Apex fouls', game.fouls], ['Pulled before the go', game.earlyPulls], ['PROCS misses', game.procsMisses]].map(([k, v]) => '<dt>' + k + '</dt><dd>' + v + '</dd>').join('');
+  document.getElementById('btn-resume').hidden = true; document.getElementById('btn-retry').hidden = false;
+  pauseEl.hidden = false; vrPanelDirty = true; if (ok) AudioKit.program(); else AudioKit.alarm();
+}
+function setPause(on) {
+  if (game.over) return; game.paused = on; pauseEl.hidden = !on;
+  document.getElementById('p-eyebrow').textContent = 'Holodeck'; const t = document.getElementById('p-title'); t.textContent = 'Program suspended'; t.className = '';
+  document.getElementById('p-body').textContent = ''; document.getElementById('p-stats').hidden = true;
+  document.getElementById('btn-resume').hidden = false; document.getElementById('btn-retry').hidden = true; vrPanelDirty = true;
+}
+function quitToArch() { game.paused = false; game.over = false; pauseEl.hidden = true; resetWorld(); enterHolodeck(game.mode); }
+document.getElementById('btn-resume').addEventListener('click', () => setPause(false));
+document.getElementById('btn-retry').addEventListener('click', () => { game.paused = false; pauseEl.hidden = true; startProgram(game.prog); });
+document.getElementById('btn-quit').addEventListener('click', quitToArch);
+
+/* pedestal picking: a ray from the hand (or the desktop gaze) */
+const _ray = new THREE.Raycaster();
+function handRay(h) {
+  if (game.mode === 'desk') { _ray.setFromCamera({ x: 0, y: 0 }, camera); return _ray; }
+  const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(h.quat); _ray.set(h.pos, dir); return _ray;
+}
+function pedestalUnder(h) { const r = handRay(h); const hits = r.intersectObjects(pedestals, true); return hits.length ? hits[0].object.parent.userData.prog ? hits[0].object.parent : pedestals.find(p => p.getObjectById(hits[0].object.id)) : null; }
+function pickProgramWithRay(h) { const p = pedestalUnder(h); if (p) startProgram(p.userData.prog); }
+function lobbyTick() {
+  pedestals.forEach(p => p.userData.hot = false);
+  hands.forEach(h => { if (!h.active && game.mode !== 'desk') return; const p = pedestalUnder(h); if (p) p.userData.hot = true; });
+  pedestals.forEach(p => { p.userData.ring.scale.setScalar(p.userData.hot ? 1.5 + 0.1 * Math.sin(game.t * 8) : 1); });
+  document.getElementById('reticle').classList.toggle('hit', pedestals.some(p => p.userData.hot));
+}
+
+/* ───────────────────── HUD (DOM) and the VR panel ───────────────────── */
+const hStep = document.getElementById('h-step'), hAlt = document.getElementById('h-alt'), hClip = document.getElementById('h-clip'), hRope = document.getElementById('h-rope'), hDrops = document.getElementById('h-drops'), hTime = document.getElementById('h-time');
+const cTitle = document.getElementById('c-title'), cBody = document.getElementById('c-body'), cList = document.getElementById('c-list');
+function hudTick() {
+  const m = Math.floor(game.t / 60), s = Math.floor(game.t % 60); hTime.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+  if (!hudDirty) return; hudDirty = false;
+  hStep.textContent = game.step || '—';
+  hAlt.textContent = Math.round((_head.y - 0) * 3.281) + ' ft';
+  hClip.textContent = lanyard.clipped ? (lanyard.anchor === 'lifeline' ? 'LIFELINE' : 'RAIL') : 'OPEN'; hClip.className = 'val ' + (lanyard.clipped ? 'good' : 'bad');
+  const ra = rope.state === 'coil' ? 'COIL' : rope.state === 'gone' ? 'GONE' : rope.anchor === 'hitch' ? (rope.knot === 'wrap' ? 'WRAP!' : rope.knot === 'clove' ? 'CLOVE' : 'HITCHED') : rope.anchor === 'pcd' ? 'PCD' : rope.anchor === 'hand' ? 'IN HAND' : rope.anchor === 'foot' ? 'UNDERFOOT' : 'LOOSE!';
+  hRope.textContent = ra; hRope.className = 'val ' + (ra === 'LOOSE!' || ra === 'WRAP!' || ra === 'GONE' ? 'bad' : 'good');
+  hDrops.textContent = game.drops; hDrops.className = 'val ' + (game.drops ? 'bad' : '');
+  const st = STEPS[game.step];
+  if (game.phase === 'lobby') { cTitle.textContent = 'Choose a build'; cBody.textContent = 'Two pedestals in front of the arch: a split 15 or a 10 basket. Point and pull the trigger (desktop: look at one and click).'; cList.innerHTML = ''; }
+  else if (st) { cTitle.textContent = game.step + ' · ' + st.title; cBody.textContent = st.body; cList.innerHTML = st.list().map(i => '<li class="' + (i.ok ? 'done' : i.bad ? 'bad' : '') + '">' + i.t + '</li>').join(''); }
+  vrPanelDirty = true;
+}
+/* the VR card: a canvas panel that hangs a little below your line of sight and follows lazily */
+let vrPanelDirty = true;
+const panelCanvas = document.createElement('canvas'); panelCanvas.width = 768; panelCanvas.height = 512;
+const panelTex = new THREE.CanvasTexture(panelCanvas); panelTex.encoding = THREE.sRGBEncoding;
+const vrPanel = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.5), new THREE.MeshBasicMaterial({ map: panelTex, transparent: true, name: 'Mat_VRPanel' }));
+vrPanel.name = 'VR_StepPanel'; vrPanel.visible = false; scene.add(vrPanel);
+function wrapText(x, text, maxW, lineH, px, py, maxLines) { const words = text.split(' '); let line = '', n = 0; for (const w of words) { const t = line ? line + ' ' + w : w; if (x.measureText(t).width > maxW && line) { x.fillText(line, px, py); py += lineH; line = w; if (++n >= maxLines) return py; } else line = t; } if (line) x.fillText(line, px, py); return py + lineH; }
+function drawVRPanel() {
+  const x = panelCanvas.getContext('2d'); x.clearRect(0, 0, 768, 512);
+  x.fillStyle = 'rgba(12,12,19,0.82)'; x.fillRect(0, 0, 768, 512); x.fillStyle = '#ff9c00'; x.fillRect(0, 0, 10, 512);
+  if (game.paused) { // the pause / result card, since the DOM one is invisible in the headset
+    x.fillStyle = '#cc99cc'; x.font = '400 20px Antonio, Arial Narrow, sans-serif'; x.fillText(document.getElementById('p-eyebrow').textContent.toUpperCase(), 30, 36);
+    x.fillStyle = game.over && !game.result ? '#e5484d' : '#f2c14e'; x.font = '700 40px Antonio, Arial Narrow, sans-serif'; x.fillText(document.getElementById('p-title').textContent.toUpperCase(), 30, 84);
+    x.fillStyle = '#e8e4d8'; x.font = '300 21px Titillium Web, Segoe UI, sans-serif'; let y = wrapText(x, document.getElementById('p-body').textContent || 'Trigger resumes. A / X returns to the arch.', 700, 27, 30, 122, 5);
+    if (game.over) { x.fillStyle = '#8d8a7b'; x.font = '400 20px Titillium Web, Segoe UI, sans-serif'; Array.from(document.querySelectorAll('#p-stats dt')).forEach((dt, i) => { x.fillText(dt.textContent + ': ' + dt.nextElementSibling.textContent, 30, y); y += 26; });
+      x.fillStyle = '#99ccff'; x.font = '600 22px Antonio, Arial Narrow, sans-serif'; x.fillText('A / X — RUN IT AGAIN', 30, 480); }
+    panelTex.needsUpdate = true; return; }
+  const st = STEPS[game.step];
+  x.fillStyle = '#cc99cc'; x.font = '400 20px Antonio, Arial Narrow, sans-serif';
+  x.fillText((game.phase === 'lobby' ? 'HOLODECK' : (game.prog === 'split15' ? 'SPLIT 15' : '10 BASKET') + ' · ' + Math.round(_head.y * 3.281) + ' FT · ' + (lanyard.clipped ? 'CLIPPED' : 'NOT CLIPPED') + ' · ROPE ' + hRope.textContent).toUpperCase(), 30, 36);
+  x.fillStyle = '#f2c14e'; x.font = '700 40px Antonio, Arial Narrow, sans-serif';
+  x.fillText(game.phase === 'lobby' ? 'CHOOSE A BUILD' : (game.step + ' · ' + st.title).toUpperCase(), 30, 84);
+  x.fillStyle = '#e8e4d8'; x.font = '300 21px Titillium Web, Segoe UI, sans-serif';
+  let y = wrapText(x, game.phase === 'lobby' ? cBody.textContent : st.body, 700, 27, 30, 122, 6);
+  if (st && game.phase !== 'lobby') { x.font = '400 21px Titillium Web, Segoe UI, sans-serif'; st.list().forEach(i => { x.fillStyle = i.ok ? '#5ad38a' : i.bad ? '#e5484d' : '#8d8a7b'; x.fillText((i.ok ? '✓ ' : i.bad ? '✕ ' : '· ') + i.t, 30, y); y += 27; }); }
+  if (radioLines.length) { const l = radioLines[radioLines.length - 1]; x.fillStyle = '#99ccff'; x.font = '400 20px Titillium Web, Segoe UI, sans-serif'; wrapText(x, '📻 ' + l.who + ': ' + l.text, 700, 25, 30, 470, 2); }
+  if (lastToast && perfNow() - lastToast.t < 3) { x.fillStyle = lastToast.bad ? '#e5484d' : '#99ccff'; x.font = '600 24px Antonio, Arial Narrow, sans-serif'; x.fillText(lastToast.msg.toUpperCase(), 30, 440); }
+  panelTex.needsUpdate = true;
+}
+const _pf = new THREE.Vector3(), _pq = new THREE.Quaternion();
+function vrPanelTick(dt) {
+  vrPanel.visible = renderer.xr.isPresenting && game.running;
+  if (!vrPanel.visible) return;
+  if (vrPanelDirty || (lastToast && perfNow() - lastToast.t < 3.2)) { vrPanelDirty = false; drawVRPanel(); }
+  camera.getWorldQuaternion(_pq); const yaw = new THREE.Euler().setFromQuaternion(_pq, 'YXZ').y;
+  _pf.set(-Math.sin(yaw), 0, -Math.cos(yaw)).multiplyScalar(1.2).add(_head); _pf.y = _head.y - 0.45;
+  vrPanel.position.lerp(_pf, Math.min(1, dt * 4)); vrPanel.lookAt(_head);
+}
+
+/* ───────────────────── desktop input ───────────────────── */
+let refTypeUsed = 'local-floor';
+const keys = {}; let pointerLocked = false, deskReach = 0.7;
+const canvasEl = renderer.domElement;
+addEventListener('keydown', e => { keys[e.code] = true;
+  if (!game.running) return;
+  if (e.code === 'KeyP') { setPause(!game.paused); }
+  if (e.code === 'KeyR') keyRadio();
+  if (e.code === 'KeyF') { hands[0].trig = true; }
+  if (e.code === 'KeyE') deskReach = deskReach > 0.75 ? 0.5 : deskReach + 0.15;
+});
+addEventListener('keyup', e => { keys[e.code] = false; if (e.code === 'KeyF') hands[0].trig = false; });
+canvasEl.addEventListener('mousedown', e => { if (!game.running || game.mode !== 'desk') return; AudioKit.unlock();
+  if (!pointerLocked) { canvasEl.requestPointerLock && canvasEl.requestPointerLock(); }
+  if (e.button === 0) hands[0].grip = true; if (e.button === 2) hands[0].trig = true; });
+addEventListener('mouseup', e => { if (e.button === 0) hands[0].grip = false; if (e.button === 2) hands[0].trig = false; });
+canvasEl.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('pointerlockchange', () => { pointerLocked = document.pointerLockElement === canvasEl; });
+addEventListener('mousemove', e => { if (!pointerLocked || game.mode !== 'desk' || game.paused) return;
+  player.yaw -= e.movementX * 0.0022; player.pitch = Math.max(-1.4, Math.min(1.4, player.pitch - e.movementY * 0.0022)); });
+addEventListener('wheel', e => { if (!game.running || game.mode !== 'desk' || game.paused) return;
+  const held = heldOf(0); if (!held) return;
+  if (held.kind === 'ropeEnd' && nearHitchRail(hands[0].pos)) { rope.acc += (e.deltaY > 0 ? 1 : -1) * Math.PI / 3; const t = Math.floor((Math.abs(rope.acc) + 0.6) / (2 * Math.PI)); if (t !== rope.turns) { rope.turns = t; AudioKit.click(); toast(t + (t === 1 ? ' turn' : ' turns') + ' on the rail'); } }
+  else if (held.kind === 'ropePull' && e.deltaY > 0) { haulBy(0.35 * SETTINGS.haul / 3); AudioKit.haul(); }
+  else if (held.kind === 'conn' && bridle.twist) { clearTwist(); }
+}, { passive: true });
+function desktopTick(dt) {
+  if (game.mode !== 'desk') return;
+  camera.rotation.set(0, 0, 0); camera.rotation.order = 'YXZ'; camera.rotation.y = player.yaw; camera.rotation.x = player.pitch;
+  camera.position.set(0, keys.KeyC ? 1.0 : 1.6, 0);
+  if (!game.paused && !player.falling) {
+    const sp = (keys.ShiftLeft ? 2.4 : 1.4) * dt, f = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw)), r = new THREE.Vector3(f.z, 0, -f.x);
+    let dx = 0, dz = 0;
+    if (keys.KeyW) { dx += f.x * sp; dz += f.z * sp; } if (keys.KeyS) { dx -= f.x * sp; dz -= f.z * sp; }
+    if (keys.KeyD) { dx += r.x * sp; dz += r.z * sp; } if (keys.KeyA) { dx -= r.x * sp; dz -= r.z * sp; }
+    if (dx || dz) { if (game.phase === 'arena') moveRig(dx, dz); else { playerRig.position.x += dx; playerRig.position.z += dz; } }
+  }
+  // the desktop hand: a point out along the gaze
+  const h = hands[0]; h.active = true; h.mesh.visible = false;
+  if (!window.RIG_PIN_HAND) { camera.getWorldQuaternion(h.quat); camera.getWorldPosition(h.pos); h.pos.addScaledVector(new THREE.Vector3(0, 0, -1).applyQuaternion(h.quat), deskReach); h.pos.y -= 0.12; }
+  hands[1].active = false;
+  document.getElementById('reticle').classList.toggle('hit', !!grabCandidate(h) || heldOf(0) !== null);
+}
+
+/* ───────────────────── VR controllers ───────────────────── */
+const vrControllers = [];
+for (let i = 0; i < 2; i++) {
+  const c = renderer.xr.getController(i); c.name = 'Controller' + i; const h = hands[i];
+  c.addEventListener('connected', e => { h.src = e.data; h.active = true; });
+  c.addEventListener('disconnected', () => { h.src = null; h.active = false; });
+  c.addEventListener('selectstart', () => { h.trig = true; });
+  c.addEventListener('selectend', () => { h.trig = false; });
+  c.addEventListener('squeezestart', () => { h.grip = true; });
+  c.addEventListener('squeezeend', () => { h.grip = false; });
+  playerRig.add(c); vrControllers.push(c);
+}
+function vrTick(dt) {
+  if (!renderer.xr.isPresenting) return;
+  for (let i = 0; i < 2; i++) {
+    const c = vrControllers[i], h = hands[i]; if (!h.active) { h.mesh.visible = false; continue; }
+    c.getWorldPosition(h.pos); c.getWorldQuaternion(h.quat);
+    h.pos.addScaledVector(new THREE.Vector3(0, 0, -1).applyQuaternion(h.quat), 0.06);
+    h.mesh.visible = true; h.mesh.position.copy(h.pos); h.mesh.quaternion.copy(h.quat); h.ray.visible = game.phase === 'lobby';
+    const gp = h.src && h.src.gamepad; if (!gp || !gp.buttons) continue;
+    const lower = !!(gp.buttons[4] && gp.buttons[4].pressed), upper = !!(gp.buttons[5] && gp.buttons[5].pressed);
+    const ax = gp.axes && gp.axes.length > 3 ? gp.axes[2] : 0, ay = gp.axes && gp.axes.length > 3 ? gp.axes[3] : 0;
+    if (game.paused) {
+      if (lower && !h.prevLower) { if (game.over) { game.paused = false; pauseEl.hidden = true; startProgram(game.prog); } else quitToArch(); }
+      if (h.trig && !h.prevTrig && !game.over) setPause(false);
+      h.lowerFired = true;
+    } else {
+      if (lower && !h.prevLower) { h.lowerT = perfNow(); h.lowerFired = false; }
+      if (lower && !h.lowerFired && perfNow() - h.lowerT > 0.6) { h.lowerFired = true; setPause(true); }
+      if (upper && !h.prevUpper) keyRadio();
+      // thumbstick: walk, relative to where you look; the left stick by convention, both work
+      if ((Math.abs(ax) > 0.2 || Math.abs(ay) > 0.2) && !player.falling) {
+        const yaw = new THREE.Euler().setFromQuaternion(camera.getWorldQuaternion(new THREE.Quaternion()), 'YXZ').y;
+        const f = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new THREE.Vector3(f.z, 0, -f.x);
+        const sp = 1.2 * dt; const dx = (f.x * -ay + r.x * ax) * sp, dz = (f.z * -ay + r.z * ax) * sp;
+        if (game.phase === 'arena') moveRig(dx, dz); else { playerRig.position.x += dx; playerRig.position.z += dz; }
+      }
+    }
+    h.prevLower = lower; h.prevUpper = upper;
+  }
+}
+/* grip / trigger edges, shared by both input paths */
+function handsTick(dt) {
+  for (const h of hands) {
+    if (!h.active) { h.prevGrip = h.grip; h.prevTrig = h.trig; continue; }
+    if (!game.paused) {
+      if (h.grip && !h.prevGrip) grabStart(h);
+      if (!h.grip && h.prevGrip) grabEnd(h);
+      if (h.trig && !h.prevTrig) triggerAction(h);
+      const held = heldOf(h.index);
+      if (held) {
+        // carried things ride the hand
+        if (held.kind === 'gear' || held.kind === 'pocket' || held.kind === 'burlap') { arena.attach(held.mesh); held.mesh.position.copy(h.pos); held.mesh.quaternion.copy(h.quat); }
+        if (held.kind === 'ropeEnd' && rope.state === 'deployed' && rope.knot !== 'clove+half' && !rope.pcdFed) knotTick(h.pos);
+        if (held.kind === 'ropePull') { const dy = h.pos.y - h.prevPos.y; if (dy < 0) { haulBy(-dy * SETTINGS.haul); if (Math.random() < 0.08) AudioKit.haul(); } }
+      }
+    }
+    h.prevGrip = h.grip; h.prevTrig = h.trig; h.prevPos.copy(h.pos);
+  }
+}
+
+/* ───────────────────── lobby DOM ───────────────────── */
+const xrStatus = document.getElementById('xrstatus'), btnVR = document.getElementById('btn-vr'), btnPop = document.getElementById('btn-pop'), btnDesk = document.getElementById('btn-desk');
+const isFramed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+const hasRealURL = /^https?:/.test(location.href) && !/blob:/.test(location.href);
+if (isFramed && hasRealURL) btnPop.href = location.href;
+let lastVRError = '';
+function drawDiag(s) { document.getElementById('diag').textContent = 'xr: ' + s + (lastVRError ? ' · ' + lastVRError : '') + ' · three r' + THREE.REVISION + ' · body-tracking joints seen: ' + bodyJointsSeen; }
+document.querySelectorAll('.prog').forEach(b => b.addEventListener('click', () => { game.prog = b.dataset.prog; document.querySelectorAll('.prog').forEach(x => x.classList.toggle('is-on', x === b));
+  document.getElementById('prog-hint').textContent = b.dataset.prog === 'split15' ? 'A 5 and a 10 shackled together. The 5 wraps the beam; the 10 swings under and its shackle mates to the eye of the 5. The ground rigger\'s bowline is a 12-inch loop in the eye of the 5.'
+    : 'One 10-foot wire rope. One eye is in the shackle with the ground rigger\'s 3-foot bowline; the other swings over the beam, under, and back to mate in the same shackle.'; }));
+document.getElementById('btn-settings').addEventListener('click', e => { const s = document.getElementById('settings'); s.hidden = !s.hidden; e.currentTarget.setAttribute('aria-expanded', String(!s.hidden)); });
+function bindRange(id, key, fmt) { const el = document.getElementById(id), out = document.getElementById('o-' + id.slice(2)); const show = () => { el.value = SETTINGS[key]; out.textContent = fmt(SETTINGS[key]); };
+  el.addEventListener('input', () => { SETTINGS[key] = parseFloat(el.value); out.textContent = fmt(SETTINGS[key]); saveSettings(); if (key === 'vol') AudioKit.setVol(SETTINGS.vol); }); show(); return show; }
+const shows = [bindRange('s-edge', 'edge', v => (v * 39.37).toFixed(0) + ' in'), bindRange('s-haul', 'haul', v => v + '×'), bindRange('s-pace', 'pace', v => (v * 3.281).toFixed(1) + ' ft/s'), bindRange('s-turns', 'turns', v => v), bindRange('s-vol', 'vol', v => Math.round(v * 100) + '%')];
+const bodyChk = document.getElementById('s-body'); bodyChk.checked = SETTINGS.body; bodyChk.addEventListener('change', () => { SETTINGS.body = bodyChk.checked; saveSettings(); });
+document.getElementsByName('dom').forEach(r => { r.checked = r.value === SETTINGS.dom; r.addEventListener('change', () => { SETTINGS.dom = r.value; saveSettings(); }); });
+document.getElementById('btn-reset').addEventListener('click', () => { Object.assign(SETTINGS, DEFAULTS); saveSettings(); shows.forEach(f => f()); bodyChk.checked = SETTINGS.body; document.getElementsByName('dom').forEach(r => r.checked = r.value === SETTINGS.dom); });
+
+btnDesk.addEventListener('click', () => { enterHolodeck('desk'); setTimeout(() => canvasEl.requestPointerLock && canvasEl.requestPointerLock(), 50); });
+function offerStandalone(msg) { if (isFramed && hasRealURL) { btnPop.hidden = false; xrStatus.textContent = msg + '. Try OPEN STANDALONE, then enter from the new tab.'; } else xrStatus.textContent = msg + ' — desktop walkthrough only.'; btnVR.disabled = !(navigator.xr); }
+if (navigator.xr && navigator.xr.isSessionSupported) {
+  navigator.xr.isSessionSupported('immersive-vr').then(ok => { drawDiag(ok ? 'yes' : 'NO');
+    if (ok) { xrStatus.textContent = 'Headset detected — the holodeck is ready.'; xrStatus.classList.add('ok'); btnVR.disabled = false; if (isFramed && hasRealURL) btnPop.hidden = false; }
+    else offerStandalone('This browser reports no immersive VR'); })
+    .catch(err => { lastVRError = (err && (err.name + ': ' + err.message)) || String(err); drawDiag('REFUSED'); offerStandalone('VR check refused'); });
+} else { xrStatus.textContent = 'WebXR not available in this browser — desktop walkthrough only.'; drawDiag('n/a'); }
+btnVR.addEventListener('click', async () => {
+  try {
+    let session, refType = 'local-floor';
+    try { session = await navigator.xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor', 'body-tracking', 'hand-tracking'] }); }
+    catch (e1) { session = await navigator.xr.requestSession('immersive-vr'); refType = 'local'; }
+    renderer.xr.setReferenceSpaceType(refType);
+    try { await renderer.xr.setSession(session); }
+    catch (e2) { refType = 'local'; renderer.xr.setReferenceSpaceType('local'); await renderer.xr.setSession(session); }
+    refTypeUsed = refType; enterHolodeck('vr');
+    session.addEventListener('end', () => { game.running = false; game.phase = 'lobby'; game.mode = null; lobbyEl.style.display = 'flex'; hudEl.style.display = 'none'; pauseEl.hidden = true;
+      playerRig.position.set(0, 0, 0); playerRig.rotation.y = 0; camera.position.set(0, 1.6, 0); camera.rotation.set(0, 0, 0); renderer.xr.setReferenceSpaceType('local-floor'); drawDiag('ended'); });
+  } catch (err) { lastVRError = (err && (err.name + ': ' + err.message)) || String(err); drawDiag('start-failed');
+    xrStatus.textContent = isFramed && hasRealURL ? 'The embedded viewer is blocking headset tracking. Tap OPEN STANDALONE, then enter from the new tab.' : 'Could not start VR: ' + (err.message || err); xrStatus.classList.remove('ok'); if (isFramed && hasRealURL) btnPop.hidden = false; }
+});
+
+/* ───────────────────── main loop ───────────────────── */
+let lastT = perfNow();
+const gridFlash = holodeck.getObjectByName('Holodeck_GridEmitters');
+renderer.setAnimationLoop((time, frame) => {
+  const now = perfNow(); const dt = Math.min(0.05, now - lastT); lastT = now;
+  if (game.running && !game.paused) game.t += dt;
+  if (game.running) {
+    desktopTick(dt); vrTick(dt); bodyTick(); handsTick(dt);
+    if (!game.paused) {
+      if (game.phase === 'lobby') lobbyTick();
+      else { playerTick(dt); lanyardTick(); ropeTick(dt); bridleTick(dt); fallingTick(dt); stepTick(dt); }
+    }
+    if (renderer.xr.isPresenting) feetTick(frame || (renderer.xr.getFrame && renderer.xr.getFrame())); else feetTick(null);
+    hudTick(); vrPanelTick(dt);
+    if (programFade > 0) { programFade = Math.max(0, programFade - dt * 1.4); if (gridFlash && gridFlash.material) gridFlash.material.opacity = 0.85 + programFade * 0.15; }
+  }
+  renderer.render(scene, camera);
+});
+
+/* debug / test hooks: drive the flow without a headset */
+window.RIG = { game, rope, bridle, lanyard, gear, pocket, pcd, hands, player, SETTINGS, WORLD, enterHolodeck, startProgram, setStep, wearGear, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, groundTiesIn, endProgram, STEPS, grabbables, playerRig, camera, scene, holodeck, arena };
+</script>
+</body>
+</html>
