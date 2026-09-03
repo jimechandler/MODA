@@ -249,7 +249,7 @@
         <dt>Feet</dt><dd>Where the headset says they are. Stand on the rope to hold it; step off the beam and gravity has you</dd>
         <dt>Desktop</dt><dd>Mouse look · WASD walk · <b>left mouse = grip</b> · right mouse / F = trigger · mouse wheel wraps a knot or hauls · E reach · R radio · P pause</dd>
       </dl>
-      <p class="footnote">M0.10 &mdash; bars you cannot pull rope through, a rope that lies still and does not fling, a bight in the hand. On Quest, open this page in the headset browser.
+      <p class="footnote">M0.12 &mdash; balance by centre of gravity: lean out over the edge with your feet planted, get a warning and a moment when your weight goes over, longer crouched or sitting. On Quest, open this page in the headset browser.
         If the Enter button stays unavailable inside an embedded viewer, open the page in its own tab.</p>
       <p class="footnote" id="diag" style="font-family:monospace;font-size:11px;color:#6a6a5c;line-height:1.6"></p>
     </div>
@@ -1298,7 +1298,7 @@ function pcdSlideTick() {
       const between = (handPin(h.index) - rope.pcdIdx) * R.L0 / Math.max(1, SETTINGS.haul);
       if (h.pos.distanceTo(P) < between * 0.97) break;
       if (!haulAllowed()) { if (!rope.refuseAt || game.t - rope.refuseAt > 2) { rope.refuseAt = game.t; AudioKit.deny(); } haptic(h, 0.3, 80); break; }   // a pull that is refused feels and sounds refused, whatever the reason on the board
-      pinClear(rope.pcdIdx); rope.pcdIdx--; pinSet(rope.pcdIdx, 'pcd', P); moved = true;
+      pcdSlideOne(P); moved = true;
     }
     if (moved) { ropeHauledFromPCD(); if (Math.random() < 0.3) AudioKit.haul(); haptic(h, 0.6, 30); }
   }
@@ -1312,12 +1312,27 @@ function pcdSlideTick() {
     if (rope.hauled <= 0.01) runBackLanded();
   }
 }
+/* one segment through the device. The rope below it is inextensible, so all of it that is hanging
+   moves up one segment with it — moved outright, with no speed left over (the old re-pin let the
+   chain drag the hang up a step late, and thirty metres of rope arriving at thirty metres a second
+   does not stop where the hand stopped). What lies on the floor stays and is pulled up in its turn. */
+const _slide = new THREE.Vector3();
+function pcdSlideOne(P) {
+  const k = rope.pcdIdx; pinClear(k); rope.pcdIdx = k - 1; pinSet(k - 1, 'pcd', P); R.prev[k - 1].copy(P);
+  // transport: every particle below the device steps into the place of the one above it, along the
+  // rope's own path — the hang, the pile and the end all advance one segment, nothing stretches
+  for (let i = 0; i <= k - 2; i++) { if (_pinned[i]) break; R.pos[i].copy(R.pos[i + 1]); R.prev[i].copy(R.pos[i]); }
+  // tied to the steel, the end cannot step forward on its own: when the strand from the eye to the device is taut it is
+  // a straight line, and the particles are spaced evenly along it (the stretch is then the eye's to answer, in steelStep)
+  if (_pinned[0] && S.active && !bridle.arrived) { const kk = rope.pcdIdx; const e = R.pos[0]; const D = e.distanceTo(P); const strand = kk * R.L0;
+    if (strand < D * 1.02) { for (let i = 1; i < kk; i++) { R.pos[i].copy(e).lerp(P, i / kk); R.prev[i].copy(R.pos[i]); } } }
+}
 function ropeHauledFromPCD() { const P = R.pins.get(rope.pcdIdx).target; rope.hauled = Math.max(0, P.y - rope.pcdIdx * R.L0 * 0.98); hudDirty = true; }
 /* test / desktop hook: pass this much rope through the device */
 function haulBy(dy) {
   if (!rope.pcdFed) return; const P = R.pins.get(rope.pcdIdx).target;
   const steps = Math.max(1, Math.round(dy / R.L0));
-  for (let s = 0; s < steps; s++) { if (rope.pcdIdx <= 1) break; if (!haulAllowed()) break; pinClear(rope.pcdIdx); rope.pcdIdx--; pinSet(rope.pcdIdx, 'pcd', P); }
+  for (let s = 0; s < steps; s++) { if (rope.pcdIdx <= 1) break; if (!haulAllowed()) break; pcdSlideOne(P); }
   ropeHauledFromPCD();
 }
 
@@ -1394,15 +1409,23 @@ function ropeTick(dt) {
     if (best >= 0) { pinSet(best, 'foot', new THREE.Vector3(f.x, R.pos[best].y, f.z), { foot: fi }); haptic(hands[fi], 0.4, 40); if (!rope.footToast || game.t - rope.footToast > 4) { rope.footToast = game.t; toast('Standing on the rope'); } }
   });
   // the ground rigger carrying the far end to the point
-  if (rope.groundCarry && !rope.bowline) { const pin = R.pins.get(0); const to = new THREE.Vector3(SLING_X + 0.1, 0.4, WORLD.slingZ); if (pin && pin.kind === 'ground') { pin.target.lerp(to, Math.min(1, dt * 0.6)); groundRigger.position.set(pin.target.x + 0.4, 0, pin.target.z + 0.3); } }
+  if (rope.groundCarry && !rope.bowline) { const pin = R.pins.get(0); const to = new THREE.Vector3(SLING_X + 0.1, 0.4, WORLD.slingZ); if (pin && pin.kind === 'ground') {
+    // the ground rigger walks the end to the point and drags the pile on the floor along with it (150 feet is 108 down and 42 of slack: the slack has to come too)
+    _rv.copy(pin.target); pin.target.lerp(to, Math.min(1, dt * 0.6)); _rv.sub(pin.target).multiplyScalar(-1);
+    for (let i = 1; i < R.n; i++) { if (R.pos[i].y < 0.25 && !R.pins.has(i)) { R.pos[i].x += _rv.x; R.pos[i].z += _rv.z; R.prev[i].x += _rv.x; R.prev[i].z += _rv.z; } }
+    groundRigger.position.set(pin.target.x + 0.4, 0, pin.target.z + 0.3); } }
   // the bridle eye holds the far end once you are tied in
-  if (rope.bowline) { const e = eyeAPos(new THREE.Vector3()); e.y += 0.06; const pin = R.pins.get(0); if (pin) pin.target.copy(e); else pinSet(0, 'eye', e); }
+  if (rope.bowline) { const e = eyeAPos(new THREE.Vector3()); if (!S.active || bridle.arrived) e.y += 0.06; const pin = R.pins.get(0); if (pin) pin.target.copy(e); else pinSet(0, 'eye', e); }   // the rope's end is the eye
   coilTick();
   ropeCoarseBuild(); ropeSelfBuild();
   R.pins.forEach(pin => { if (pin.kind === 'coil') return; if (!pin.from) pin.from = pin.target.clone(); else if (pin.from.distanceTo(pin.target) > 0.5) pin.from.copy(pin.target); });   // a pin that leapt (re-pinned elsewhere) starts fresh
   const sub = dt / R.substeps; for (let s = 0; s < R.substeps; s++) ropeStep(sub, (s + 1) / R.substeps);
   R.pins.forEach(pin => { if (pin.from) pin.from.copy(pin.target); });
   pcdSlideTick();
+  // what the rope is pulling the eye with: the stretch left in the strand from the device down to the
+  // end. The steel moves the eye up the rope by that much (steelStep) — the rope comes taut, the load follows.
+  if (S.active && rope.pcdFed && !bridle.arrived) { let ex = 0; const k = rope.pcdIdx; for (let i = 0; i < k; i++) { const d = R.pos[i].distanceTo(R.pos[i + 1]); if (d > R.L0) ex += d - R.L0; }
+    S.ropePull = Math.min(Math.max(0, ex - 0.002 * k * R.L0) * 0.6, 0.25); S.ropeDir.copy(R.pos[Math.min(k, 3)]).sub(R.pos[0]).normalize(); }   // less the solver's own residual (~0.2 %), and gently
   if (R.world === 'knots') { benchTick(dt); hudDirty = true; return; }
   // landing
   if (!rope.landed && R.pos[0].y < 0.1) { rope.landed = true; rope.deployT = -1; AudioKit.thud(); radio('Ground', 'Rope\'s down. I\'ve got the end.', 1); pinSet(0, 'ground', R.pos[0]); flakeCoil(); }
@@ -1638,6 +1661,7 @@ function eyeOnLine(P, out, ropeOut, dir) {
 }
 function eyeAPos(out) {
   const top = H - 0.1;
+  if (S.active && !bridle.arrived) return out.copy(S.pos[S.legA[0]]);   // the eye is where the steel is
   if (!rope.pcdFed || bridle.arrived) return out.set(SLING_X, Math.min(rope.hauled, top), WORLD.slingZ);
   bridleGeometry(); return eyeOnLine(_PA, out, Math.max(0, _PA.y - Math.min(rope.hauled, top)), _dirA);
 }
@@ -1647,23 +1671,25 @@ function bridleTick(dt) {
   bridleGroup.visible = rope.state === 'deployed' && rope.bowline;
   if (!bridleGroup.visible) return;
   const L = bridle.legLen;
-  eyeAPos(_ea); eyeOnLine(_PB, _eb, Math.max(0, _PB.y - Math.min(bridle.hauledB, H - 0.1)), _dirB);
-  if (bridle.arrived) { bridleGeometry(); }
+  const live = S.active && !bridle.arrived;   // the steel is simulated until it is at the beam; the wrap at the beam is the scripted part
+  if (live) { _ea.copy(S.pos[S.legA[0]]); _eb.copy(S.pos[S.legB[0]]); _ap.copy(S.pos[S.sh.pin]); _apexG.copy(_ap); }
+  else { eyeAPos(_ea); eyeOnLine(_PB, _eb, Math.max(0, _PB.y - Math.min(bridle.hauledB, H - 0.1)), _dirB); if (bridle.arrived) { bridleGeometry(); } _ap.copy(_apexG); }
   bridle.drift = rope.hauled - bridle.hauledB;
-  _ap.copy(_apexG); const ax = _ap.x, ay = _ap.y;
-  placeCyl(legA, bridle.mated ? MATE_POS : _ea, _ap); placeCyl(legB, _eb, _ap);
-  apexShackle.position.copy(_ap); apexPin.position.copy(_ap).y -= 0.06;
+  const ax = _ap.x, ay = _ap.y;
+  legA.visible = legB.visible = apexShackle.visible = apexPin.visible = !live;
+  if (!live) { placeCyl(legA, bridle.mated ? MATE_POS : _ea, _ap); placeCyl(legB, _eb, _ap); apexShackle.position.copy(_ap); apexPin.position.copy(_ap).y -= 0.06; }
   eyeA.position.copy(_ea); eyeA.visible = !bridle.arrived; burlap.visible = !bridle.burlapOff && !bridle.arrived ? true : burlap.visible;
-  eyeB.position.copy(_eb);
-  if (game.prog === 'split15') { midShackleA.visible = !bridle.mated; midShackleA.position.lerpVectors(_ea, _ap, WORLD.leg5 / L); } else midShackleA.visible = false;
-  // hoist: hangs on the deck chain once the apex is off the floor; its chain pays out behind it
-  const hoistY = Math.max(0, ay - 1.05);
-  hoist.position.set(ax, hoistY, WORLD.slingZ);
+  eyeB.position.copy(_eb); eyeB.visible = !live;
+  if (game.prog === 'split15') { midShackleA.visible = !bridle.mated; if (live) midShackleA.position.copy(S.pos[S.legA[Math.round(S.legA.length * WORLD.leg5 / L)]]); else midShackleA.position.lerpVectors(_ea, _ap, WORLD.leg5 / L); } else midShackleA.visible = false;
+  // hoist: on the floor until the hook is on, then wherever the chain has it; its load chain pays out behind it
+  const hoistY = live ? Math.max(0, S.pos[S.motor].y - 0.44) : Math.max(0, ay - 1.05);
+  if (live) hoist.position.set(S.pos[S.motor].x, hoistY, S.pos[S.motor].z); else hoist.position.set(ax, hoistY, WORLD.slingZ);
   bridle.chainOut = SETTINGS.chainDown ? Math.max(0, hoistY - 0.2) : 0;
-  loadChain.visible = bridle.chainOut > 0.3; if (loadChain.visible) placeCyl(loadChain, new THREE.Vector3(ax, hoistY, WORLD.slingZ), new THREE.Vector3(ax + 0.15, 0.12, WORLD.slingZ + 0.1));
-  bottomHook.position.set(ax + 0.15, 0.12, WORLD.slingZ + 0.1); bottomHook.visible = true;
+  if (live && S.hooked) S.w[S.motor] = 1 / (MASS.motor + MASS.bag + MASS.chainPerM * bridle.chainOut);   // heavier as it climbs
+  loadChain.visible = bridle.chainOut > 0.3; if (loadChain.visible) placeCyl(loadChain, new THREE.Vector3(hoist.position.x, hoistY, hoist.position.z), new THREE.Vector3(POINT.x + 0.15, 0.12, WORLD.slingZ + 0.1));
+  bottomHook.position.set(POINT.x + 0.15, 0.12, WORLD.slingZ + 0.1); bottomHook.visible = true;
   loadTick(_ea, _eb, _ap, ay);
-  deckChain.visible = ay > 0.5; placeCyl(deckChain, _ap, new THREE.Vector3(ax, hoistY + 0.44, WORLD.slingZ));
+  deckChain.visible = !live && ay > 0.5; if (!live) placeCyl(deckChain, _ap, new THREE.Vector3(ax, hoistY + 0.44, WORLD.slingZ));
   // the other rigger's rope: from their PCD down to their eye
   placeCyl(ropeB, new THREE.Vector3(GAP, SLING_POINT.y - 0.3, WORLD.slingZ), _eb);
   mate.visible = bridle.arrived; mate.position.copy(MATE_POS); mate.position.z = bridle.zA;
@@ -1701,24 +1727,32 @@ function haulTick(dt) {
   let rateB = 0;
   if (bridle.stage === 'apex') rateB = atApexB ? 0 : SETTINGS.pace * 0.9;
   else if (bridle.stage === 'hook') rateB = bridle.hauledB < L + 0.6 ? SETTINGS.pace * 0.8 : 0;
-  else if (bridle.stage === 'load') { const wobble = 1 + 0.3 * Math.sin(game.t * 0.7) * Math.sin(game.t * 0.23);
-    // a competent partner: works at their pace, eases off when they notice they are ahead, digs in when behind
-    rateB = SETTINGS.pace * wobble * (bridle.drift < -0.5 ? 0.25 : 1) + 0.25 * Math.max(-1, Math.min(1, bridle.drift)); rateB = Math.max(0, rateB); if (bridle.hauledB >= top) rateB = 0;
-    if (bridle.fouled) rateB = bridle.drift > 0 ? SETTINGS.pace * 1.4 : 0; }   // fouled: whoever is behind catches up, the other holds
+  else if (bridle.stage === 'load') { const wobble = 1 + 0.2 * Math.sin(game.t * 0.7) * Math.sin(game.t * 0.23);
+    // the other rigger watches you as you watch them: their pace bends toward yours — faster when you are ahead,
+    // slower when you are behind, stopped if you have stopped a long way back, never running away
+    rateB = SETTINGS.pace * wobble + 0.6 * bridle.drift; rateB = Math.max(0, Math.min(SETTINGS.pace * 1.8, rateB));
+    if (bridle.drift < -1.0) rateB = 0;                                     // a metre ahead of you: they hold and wait
+    if (bridle.hauledB >= top) rateB = 0;
+    if (bridle.fouled) rateB = 0; }                                           // fouled: everyone stops
   if (rateB > 0) { bridle.hauledB = Math.min(top, bridle.hauledB + rateB * dt); otherRigger.userData.armL.position.y = 1.15 + 0.12 * Math.sin(game.t * 6); otherRigger.userData.armR.position.y = 1.15 - 0.12 * Math.sin(game.t * 6); }
   if (bridle.stage === 'apex') {
     if (atApexA && !bridle.calledApexA) { bridle.calledApexA = true; if (holdingRadio()) playerSays('Split at the apex.'); }
     if (atApexA && atApexB && !bridle.togetherCalled) { bridle.togetherCalled = true; bridle.stage = 'hook';
       radio('Ground', 'Both legs at the apex. TOGETHER — pull to the hook.', 1.2); toast('TOGETHER — pull to the hook eye'); }
   } else if (bridle.stage === 'hook') {
-    if (rope.hauled >= L + 0.6 - q && bridle.hauledB >= L + 0.6 && !bridle.continueCalled) { bridle.continueCalled = true; bridle.stage = 'load';
+    // the hook goes on when the deck chain's bottom eye is down at the hoist hook — physically, when the steel is live
+    const chainAtHook = S.active ? S.pos[S.chain[S.chain.length - 1]].distanceTo(S.pos[S.motor]) < 1.3 : (rope.hauled >= L + 0.6 - q && bridle.hauledB >= L + 0.6);
+    if (chainAtHook && !bridle.continueCalled) { bridle.continueCalled = true; bridle.stage = 'load'; steelHookOn();
       radio('Ground', 'Hook\'s taut. CONTINUE — bring it up, match each other.', 1.0); toast('CONTINUE — haul the load, match the other rigger'); AudioKit.chain(); }
   } else if (bridle.stage === 'load') {
     const d = Math.abs(bridle.drift); game.bestDrift = Math.max(game.bestDrift, d);
-    if (d > 1.5 && !bridle.fouled) { bridle.fouled = true; bridle.twist = true; game.fouls++; AudioKit.alarm();
-      radio('Ground', bridle.drift > 0 ? 'WHOA — hold on! You\'re way ahead, it\'s bellying and fouling at the apex. Stop and let them catch up.' : 'Hold on — you\'re behind, it\'s drifting to their side. Pick it up.');
-      toast('FOUL AT THE APEX — stop pulling', true); }
-    if (bridle.fouled) { if (d < 0.4) { bridle.fouled = false; radio('Ground', 'Clear. Continue, together.', 0.3); toast('Cleared — continue together'); } }
+    // the foul is read off the steel: a leg wrapped round the chain or the other leg, or the shackle spun with both legs loaded
+    const foulNow = S.active ? S.foulKind : (d > 1.5 ? 'wrap' : null);
+    if (foulNow && !bridle.fouled) { bridle.fouled = true; bridle.foulKind = foulNow; bridle.twist = true; game.fouls++; AudioKit.alarm(); bridle.foulT = game.t;
+      (game.foulLog = game.foulLog || []).push({ t: +game.t.toFixed(1), kind: foulNow, drift: +bridle.drift.toFixed(2), twist: S.active ? +S.twist.toFixed(2) : null, wrapA: S.active ? +S.wrapA.toFixed(2) : null, wrapB: S.active ? +S.wrapB.toFixed(2) : null, wrapAB: S.active ? +(S.wrapAB || 0).toFixed(2) : null, oneLeg: S.active ? +S.oneLegT.toFixed(1) : null });
+      radio('Ground', foulNow === 'spin' ? 'WHOA — STOP. It spun up while one leg was slack and now the thimbles are crossed in the bow. Both of you hold.' : (bridle.drift > 0 ? 'WHOA — hold on! Your leg\'s wrapped round the chain at the apex. Stop and shake it out.' : 'Hold on — their leg\'s round the chain. Everybody stop.'));
+      toast(foulNow === 'spin' ? 'FOULED — the shackle spun up. Key the radio.' : 'FOUL AT THE APEX — stop, shake your rope', true); }
+    if (bridle.fouled) { if (!foulNow && game.t - bridle.foulT > 0.6) { bridle.fouled = false; radio('Ground', 'Clear. Continue, together.', 0.3); toast('Cleared — continue together'); } }
     else if (d > 0.7 && !bridle.warned) { bridle.warned = true; toast(bridle.drift > 0 ? 'Drifting your way — slow down' : 'Bellying on your side — pick up the pace', true); }
     else if (d < 0.4) bridle.warned = false;
     if (rope.hauled >= top - q && !bridle.arrived) { bridle.arrived = true; bridle.stage = 'beam'; AudioKit.steel();
@@ -1739,13 +1773,15 @@ function loadTick(ea, eb, ap, ay) {
   bridle.loadW = 0; bridle.shareA = 0.5;
   if (apexUp) {
     // bridle statics: T_A = W·cos(αB) / sin(αA + αB), angles from horizontal
-    const aA = Math.atan2(ea.y - ay, Math.max(0.05, Math.abs(ap.x - ea.x))), aB = Math.atan2(eb.y - ay, Math.max(0.05, Math.abs(eb.x - ap.x)));
+    let aA = Math.atan2(ea.y - ay, Math.max(0.05, Math.abs(ap.x - ea.x))), aB = Math.atan2(eb.y - ay, Math.max(0.05, Math.abs(eb.x - ap.x)));
     bridle.angA = aA; bridle.angB = aB;
     const hoistY = Math.max(0, ay - 1.05), hoistUp = hoistY > 0.02;
     const W = MASS.apex + (hoistUp ? MASS.motor + MASS.bag + MASS.chainPerM * bridle.chainOut : 0);
     bridle.loadW = W;
-    const sinSum = Math.max(0.15, Math.sin(aA + aB));                 // legs pulled nearly straight: tension climbs, capped
-    bridle.shareA = Math.max(0.2, Math.min(3, Math.cos(aB) / sinSum));
+    if (aB < 0.09) bridle.shareA = Math.min(1.5, 1 / Math.max(0.5, Math.sin(Math.max(0.3, aA))));   // their leg is slack (apex at or above their eye): yours has it all
+    else if (aA < 0.09) bridle.shareA = 0.2;                                                            // yours is slack: you feel your rope and leg, not the load
+    else { const sinSum = Math.max(0.15, Math.sin(aA + aB));               // legs pulled nearly straight: tension climbs, capped
+      bridle.shareA = Math.max(0.2, Math.min(3, Math.cos(aB) / sinSum)); }
     load += W * bridle.shareA;
   }
   bridle.loadA = load * s;
@@ -1754,21 +1790,229 @@ function loadTick(ea, eb, ap, ay) {
 function haulAllowed() {
   const L = bridle.legLen;
   if (bridle.stage === 'idle') { if (!bridle.earlyToast) { bridle.earlyToast = true; game.earlyPulls++; toast('Wait for the ground rigger\'s GO', true); radio('Ground', 'Hold on — I\'m not done tying in.', 0.3); } return false; }
-  if (bridle.fouled && bridle.drift > 0) { toast('STOP — it is fouled. Let them catch up.', true); return false; }
+  if (bridle.fouled) { toast(bridle.foulKind === 'spin' ? 'STOP — it is spun up. Key the radio.' : 'STOP — it is fouled. Shake your rope, let it fall clear.', true); return false; }
+  // the steel has to come with the rope: if the strand from the device to the eye is already stretched
+  // well past its length, the other side is holding the load and pulling harder does nothing
+  if (S.active && !bridle.arrived && rope.pcdFed) { const P = R.pins.get(rope.pcdIdx).target; const D = S.pos[S.legA[0]].distanceTo(P); const strand = rope.pcdIdx * R.L0;
+    if (D > strand + 0.45) { if (!bridle.holdToast || game.t - bridle.holdToast > 2.5) { bridle.holdToast = game.t; toast('It won\'t come — their leg is holding it. Wait for them.', true); } return false; } }
   let cap = H - 0.1;
   if (bridle.stage === 'apex') cap = L;
   else if (bridle.stage === 'hook') cap = L + 0.6;
   if (rope.hauled >= cap - 0.02) { if (!bridle.capToast || game.t - bridle.capToast > 3) { bridle.capToast = game.t; toast(bridle.stage === 'apex' ? 'Leg is at the apex — wait for TOGETHER' : bridle.stage === 'hook' ? 'Hook is taut — wait for CONTINUE' : 'That is as high as it goes'); } return false; }
   return true;
 }
+/* the ground rigger flakes the rope out at the point before tying in: the rope below the device hangs
+   straight down to the floor, the slack lies in a figure-eight at the point, the end is at the point */
+function relayRopeAtPoint() {
+  if (!rope.pcdFed) return; const k = rope.pcdIdx, P = R.pins.get(k).target; const end = new THREE.Vector3(SLING_X + 0.1, R.r, WORLD.slingZ);
+  const hangN = Math.min(k, Math.floor((P.y - R.r) / R.L0)); const perLoop = Math.max(8, Math.round(2.4 / R.L0));
+  for (let i = k - 1; i >= 0; i--) { const down = k - i;
+    if (down <= hangN) R.pos[i].set(P.x, P.y - down * R.L0, P.z);
+    else { const u = (down - hangN) / perLoop, a = u * 2 * Math.PI; R.pos[i].set(end.x + 0.35 * Math.sin(a) + 0.4, R.r + Math.floor(u) * R.r * 2.2, end.z + 0.18 * Math.sin(2 * a) + 0.3); }
+    if (!R.pins.has(i)) R.prev[i].copy(R.pos[i]); }
+  R.pos[0].copy(end); R.prev[0].copy(end); const g = R.pins.get(0); if (g) g.target.copy(end);
+}
 /* the ground rigger, once the rope is at the sling, ties in */
 function groundTiesIn() {
   if (rope.bowline) return; rope.bowline = true; bridle.legLen = WORLD.legSplit;   // beam to apex is 15' either way; the basket only changes the top
+  relayRopeAtPoint(); steelBuild();
   radio('Ground', game.prog === 'split15' ? 'Tying in — twelve-inch bowline into the eye of the 5.' : 'Tying in — three-foot bowline into the shackle on the 10.', 0.5);
   radio('Ground', 'You\'re tied. Ready when you are.', 4);
   bridle.readyT = game.t + 4.5;
 }
 
+/* ───────────────────── the steel: legs, apex shackle, deck chain, motor ─────────────────────
+   Simulated, not placed. Two 3/8" wire legs (3-inch particles, stiff in length, resisting a kink),
+   an apex shackle that is a small rigid body (four particles, rigid distances), a deck chain from
+   its pin, and the motor as one heavy particle that the chain picks up once the hook is on. Your
+   rope's eye is the top of leg A: the rope pins its end there and the leg is pulled by the rope's
+   next particle, so the leg hangs from whatever rope you have taken in. The partner's eye is driven
+   by what they have hauled. Steel touches steel: legs, chain and shackle collide with each other,
+   so a slack leg can lie across the chain, and a spun shackle wraps it — the foul, for real.
+
+   The spin: a loaded wire rope unlays. With one leg slack the load hangs on one wire and the
+   shackle turns (about 40°/s, up to a turn and a half); with both legs loaded it cannot. The wrap
+   that spin makes is a foul when the slack leg is taken up again. Low enough, the ground rigger
+   can take the spin out by hand; too high, nothing from up here undoes it — it comes down. */
+const STEEL = { legSpacing: 3 * 0.0254, wireR: 0.0048, chainR: 0.007, chainLink: 0.09, deckChain: 1.05, shackle: 0.13, spinRate: 0.45, spinMax: 1.5 * 2 * Math.PI, groundReach: 2.6 };
+const S = { active: false, n: 0, pos: [], prev: [], w: [], kind: [], dist: [], bend: [], legA: [], legB: [], sh: {}, chain: [], motor: -1, hooked: false, twist: 0, oneLegT: 0, wrapB: 0, wrapA: 0, foulKind: null, lastCheck: 0, inst: null, ropeLink: -1, ropePull: 0, ropeDir: new THREE.Vector3(0, 1, 0) };
+const steelGroup = new THREE.Group(); steelGroup.name = 'Steel'; arena.add(steelGroup);
+const shackleBody = new THREE.Group(); shackleBody.name = 'Steel_ApexShackle'; steelGroup.add(shackleBody);
+{ const bow = torus(0.065, 0.016, MAT.shackle, 'ApexShackle_Bow'); bow.position.y = 0.04; shackleBody.add(bow);
+  const pin = cyl(0.014, 0.17, MAT.pin, 'ApexShackle_Pin'); pin.rotation.z = Math.PI / 2; pin.position.y = -0.05; shackleBody.add(pin);
+  const head = cyl(0.024, 0.03, MAT.pin, 'ApexShackle_PinHead'); head.rotation.z = Math.PI / 2; head.position.set(0.1, -0.05, 0); shackleBody.add(head); }
+const thimbleSA = torus(0.035, 0.01, MAT.wireRope, 'Steel_Thimble_A'); steelGroup.add(thimbleSA);
+const thimbleSB = torus(0.035, 0.01, MAT.wireRope, 'Steel_Thimble_B'); steelGroup.add(thimbleSB);
+function steelAdd(p, mass, kind) { S.pos.push(p.clone()); S.prev.push(p.clone()); S.w.push(mass > 0 ? 1 / mass : 0); S.kind.push(kind); return S.n++; }
+function steelDist(i, j, rest, oneSided) { S.dist.push({ i, j, rest, one: !!oneSided }); }
+/* build the assembly lying on the floor under the point, legs laid out toward each beam */
+function steelBuild() {
+  S.n = 0; S.pos.length = 0; S.prev.length = 0; S.w.length = 0; S.kind.length = 0; S.dist.length = 0; S.bend.length = 0; S.legA.length = 0; S.legB.length = 0; S.chain.length = 0;
+  S.hooked = false; S.twist = 0; S.oneLegT = 0; S.wrapA = 0; S.wrapB = 0; S.foulKind = null; S.lastCheck = 0;
+  const L = bridle.legLen, m = STEEL.legSpacing, nLeg = Math.round(L / m); const y0 = STEEL.wireR + 0.004; const z = WORLD.slingZ;
+  const apex = new THREE.Vector3(GAP / 2, y0, z + 0.05);
+  // the shackle: a rigid four (bow-left, bow-right, bow-top, pin), on the floor beside the apex
+  const sh = S.sh; const s = STEEL.shackle;
+  sh.bl = steelAdd(new THREE.Vector3(apex.x - 0.045, y0 + 0.02, apex.z), 0.75, 'shackle'); sh.br = steelAdd(new THREE.Vector3(apex.x + 0.045, y0 + 0.02, apex.z), 0.75, 'shackle');
+  sh.top = steelAdd(new THREE.Vector3(apex.x, y0 + 0.02, apex.z - 0.06), 0.75, 'shackle'); sh.pin = steelAdd(new THREE.Vector3(apex.x, y0 + 0.02, apex.z + 0.07), 0.75, 'shackle');
+  const rig = [sh.bl, sh.br, sh.top, sh.pin]; for (let a = 0; a < 4; a++) for (let b = a + 1; b < 4; b++) steelDist(rig[a], rig[b], S.pos[rig[a]].distanceTo(S.pos[rig[b]]));
+  // legs: from the shackle's bow out along the floor toward each side, ending at the eyes (index 0 of each leg is the eye)
+  const wireM = MASS.wirePerM * m;
+  // each leg lies in a lazy S from its eye to the shackle (wire rope holds a bend; no sharp folds in the layout).
+  // Leg A's eye is where the rope's end is — the ground rigger tied in there.
+  const lay = (eyeAt, attach, into) => { const idx = []; const end = S.pos[attach].clone(); end.y = y0; const D = Math.max(0.5, eyeAt.distanceTo(end));
+    const waves = Math.max(1, Math.round(D / 1.2)); const arcNeed = L / D; const A = arcNeed > 1.05 ? Math.min(0.6, 2 * Math.sqrt(arcNeed - 1) / (2 * Math.PI * waves / D)) : 0;
+    const side = new THREE.Vector3(-(end.z - eyeAt.z), 0, end.x - eyeAt.x).normalize();
+    for (let k = 0; k <= nLeg; k++) { const t = k / nLeg; const p = new THREE.Vector3().copy(eyeAt).lerp(end, t).addScaledVector(side, A * Math.sin(t * waves * 2 * Math.PI)); p.y = y0; idx.push(steelAdd(p, k === 0 ? 0.5 : wireM, 'wire')); }
+    // idx[0] = eye, idx[last] = at the shackle
+    for (let k = 0; k < idx.length - 1; k++) steelDist(idx[k], idx[k + 1], m);
+    for (let k = 0; k < idx.length - 2; k++) S.bend.push({ i: idx[k], j: idx[k + 2], min: m * 1.85 });   // wire rope will not kink: keeps a 3-particle stretch from folding flat
+    steelDist(idx[idx.length - 1], attach, 0.03);
+    into.push(...idx); };
+  const eyeA = (R.alive && R.n) ? new THREE.Vector3(R.pos[0].x, y0, R.pos[0].z) : new THREE.Vector3(SLING_X + 0.1, y0, z);
+  const eyeB = new THREE.Vector3(GAP - SLING_X - 0.1, y0, z);
+  lay(eyeA, sh.bl, S.legA); lay(eyeB, sh.br, S.legB);
+  // the deck chain from the pin, laid out on the floor, and the motor's top hook eye at its end
+  const nCh = Math.round(STEEL.deckChain / STEEL.chainLink); let prev = sh.pin;
+  for (let k = 1; k <= nCh; k++) { const i = steelAdd(new THREE.Vector3(apex.x + 0.02 * k, y0, apex.z + 0.07 + k * STEEL.chainLink * 0.95), MASS.chainPerM * STEEL.chainLink, 'chain'); steelDist(prev, i, STEEL.chainLink); S.chain.push(i); prev = i; }
+  // the motor: a heavy particle where the hoist body sits, its hook 0.44 above its base
+  S.motor = steelAdd(new THREE.Vector3(POINT.x, 0.44, POINT.z), MASS.motor + MASS.bag, 'motor');
+  S.active = true; S.ropeLink = S.legA[0];
+  if (S.inst) { steelGroup.remove(S.inst); S.inst.geometry.dispose(); }
+  const segs = S.dist.length;
+  S.inst = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 6, 1), MAT.wireRope, segs); S.inst.name = 'Steel_Segments'; S.inst.frustumCulled = false; steelGroup.add(S.inst);
+}
+/* the hook goes on: the ground rigger connects the deck chain's bottom eye to the hoist hook */
+function steelHookOn() { if (S.hooked || !S.active) return; S.hooked = true; steelDist(S.chain[S.chain.length - 1], S.motor, 0.06); }
+const _sv1 = new THREE.Vector3(), _sv2 = new THREE.Vector3(), _sax = new THREE.Vector3();
+function steelStep(dt, first) {
+  const g = -WORLD.g * dt * dt, damp = 1 - 2.5 * dt, vmax = 6 * dt;   // wire rope and chain are heavily damped things; nothing here moves faster than a man can haul
+  for (let i = 0; i < S.n; i++) { if (!S.w[i]) continue; const p = S.pos[i], q = S.prev[i]; _sv1.copy(p).sub(q).multiplyScalar(damp); const v = _sv1.length(); if (v > vmax) _sv1.multiplyScalar(vmax / v); q.copy(p); p.add(_sv1); p.y += g; }
+  // kinematic ends: the partner's eye, and (before the hook is on) the motor sits on its base
+  const eb = S.pos[S.legB[0]]; eb.copy(steelEyeB(_sv2)); S.prev[S.legB[0]].copy(eb);
+  if (!S.hooked) { const mo = S.pos[S.motor]; mo.set(POINT.x, 0.44, POINT.z); S.prev[S.motor].copy(mo); }
+  // the joint with the rope: the rope's end particle is free in the rope solve (so the rope contracts toward the
+  // device when hauled) and the eye is drawn to wherever it ended up — most of the way each step. The rope
+  // keeps a little stretch under load, the eye follows the haul, and what hangs on the eye comes with it.
+  if (rope.pcdFed && R.alive && S.ropePull > 0 && first) { const a = S.pos[S.ropeLink];
+    if (a.distanceTo(S.pos[S.sh.bl]) < bridle.legLen + 0.06) { a.addScaledVector(S.ropeDir, S.ropePull); S.prev[S.ropeLink].addScaledVector(S.ropeDir, S.ropePull); }   // up the rope by the rope's stretch, inelastically: the rope comes taut and the eye comes with it
+    S.ropePull = 0; }   // — unless the leg is already at full stretch: then the steel is holding, the rope stays stretched, and the haul is refused (haulAllowed)
+  // long constraints: the shackle is never farther from an eye than a leg, the motor never farther from the
+  // pin than the chain — the heavy end is coupled to the eyes directly, not through sixty light particles
+  const L = bridle.legLen; const longC = (i, j, rest, fb) => { const a = S.pos[i], b = S.pos[j]; _sv1.copy(b).sub(a); const d = _sv1.length(); if (d <= rest || d < 1e-9) return; let wa = S.w[i], wb = S.w[j]; if (fb !== undefined) { wa = 1 - fb; wb = fb; } const ws = wa + wb; if (!ws) return; const diff = (d - rest) / d;
+    a.addScaledVector(_sv1, diff * wa / ws); b.addScaledVector(_sv1, -diff * wb / ws); S.prev[i].addScaledVector(_sv1, diff * wa / ws * 0.9); S.prev[j].addScaledVector(_sv1, -diff * wb / ws * 0.9); };
+  // the eyes are on ropes held by devices: what they give, the shackle takes (the eye moves a tenth, the bow the rest);
+  // the motor hangs off the pin on an inextensible chain: where the pin goes, the motor follows — its weight is felt
+  // in the hands through the load model, not fought here (a 93 kg mass on a chain of 100 g links never converges in PBD)
+  longC(S.legA[0], S.sh.bl, L + 0.03, 0.9); longC(S.legB[0], S.sh.br, L + 0.03, 0.9); if (S.hooked) longC(S.sh.pin, S.motor, STEEL.deckChain + 0.08, 1.0);
+  for (let it = 0; it < 6; it++) {
+    for (const c of S.dist) { const a = S.pos[c.i], b = S.pos[c.j]; _sv1.copy(b).sub(a); const d = _sv1.length(); if (d < 1e-9) continue; if (c.one && d <= c.rest) continue;
+      const wa = S.w[c.i], wb = S.w[c.j], ws = wa + wb; if (!ws) continue; const diff = (d - c.rest) / d; a.addScaledVector(_sv1, diff * wa / ws); b.addScaledVector(_sv1, -diff * wb / ws); }
+    for (const c of S.bend) { const a = S.pos[c.i], b = S.pos[c.j]; _sv1.copy(b).sub(a); const d = _sv1.length(); if (d >= c.min || d < 1e-9) continue;
+      const wa = S.w[c.i], wb = S.w[c.j], ws = wa + wb; if (!ws) continue; const diff = (d - c.min) / d; a.addScaledVector(_sv1, diff * wa / ws); b.addScaledVector(_sv1, -diff * wb / ws); }
+    steelSpin(dt / 6);
+  }
+  steelCollide(dt);
+}
+/* the partner's eye: on their rope's line from their device toward the apex, as far down as they have not yet hauled */
+function steelEyeB(out) {
+  const PB = _PB; PB.set(GAP - SLING_X, SLING_POINT.y - 0.28, WORLD.slingZ);
+  const ropeOut = Math.max(0, PB.y - Math.min(bridle.hauledB, H - 0.1));
+  const apex = S.pos[S.sh.br]; _sax.copy(apex).sub(PB); if (_sax.y > -0.05) _sax.y = -0.05; _sax.normalize();
+  out.copy(PB).addScaledVector(_sax, ropeOut); if (out.y < 0.05) out.y = 0.05; return out;
+}
+/* is a leg carrying load? Taut means its eye is about a leg's length from the shackle */
+function legTaut(leg, attach) { const d = S.pos[leg[0]].distanceTo(S.pos[attach]); return d >= bridle.legLen * 0.975; }
+function steelSpin(dt) {
+  // With these legs on beams this far apart, neither leg ever goes truly slack — the apex just swings toward
+  // whoever is ahead. What rolls the shackle is that swing: past about 0.8 m of drift the load is hanging
+  // off-line and the shackle starts to turn; under 0.4 m it settles back, unless it has already gone far
+  // enough that the thimbles crossed in the bow (2.4 rad) — then it is locked, and only hands undo it.
+  const up = S.pos[S.sh.pin].y > 0.5; const d = Math.abs(bridle.drift); let rate = 0;
+  if (S.unspin > 0) rate = -Math.sign(S.twist || 1) * STEEL.spinRate * 1.5;                                             // the ground rigger turning it back by hand
+  else if (up && bridle.stage === 'load' && d > 0.8 && Math.abs(S.twist) < STEEL.spinMax) rate = STEEL.spinRate * Math.min(1, (d - 0.8) / 0.7);
+  else if (up && d < 0.4 && Math.abs(S.twist) > 0.02 && Math.abs(S.twist) < 2.4) rate = -Math.sign(S.twist) * STEEL.spinRate * 0.5;   // settling back while it still can
+  if (!rate) return; let a = rate * dt; if (rate * S.twist < 0 && Math.abs(a) > Math.abs(S.twist)) { a = -S.twist; if (S.unspin > 0) S.unspin = 0; }   // never past zero on the way back
+  S.twist += a;
+  // rotate the bow points about the vertical through the pin: the legs' thimbles swing round, the slack one trailing
+  const P = S.pos[S.sh.pin]; const c = Math.cos(a), s = Math.sin(a);
+  [S.sh.bl, S.sh.br, S.sh.top].forEach(i => { const p = S.pos[i]; const dx = p.x - P.x, dz = p.z - P.z; p.x = P.x + dx * c - dz * s; p.z = P.z + dx * s + dz * c; });
+}
+/* what the steel hits: the floor, the beams, and itself */
+const _sh2 = new Map();
+function steelCollide(dt) {
+  const beamHit = (p, r) => { for (const bx of [0, GAP]) { if (Math.abs(p.x - bx) < BW / 2 + r && p.z <= 0.05 && p.z >= -BL && p.y < H + r && p.y > H - 0.78 - r) {
+    const dTop = H + r - p.y, dBot = p.y - (H - 0.78 - r), dSide = BW / 2 + r - Math.abs(p.x - bx);
+    if (dTop <= dSide && dTop <= dBot) p.y = H + r; else if (dSide < dBot) p.x = bx + Math.sign(p.x - bx || 1) * (BW / 2 + r); else p.y = H - 0.78 - r; } } };
+  for (let i = 0; i < S.n; i++) { if (!S.w[i]) continue; const p = S.pos[i], q = S.prev[i]; const r = S.kind[i] === 'chain' ? STEEL.chainR : S.kind[i] === 'motor' ? 0.16 : STEEL.wireR;
+    const floor = S.kind[i] === 'motor' ? 0.44 : r;
+    if (p.y < floor) { const push = floor - p.y; p.y = floor; const tx = p.x - q.x, tz = p.z - q.z, t = Math.hypot(tx, tz); if (t > 1e-9) { const f = Math.min(1, 0.5 * push / t); p.x -= tx * f; p.z -= tz * f; } }
+    beamHit(p, r); }
+  // steel on steel: a hash of everything but the motor; pairs closer than two radii are pushed apart, with friction
+  const cell = 0.03, inv = 1 / cell; _sh2.clear(); const key = (x, y, z) => (Math.floor(x * inv) * 73856093) ^ (Math.floor(y * inv) * 19349663) ^ (Math.floor(z * inv) * 83492791);
+  for (let i = 0; i < S.n; i++) { if (S.kind[i] === 'motor') continue; const p = S.pos[i]; const k = key(p.x, p.y, p.z); let b = _sh2.get(k); if (!b) { b = []; _sh2.set(k, b); } b.push(i); }
+  const near = (i, j) => Math.abs(i - j) < 3 && S.kind[i] === S.kind[j];   // rope neighbours along one strand are not contacts
+  for (let i = 0; i < S.n; i++) { if (S.kind[i] === 'motor') continue; const p = S.pos[i]; const cx = Math.floor(p.x * inv), cy = Math.floor(p.y * inv), cz = Math.floor(p.z * inv);
+    for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) for (let oz = -1; oz <= 1; oz++) { const b = _sh2.get(((cx + ox) * 73856093) ^ ((cy + oy) * 19349663) ^ ((cz + oz) * 83492791)); if (!b) continue;
+      for (const j of b) { if (j <= i || near(i, j)) continue; if (S.kind[i] === 'shackle' && S.kind[j] === 'shackle') continue;
+        const ri = S.kind[i] === 'chain' ? STEEL.chainR : STEEL.wireR, rj = S.kind[j] === 'chain' ? STEEL.chainR : STEEL.wireR; const minD = ri + rj;
+        const a = S.pos[i], c = S.pos[j]; _sv1.copy(c).sub(a); const d = _sv1.length(); if (d >= minD || d < 1e-7) continue;
+        const wa = S.w[i], wb = S.w[j], ws = wa + wb; if (!ws) continue; _sv1.multiplyScalar(1 / d); const push = minD - d;
+        a.addScaledVector(_sv1, -push * wa / ws); c.addScaledVector(_sv1, push * wb / ws);
+        S.prev[i].addScaledVector(_sv1, -push * wa / ws * 0.8); S.prev[j].addScaledVector(_sv1, push * wb / ws * 0.8);
+        // friction between them: relative slide cut by μ·push — this is what lets a wrap bite
+        _sv2.copy(c).sub(S.prev[j]).sub(a).add(S.prev[i]); const vn = _sv2.dot(_sv1); _sv2.addScaledVector(_sv1, -vn); const t = _sv2.length(); if (t < 1e-9) continue;
+        const f = Math.min(1, 0.45 * push / t); S.prev[i].addScaledVector(_sv2, -f * wa / ws); S.prev[j].addScaledVector(_sv2, f * wb / ws); } } }
+}
+/* reading the steel: is a leg wrapped round the chain, or round the other leg? */
+function steelFoulCheck() {
+  const pin = S.pos[S.sh.pin], chEnd = S.pos[S.chain[Math.min(S.chain.length - 1, 6)]];
+  // (only rope that is actually alongside the axis counts: at least 12 cm along it from its start and at least
+  // a wire's width off it — particles at the shackle itself sit on the axis and their angle means nothing)
+  const wrapAround = (leg, from, P, D, band) => { axisBasis(D); let total = 0, last = null, cnt = 0;
+    for (let k = from; k < leg.length; k++) { const p = S.pos[leg[k]]; _wr.copy(p).sub(P); const along = _wr.dot(_wd); const rad = axisDist(P, p); if (along < 0.12 || rad > band || rad < 0.012) { last = null; continue; }
+      _wr.copy(p).sub(P); const th = Math.atan2(_wr.dot(_wv), _wr.dot(_wu)); if (last !== null) { let d = th - last; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; total += d; } last = th; cnt++; }
+    return cnt >= 4 ? Math.abs(total) / (2 * Math.PI) : 0; };
+  _sax.copy(chEnd).sub(pin); if (_sax.length() < 0.05) _sax.set(0, -1, 0);
+  const lower = leg => Math.max(0, leg.length - 14);   // the last metre of each leg, by the shackle
+  S.wrapB = wrapAround(S.legB, lower(S.legB), pin, _sax, 0.09); S.wrapA = wrapAround(S.legA, lower(S.legA), pin, _sax, 0.09);
+  // legs round each other: leg B's tail about leg A's last stretch
+  const aTop = S.pos[S.legA[Math.max(0, S.legA.length - 10)]]; _sv2.copy(S.pos[S.sh.bl]).sub(aTop); if (_sv2.length() > 0.05) S.wrapAB = wrapAround(S.legB, lower(S.legB), aTop, _sv2, 0.07); else S.wrapAB = 0;
+  const tA = legTaut(S.legA, S.sh.bl), tB = legTaut(S.legB, S.sh.br);
+  let kind = null;
+  if ((S.wrapB >= 0.45 || S.wrapA >= 0.45 || S.wrapAB >= 0.45) && tA && tB) kind = 'wrap';         // a leg round the chain or the other leg, and both legs loaded: it is fouled
+  else if (Math.abs(S.twist) >= 2.4 && tA && tB) kind = 'spin';                                          // spun up and both legs taken up: the thimbles are crossed in the bow
+  S.foulKind = kind; return kind;
+}
+/* the ground rigger taking the spin out, if the apex is low enough to reach */
+function steelGroundClears() {
+  if (!S.active) return false; const y = S.pos[S.sh.pin].y;
+  if (y > STEEL.groundReach) { radio('Ground', 'It\'s spun up and it\'s too high for me. Nothing you can do from there — that one comes down. Slack off, both of you.', 0.5); return false; }
+  radio('Ground', 'Hang on — I\'ve got it. Taking the spin out.', 0.4); S.unspin = 1; setTimeout(() => radio('Ground', 'Clear. Nice and even now, together.', 0), 3500); return true;
+}
+/* draw: every distance constraint is a cylinder (legs, chain, the shackle's frame is a mesh) */
+const _sm = new THREE.Matrix4(), _sqq = new THREE.Quaternion(), _sup = new THREE.Vector3(0, 1, 0), _smid = new THREE.Vector3(), _ssc = new THREE.Vector3();
+function steelRender() {
+  steelGroup.visible = S.active && rope.bowline && !bridle.arrived; if (!steelGroup.visible) return;
+  let k = 0; const inst = S.inst;
+  for (const c of S.dist) { const a = S.pos[c.i], b = S.pos[c.j]; const shk = S.kind[c.i] === 'shackle' && S.kind[c.j] === 'shackle'; const chain = S.kind[c.i] === 'chain' || S.kind[c.j] === 'chain' || S.kind[c.j] === 'motor';
+    _sv1.copy(b).sub(a); const len = _sv1.length() || 1e-4; _sv1.multiplyScalar(1 / len); _sqq.setFromUnitVectors(_sup, _sv1); _smid.copy(a).add(b).multiplyScalar(0.5);
+    const r = shk ? 0.0001 : chain ? STEEL.chainR * 1.4 : STEEL.wireR * 1.3; _ssc.set(r, len * 1.03, r); _sm.compose(_smid, _sqq, _ssc); inst.setMatrixAt(k++, _sm); }
+  inst.instanceMatrix.needsUpdate = true;
+  // the shackle mesh follows its four particles
+  const bl = S.pos[S.sh.bl], br = S.pos[S.sh.br], top = S.pos[S.sh.top], pin = S.pos[S.sh.pin];
+  _smid.copy(bl).add(br).multiplyScalar(0.5); shackleBody.position.copy(_smid);
+  _sv1.copy(br).sub(bl).normalize(); _sv2.copy(top).sub(pin).normalize(); _sax.crossVectors(_sv1, _sv2).normalize(); _sv2.crossVectors(_sax, _sv1).normalize();
+  _sm.makeBasis(_sv1, _sv2, _sax); shackleBody.quaternion.setFromRotationMatrix(_sm);
+  thimbleSA.position.copy(S.pos[S.legA[S.legA.length - 1]]); thimbleSB.position.copy(S.pos[S.legB[S.legB.length - 1]]);
+}
+/* per frame: 8 small steps, then the foul read four times a second */
+function steelTick(dt) {
+  if (!S.active || !rope.bowline || bridle.arrived) return;
+  const sub = Math.min(dt, 0.05) / 8; for (let s = 0; s < 8; s++) steelStep(sub, s === 0);
+  const tA = legTaut(S.legA, S.sh.bl), tB = legTaut(S.legB, S.sh.br); S.oneLegT = (tA !== tB && S.pos[S.sh.pin].y > 0.5) ? S.oneLegT + dt : 0;
+  if (game.t - S.lastCheck > 0.25) { S.lastCheck = game.t; steelFoulCheck(); }
+}
 /* ───────────────────── step 5: over, under, mate ───────────────────── */
 function wrapTick(hp) {
   if (!hp || !bridle.arrived || bridle.mated) return;
@@ -2256,6 +2500,31 @@ function climbBack() {
   player.falling = player.arrested = false; fall.phase = 'none'; fall.packExt = 0; fall.v.set(0, 0, 0);
   playerRig.position.copy(player.safe); document.getElementById('vignette').classList.remove('on'); toast('Back on the steel — that pack is done, it gets replaced'); hudDirty = true;
 }
+/* ───────────────────── balance ─────────────────────
+   Where the feet are (the headset's estimate if it has one, otherwise a slow follower of the head: a
+   lean leaves the feet where they were, a walk brings them along) and where the weight is: a standing
+   body pivots at the ankles, so the centre of gravity moves a little over half of what the head does;
+   crouched, less; sitting, hardly at all. */
+const balance = { feet: new THREE.Vector3(), init: false, teeterT: 0, warned: false, posture: 'standing', lean: 0.55, grace: 0.9, cog: new THREE.Vector3(), lastHead: new THREE.Vector3() };
+const teeterRing = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.75, 32), new THREE.MeshBasicMaterial({ color: 0xe5484d, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthTest: false, name: 'Mat_TeeterRing' }));
+teeterRing.name = 'Balance_Warning'; teeterRing.position.z = -0.8; teeterRing.visible = false; camera.add(teeterRing);
+function balanceTick(dt) {
+  const rp = playerRig.position; const hx = _head.x - rp.x, hz = _head.z - rp.z, hy = _head.y - rp.y;
+  player.standH = Math.max(player.standH || 1.3, Math.min(2.1, hy));   // the tallest they have stood in this program
+  if (!balance.init) { balance.feet.set(hx, 0, hz); balance.lastHead.set(hx, 0, hz); balance.init = true; }
+  if (bodyTracked && feetPos.length === 2) { balance.feet.set((feetPos[0].x + feetPos[1].x) / 2 - rp.x, 0, (feetPos[0].z + feetPos[1].z) / 2 - rp.z); }
+  else { const reach = Math.hypot(hx - balance.feet.x, hz - balance.feet.z);
+    // within 0.4 m of the feet the head is leaning and the feet stay put (creeping back under it over a few
+    // seconds); farther than that nobody goes without taking a step, and the feet come along
+    const k = reach >= 0.4 ? 12 : reach < 0.15 ? 1.0 : 0; const f = Math.min(1, dt * k); balance.feet.x += (hx - balance.feet.x) * f; balance.feet.z += (hz - balance.feet.z) * f; }   // upright: the feet settle under the head; leaning: they stay
+  balance.lastHead.set(hx, 0, hz);
+  const r = hy / player.standH;
+  if (r > 0.8) { balance.posture = 'standing'; balance.lean = 0.55; balance.grace = 0.9; }
+  else if (r > 0.55) { balance.posture = 'crouching'; balance.lean = 0.38; balance.grace = 1.6; }
+  else { balance.posture = 'sitting'; balance.lean = 0.22; balance.grace = 2.6; }
+  if (game.mode === 'desk') { balance.feet.set(hx, 0, hz); balance.lean = 1; balance.grace = 0.25; }   // no body on the desk: the head is the body
+  balance.cog.set(rp.x + balance.feet.x + (hx - balance.feet.x) * balance.lean, _head.y, rp.z + balance.feet.z + (hz - balance.feet.z) * balance.lean);
+}
 function playerTick(dt) {
   camera.getWorldPosition(_head);
   if (game.phase !== 'arena') return;
@@ -2268,11 +2537,21 @@ function playerTick(dt) {
     return;
   }
   railCollide();
-  const tol = SETTINGS.edge;
-  let ok = supported(_head.x, _head.z, tol);
-  if (ok && bodyTracked) ok = feetPos.some(f => supported(f.x, f.z, tol + 0.15));
-  if (!ok) { player.offBeamT += dt; if (player.offBeamT > 0.12) { fallStart(); toast(lanyard.clipped ? 'OFF THE BEAM' : 'OFF THE BEAM — NOT CLIPPED', true); } }
-  else { player.offBeamT = 0; player.safe.copy(playerRig.position); }
+  balanceTick(dt);
+  const tol = SETTINGS.edge; const cog = balance.cog;
+  // balance: it is where your weight is that decides, not where your eyes are. Lean out over the edge with your
+  // feet planted and your centre of gravity stays over the steel; step out, or lean past what your stance can
+  // hold, and it does not. Over the edge you get a warning and a moment — longer crouched, longer still sitting —
+  // to get your weight back; a real step off (weight well past the edge) is a fall at once.
+  let ok = supported(cog.x, cog.z, tol);
+  if (ok && bodyTracked && feetPos.length) ok = feetPos.some(f => supported(f.x, f.z, tol + 0.15));   // both real feet off the steel: you stepped off
+  const wellOff = !supported(cog.x, cog.z, tol + 0.35);
+  if (!ok) { balance.teeterT += dt;
+    if (!balance.warned) { balance.warned = true; toast(balance.posture === 'sitting' ? 'SLIDING — WEIGHT BACK ONTO THE STEEL' : 'YOUR WEIGHT IS OVER THE EDGE — BACK!', true); AudioKit.alarm(); hands.forEach(h => haptic(h, 1.0, 250)); game.teeters = (game.teeters || 0) + 1; }
+    else if (Math.floor(balance.teeterT * 6) !== Math.floor((balance.teeterT - dt) * 6)) hands.forEach(h => haptic(h, 0.6, 60));
+    if (balance.teeterT > balance.grace || wellOff) { fallStart(); toast(lanyard.clipped ? 'OFF THE BEAM' : 'OFF THE BEAM — NOT CLIPPED', true); } }
+  else { if (balance.warned) { balance.warned = false; toast('Caught it. Weight over the steel.'); AudioKit.ack(); game.recoveries = (game.recoveries || 0) + 1; } balance.teeterT = Math.max(0, balance.teeterT - dt * 2); player.safe.copy(playerRig.position); }
+  teeterRing.visible = renderer.xr.isPresenting && balance.warned && !player.falling; if (teeterRing.visible) teeterRing.material.opacity = 0.25 + 0.25 * Math.sin(game.t * 12);
   if (onBeam(_head.x, _head.z, 0.8) && !lanyard.clipped) { game.unclippedOnBeam += dt; if (Math.floor(game.unclippedOnBeam * 2) % 6 === 0 && game.unclippedOnBeam > 0.5) document.getElementById('vignette').classList.add('on'); }
   else if (!player.arrested) document.getElementById('vignette').classList.remove('on');
 }
@@ -2306,7 +2585,7 @@ function setStep(n) { game.step = n; hudDirty = true; AudioKit.chirp(); const s 
 function stepTick(dt) {
   if (game.phase !== 'arena') return; const s = STEPS[game.step]; if (!s) return;
   if (game.step === 2 && !rope.landed && rope.state === 'coil' && ropeInHand()) { /* waiting on the throw */ }
-  if (game.step === 3 && rope.pcdFed && !rope.bowline) groundTiesIn();
+  if (game.step >= 3 && rope.pcdFed && !rope.bowline) { const g = R.pins.get(0); if (g && g.target.distanceTo(new THREE.Vector3(SLING_X + 0.1, 0.4, WORLD.slingZ)) < 0.6) groundTiesIn(); }   // once the end (and the slack) is at the point
   if (game.step === 4 && bridle.readyT && game.t > bridle.readyT && !bridle.readyToast) { bridle.readyToast = true; toast('Ground is ready — key the radio (B / Y or R)'); }
   if (game.step === 5) {
     if (!bridle.burlapOff && burlapGrab.held !== null) { const hp = handPoint(burlapGrab.held); if (hp.distanceTo(new THREE.Vector3(SLING_X, H + 0.12, WORLD.slingZ)) > 0.35) { bridle.burlapOff = true; toast('Burlap out'); AudioKit.ack(); } }
@@ -2350,6 +2629,8 @@ function keyRadio() {
   if (!holdingRadio()) { toast(gear.radio.worn || gear.radio.grab.held !== null ? 'Take the radio in your hand to talk' : 'The radio is not on you', true); AudioKit.deny(); return; }
   if (radioBusy()) { Radio.stepped++; toast('Channel is busy — wait for them to finish', true); AudioKit.deny(); return; }
   if (game.step === 1 && !game.radioChecked) { game.radioChecked = true; playerSays('Radio check, up-rigger.'); radio('Ground', 'Loud and clear. Get your rope.', 1.2); hudDirty = true; return; }
+  if (bridle.fouled && bridle.foulKind === 'spin') { playerSays('Ground, it\'s spun up at the apex. Can you get it?');
+    if (!steelGroundClears()) setTimeout(() => endProgram(false, 'Fouled at the apex', 'One leg went slack, the load spun on the other, and the thimbles crossed in the bow with both legs loaded. Too high for the ground rigger to reach and nothing to be done from the steel: that point comes down and goes up again. Keep pace with your partner — a slack leg is a spinning leg.'), 6500); return; }
   if (game.step === 4 && rope.bowline && bridle.stage === 'idle') { playerSays('Ready on the ' + (game.prog === 'split15' ? 'split 15' : '10 basket') + '?'); radio('Ground', 'Go ahead and pull. I\'m watching the steel.', 1.6); bridle.stage = 'apex'; return; }
   if (game.step === 6 && !bridle.pointChecked) { bridle.pointChecked = true; playerSays('Point check on the ' + (game.prog === 'split15' ? 'split 15' : '10 basket') + '?');
     const off = Math.abs(bridle.zA - WORLD.slingZ) * 3.281;
@@ -2362,12 +2643,12 @@ const lobbyEl = document.getElementById('lobby'), hudEl = document.getElementByI
 function resetWorld() {
   game.step = 0; game.t = 0; game.drops = 0; game.earlyPulls = 0; game.unclippedOnBeam = 0; game.falls = 0; game.ropeDrops = 0; game.fouls = 0; game.procsMisses = 0; game.bestDrift = 0; game.over = false; game.result = null; game.radioChecked = false;
   Object.assign(rope, { state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, hitchIdx: -1, pcdFed: false, pcdDir: 'ok', pcdIdx: -1, hauled: 0, bowline: false, looseT: 0, droppedIn: false, deployT: -1, landed: false, groundCarry: false, runBackFired: false, wrapT: 0, coilNext: undefined, coilHand: -1 });
-  R.alive = false; R.pins.clear(); R.world = null; knotBench.visible = false; knots.active = false; knots.lock = null; ropeBuild(SETTINGS.ropePhys, SETTINGS.ropeDetail);
+  R.alive = false; R.pins.clear(); R.world = null; S.active = false; steelGroup.visible = false; knotBench.visible = false; knots.active = false; knots.lock = null; ropeBuild(SETTINGS.ropePhys, SETTINGS.ropeDetail);
   hands.forEach(h => { h.fatigue = 0; h.load = 0; h.slipping = false; h.taut = false; });
   Object.assign(bridle, { loadA: 0, loadW: 0, shareA: 0.5, chainOut: 0, hauledB: 0, stage: 'idle', togetherCalled: false, continueCalled: false, drift: 0, fouled: false, twist: false, arrived: false, burlapOff: false, wrapStage: 0, mated: false, burlapUnder: false, steelDown: false, squared: false, zB: WORLD.slingZ, zA: WORLD.slingZ, pointChecked: false, calledApexA: false, readyT: 0, readyToast: false, warned: false, earlyToast: false });
   wrapPts.length = 0; const set = wrapLine.getObjectByName('Bridle_Wrap_Set'); if (set) wrapLine.remove(set); const tw = wrapLine.getObjectByName('Bridle_Twist'); if (tw) wrapLine.remove(tw);
   pcd.hung = false; Object.assign(lanyard, { clipped: false, anchor: 'none', taut: false }); lanyard.hooks.forEach(h => { h.anchor = 'parked'; h.held = null; });
-  Object.assign(player, { falling: false, vy: 0, arrested: false, offBeamT: 0 }); Object.assign(fall, { packExt: 0, freeFall: 0, peakF: 0, phase: 'none', hangT: 0, hangToast: false }); fall.v.set(0, 0, 0);
+  Object.assign(player, { falling: false, vy: 0, arrested: false, offBeamT: 0 }); Object.assign(balance, { init: false, teeterT: 0, warned: false }); game.teeters = 0; game.recoveries = 0; Object.assign(fall, { packExt: 0, freeFall: 0, peakF: 0, phase: 'none', hangT: 0, hangToast: false }); fall.v.set(0, 0, 0);
   falling.length = 0; grabbables.forEach(g => { g.held = null; g.locked = false; });
   Object.assign(harness, { stage: 0, legL: false, legR: false, worn: false }); harnessVisuals();
   GEAR_DEFS.forEach(d => { const g = gear[d.id]; g.worn = false; g.ring = null; g.mesh.visible = true; gearTable.attach(g.mesh); g.mesh.position.copy(g.grab.home); g.mesh.rotation.set(0, 0, 0); g.mesh.scale.set(1, 1, 1); });
@@ -2411,7 +2692,7 @@ function endProgram(ok, title, body) {
   document.getElementById('p-body').textContent = body;
   const st = document.getElementById('p-stats'); st.hidden = false;
   const m = Math.floor(game.t / 60), s = Math.floor(game.t % 60);
-  st.innerHTML = [['Time', m + ':' + (s < 10 ? '0' : '') + s], ['Things dropped', game.drops], ['Rope dropped in', game.ropeDrops], ['Falls arrested', game.falls], ['Seconds on the beam unclipped', game.unclippedOnBeam.toFixed(0)],
+  st.innerHTML = [['Time', m + ':' + (s < 10 ? '0' : '') + s], ['Things dropped', game.drops], ['Rope dropped in', game.ropeDrops], ['Falls arrested', game.falls], ['Over the edge and back', (game.recoveries || 0) + ' of ' + (game.teeters || 0)], ['Seconds on the beam unclipped', game.unclippedOnBeam.toFixed(0)],
     ['Worst drift', (game.bestDrift * 3.281).toFixed(1) + ' ft'], ['Apex fouls', game.fouls], ['Pulled before the go', game.earlyPulls], ['Stepped on radio traffic', Radio.stepped], ['PROCS misses', game.procsMisses]].map(([k, v]) => '<dt>' + k + '</dt><dd>' + v + '</dd>').join('');
   document.getElementById('btn-resume').hidden = true; document.getElementById('btn-retry').hidden = false;
   pauseEl.hidden = false; if (ok) AudioKit.program(); else AudioKit.alarm();
@@ -2701,7 +2982,7 @@ renderer.setAnimationLoop((time, frame) => {
     desktopTick(dt); vrTick(dt); bodyTick(); handsTick(dt);
     if (!game.paused) {
       if (game.phase === 'lobby') lobbyTick();
-      else { playerTick(dt); lanyardTick(); const _t0 = performance.now(); ropeTick(dt); const _t1 = performance.now(); ropeRender(); const _t2 = performance.now(); game.perfSim = game.perfSim * 0.95 + (_t1 - _t0) * 0.05; game.perfDraw = game.perfDraw * 0.95 + (_t2 - _t1) * 0.05; bridleTick(dt); fallingTick(dt); stepTick(dt); radioTick(dt); }
+      else { playerTick(dt); lanyardTick(); const _t0 = performance.now(); ropeTick(dt); const _t1 = performance.now(); ropeRender(); const _t2 = performance.now(); game.perfSim = game.perfSim * 0.95 + (_t1 - _t0) * 0.05; game.perfDraw = game.perfDraw * 0.95 + (_t2 - _t1) * 0.05; steelTick(dt); bridleTick(dt); steelRender(); fallingTick(dt); stepTick(dt); radioTick(dt); }
     }
     if (renderer.xr.isPresenting) feetTick(frame || (renderer.xr.getFrame && renderer.xr.getFrame()), dt); else feetTick(null, dt);
     hudTick(); boardsTick(); knotBoardTick(); radioDisplayTick(); vrPanelTick(dt);
@@ -2713,7 +2994,7 @@ renderer.setAnimationLoop((time, frame) => {
 /* debug / test hooks: drive the flow without a headset */
 
 /* debug / test hooks: drive the flow without a headset */
-window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, SELF, RAIL_Y, RAIL_Z, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos };
+window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, balance, SELF, RAIL_Y, RAIL_Z, S, STEEL, steelBuild, steelHookOn, steelFoulCheck, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos };
 </script>
 </body>
 </html>
