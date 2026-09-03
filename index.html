@@ -169,6 +169,23 @@
         <div class="row"><label for="s-pace">Partner pace</label>
           <input type="range" id="s-pace" min="0.3" max="3" step="0.1"><output id="o-pace"></output></div>
         <p class="hint">How fast the other up-rigger hauls once you are pulling together. Match it or the bridle drifts.</p>
+        <div class="row"><label for="s-load">Load</label>
+          <input type="range" id="s-load" min="0.25" max="1.5" step="0.05"><output id="o-load"></output></div>
+        <p class="hint">How heavy everything feels: the grip it takes and how fast your arm tires. 1 is the real numbers — a 1-ton motor with 60 feet of chain, 3/8" legs, 1/2" rope.</p>
+        <div class="row"><label for="s-fat">Fatigue</label>
+          <input type="range" id="s-fat" min="0" max="2" step="0.1"><output id="o-fat"></output></div>
+        <p class="hint">How quickly a loaded hand starts to shake and then lets go. 0 turns it off.</p>
+        <div class="racklist">
+          <label><input type="checkbox" id="s-chain" checked> The motor's chain pays out to the floor as it rises</label>
+        </div>
+        <p class="hint">Bottom hook on the floor: 60 feet of chain leaves the bag on the way up and the load grows with height. Off, the chain rides in the bag.</p>
+        <h2>Rope</h2>
+        <div class="row"><label for="s-rphys">Physics</label>
+          <select id="s-rphys"><option value="1">Every inch</option><option value="2">Every 2 in</option><option value="3">Every 3 in</option><option value="4">Every 4 in</option><option value="6">Every 6 in</option><option value="12">Every foot</option></select><output id="o-rphys"></output></div>
+        <p class="hint">How finely the 150 feet is simulated. Every inch is 1,800 particles — the most rope-like, and the most work for the headset. Applies when the program starts.</p>
+        <div class="row"><label for="s-rdet">Look</label>
+          <select id="s-rdet"><option value="0.5">Half inch</option><option value="1">Every inch</option><option value="2">Every 2 in</option><option value="4">Every 4 in</option></select><output id="o-rdet"></output></div>
+        <p class="hint">How finely the tube is drawn between particles.</p>
         <h2>Knots</h2>
         <div class="row"><label for="s-turns">Hitch turns</label>
           <input type="range" id="s-turns" min="1" max="3" step="1"><output id="o-turns"></output></div>
@@ -202,16 +219,17 @@
       <dl class="legend">
         <dt>Grip</dt><dd>Hold the grip button to hold things &mdash; gear, any part of the rope, a leg of steel. Let go over the void and it goes in</dd>
         <dt>Harness</dt><dd>Bring it to your chest to shoulder it, then trigger at the <b>chest</b>, the <b>belly</b>, and each <b>thigh</b> to clip it. Seven rings: back, chest, belly, both hips, both rear. Gear clips to any ring; the lanyard hangs off the back ring and its hooks park on the shoulder straps</dd>
+        <dt>Hooks</dt><dd>Grip a hook and the <b>trigger works its gate</b>: near the rail or the lifeline it clips; already clipped, it comes off in your hand. Six feet of webbing is six feet &mdash; it tugs you back on the deck, and in a fall it is what the <b>blowout pack</b> pays out of: about six feet of free fall, two feet of pack, then you hang and swing in</dd>
         <dt>Rope</dt><dd>It is real: 150 feet of it, every foot simulated. Hold it anywhere, let it swing, feel it go taut. Pull too hard against a taut line and it <b>slips through your hand</b></dd>
         <dt>Trigger</dt><dd>Act on what is under your hand: pick a program, dress a knot, hang the PCD, mate a shackle</dd>
         <dt>Knots</dt><dd>Hold the rope end at the rail and <b>circle your hand around the rail</b> &mdash; the game counts the turns. Trigger to dress it</dd>
-        <dt>Haul</dt><dd>Grip the rope below the PCD and <b>pull down</b>, hand over hand</dd>
-        <dt>B / Y</dt><dd>Key the radio</dd>
+        <dt>Haul</dt><dd>Grip the rope below the PCD and <b>pull down</b>, hand over hand. The heavier it gets, the harder you have to <b>squeeze</b> (trigger or grip) or it slips; hold weight too long and your hand shakes, then lets go &mdash; rest it on the cam</dd>
+        <dt>B / Y</dt><dd>Key the radio &mdash; with the <b>radio in your hand</b>. Listen first: everybody in the building is on this channel, and keying up over someone is stepping on their call</dd>
         <dt>Thumbstick</dt><dd>Push it and you walk where that <b>controller</b> points (or where you look &mdash; Settings). <b>Hold A / X 0.6&thinsp;s to pause</b></dd>
         <dt>Feet</dt><dd>Where the headset says they are. Stand on the rope to hold it; step off the beam and gravity has you</dd>
         <dt>Desktop</dt><dd>Mouse look · WASD walk · <b>left mouse = grip</b> · right mouse / F = trigger · mouse wheel wraps a knot or hauls · E reach · R radio · P pause</dd>
       </dl>
-      <p class="footnote">M0.3 &mdash; real rope, a harness that sits on your chest, boards at the table and the sling, walking that goes where you push. On Quest, open this page in the headset browser.
+      <p class="footnote">M0.6 &mdash; rope simulated to the inch, a radio with voices on it, a tail left in your hand after the hitch. On Quest, open this page in the headset browser.
         If the Enter button stays unavailable inside an embedded viewer, open the page in its own tab.</p>
       <p class="footnote" id="diag" style="font-family:monospace;font-size:11px;color:#6a6a5c;line-height:1.6"></p>
     </div>
@@ -239,6 +257,8 @@
     <div class="stat"><div class="lab">Height</div><div class="val" id="h-alt">0 ft</div></div>
     <div class="stat"><div class="lab">Fall arrest</div><div class="val bad" id="h-clip">OPEN</div></div>
     <div class="stat"><div class="lab">Rope</div><div class="val" id="h-rope">COIL</div></div>
+    <div class="stat"><div class="lab">Load</div><div class="val" id="h-load">0 lb</div></div>
+    <div class="stat"><div class="lab">Arm</div><div class="val good" id="h-arm">100%</div></div>
     <div class="stat"><div class="lab">Drops</div><div class="val" id="h-drops">0</div></div>
     <div class="stat"><div class="lab">Time</div><div class="val" id="h-time">0:00</div></div>
   </div>
@@ -279,7 +299,7 @@ const WORLD = {
   lanyard: 6 * FT,
   g: 9.81,
 };
-const DEFAULTS = { body: true, edge: 0.1, haul: 3, pace: 0.9, turns: 2, dom: 'right', vol: 0.7, moveRef: 'controller' };
+const DEFAULTS = { body: true, edge: 0.1, haul: 3, pace: 0.9, turns: 2, dom: 'right', vol: 0.7, moveRef: 'controller', loadScale: 1, chainDown: true, fatigue: 1, ropePhys: 1, ropeDetail: 1 };
 const SETTINGS = Object.assign({}, DEFAULTS);
 try { Object.assign(SETTINGS, JSON.parse(localStorage.getItem('uprigger.settings') || '{}')); } catch (e) {}
 function saveSettings() { try { localStorage.setItem('uprigger.settings', JSON.stringify(SETTINGS)); } catch (e) {} }
@@ -484,6 +504,10 @@ archSign.position.set(0, 2.1, -1.4); archSign.rotation.y = Math.PI; holodeck.add
 const arena = new THREE.Group(); arena.name = 'Arena'; arena.visible = false; scene.add(arena);
 const H = WORLD.beamHeight, BW = WORLD.beamWidth, BL = WORLD.beamLen, GAP = WORLD.beamGap;
 const SLING_X = BW / 2 + 0.15;
+/* the prep area: a 6 × 4.5 m platform off the back of the catwalk, where the gear lives */
+const GEAR_X = -4.5;
+const PREP = { x0: GEAR_X - 3.0, x1: GEAR_X + 3.0, z0: WORLD.catwalkDepth, z1: WORLD.catwalkDepth + 4.5 };
+function inPrep(x, z) { return x > PREP.x0 && x < PREP.x1 && z > PREP.z0 - 0.05 && z < PREP.z1; }
 const POINT = { x: GAP / 2, z: WORLD.slingZ };        // where the bridle apex should land
 function buildArena() {
   const floor = box(90, 0.2, 70, MAT.floor, 'Arena_Floor'); floor.position.set(GAP / 2, -0.1, -12); arena.add(floor);
@@ -503,7 +527,18 @@ function buildArena() {
   const trX = box(90, 1.2, 0.5, MAT.steel, 'Roof_Truss_X'); trX.position.set(GAP / 2, H + 4, WORLD.slingZ); arena.add(trX);
   // catwalk: grating, back wall, kick plate, posts and a yellow top rail — with a gap where each beam meets it
   const cw = box(44, 0.06, WORLD.catwalkDepth, MAT.grating, 'Catwalk_Grating'); cw.position.set(GAP / 2, H - 0.03, WORLD.catwalkDepth / 2); arena.add(cw);
-  const cwBack = box(44, 2.2, 0.04, MAT.steelDark, 'Catwalk_BackWall'); cwBack.position.set(GAP / 2, H + 1.1, WORLD.catwalkDepth); arena.add(cwBack);
+  // the back wall, with an opening onto the prep platform
+  const wallL = box(PREP.x0 - (GAP / 2 - 22), 2.2, 0.04, MAT.steelDark, 'Catwalk_BackWall_L'); wallL.position.set((GAP / 2 - 22 + PREP.x0) / 2, H + 1.1, WORLD.catwalkDepth); arena.add(wallL);
+  const wallR = box((GAP / 2 + 22) - PREP.x1, 2.2, 0.04, MAT.steelDark, 'Catwalk_BackWall_R'); wallR.position.set((PREP.x1 + GAP / 2 + 22) / 2, H + 1.1, WORLD.catwalkDepth); arena.add(wallR);
+  // the prep platform: grating, a low wall around its three outer sides, a yellow top rail
+  const pw = PREP.x1 - PREP.x0, pd = PREP.z1 - PREP.z0, pcx = (PREP.x0 + PREP.x1) / 2, pcz = (PREP.z0 + PREP.z1) / 2;
+  const prep = box(pw, 0.06, pd, MAT.grating, 'Prep_Grating'); prep.position.set(pcx, H - 0.03, pcz); arena.add(prep);
+  const prepBack = box(pw + 0.08, 2.2, 0.04, MAT.steelDark, 'Prep_BackWall'); prepBack.position.set(pcx, H + 1.1, PREP.z1); arena.add(prepBack);
+  [PREP.x0, PREP.x1].forEach((x, i) => { const w = box(0.04, 2.2, pd, MAT.steelDark, 'Prep_SideWall_' + (i ? 'R' : 'L')); w.position.set(x, H + 1.1, pcz); arena.add(w);
+    const r = cyl(0.025, pd, MAT.railYellow, 'Prep_SideRail'); r.rotation.x = Math.PI / 2; r.position.set(x + (i ? -0.06 : 0.06), H + WORLD.railHeight, pcz); arena.add(r); });
+  const prepRail = cyl(0.025, pw, MAT.railYellow, 'Prep_BackRail'); prepRail.rotation.z = Math.PI / 2; prepRail.position.set(pcx, H + WORLD.railHeight, PREP.z1 - 0.06); arena.add(prepRail);
+  const prepStripe = box(pw, 0.01, 0.08, MAT.railYellow, 'Prep_Threshold'); prepStripe.position.set(pcx, H + 0.005, PREP.z0); arena.add(prepStripe);
+  const prepSign = makeLabel('PREP AREA', 1.2, 0.3, false, '#ff9c00'); prepSign.position.set(pcx, H + 2.0, PREP.z1 - 0.06); prepSign.rotation.y = Math.PI; arena.add(prepSign);
   const kick = box(44, 0.15, 0.03, MAT.railYellow, 'Catwalk_KickPlate'); kick.position.set(GAP / 2, H + 0.075, 0.015); arena.add(kick);
   const railSegs = [[-22 + GAP / 2, -0.5], [0.5, GAP - 0.5], [GAP + 0.5, 22 + GAP / 2]];
   railSegs.forEach(([a, b]) => {
@@ -562,6 +597,8 @@ const hoistBody = cyl(0.16, 0.34, MAT.hoist, 'Hoist_Body'); hoistBody.position.y
 const hoistHook = torus(0.05, 0.014, MAT.chain, 'Hoist_Hook'); hoistHook.position.y = 0.44; hoist.add(hoistHook);
 const hoistChainBag = box(0.2, 0.3, 0.14, MAT.burlap, 'Hoist_ChainBag'); hoistChainBag.position.set(0.2, 0.15, 0); hoist.add(hoistChainBag);
 hoist.position.set(POINT.x, 0, POINT.z);
+const loadChain = cyl(0.012, 1, MAT.chain, 'Hoist_LoadChain'); loadChain.visible = false; arena.add(loadChain);
+const bottomHook = torus(0.06, 0.016, MAT.chain, 'Hoist_BottomHook'); bottomHook.visible = false; arena.add(bottomHook);
 
 
 /* ───────────────────── the harness and the kit ─────────────────────
@@ -570,11 +607,11 @@ hoist.position.set(POINT.x, 0, POINT.z);
    every other piece of kit clips into one of them. The lanyard hangs off the back ring and its
    two snap hooks park on the shoulder straps until they are on the steel. */
 const gearTable = new THREE.Group(); gearTable.name = 'GearTable'; arena.add(gearTable);
-const GEAR_X = -4.5;
-const tableTop = box(2.4, 0.04, 0.6, MAT.steelDark, 'GearTable_Top'); tableTop.position.set(GEAR_X, H + 0.9, 0.7); gearTable.add(tableTop);
-[-1.1, 1.1].forEach(x => { const l = box(0.05, 0.9, 0.5, MAT.steelDark, 'GearTable_Leg'); l.position.set(GEAR_X + x, H + 0.45, 0.7); gearTable.add(l); });
-const binMesh = box(0.34, 0.3, 0.34, MAT.concrete, 'PocketBin'); binMesh.position.set(GEAR_X - 1.6, H + 0.15, 0.85); gearTable.add(binMesh);
-const binLabel = makeLabel('BUCKET', 0.34, 0.1, false, '#99ccff'); binLabel.position.set(GEAR_X - 1.6, H + 0.36, 0.85); binLabel.rotation.x = -Math.PI / 2; gearTable.add(binLabel);
+const TABLE_Z = PREP.z1 - 0.7;   // the table stands against the prep area's back wall; you face it with the arena behind you
+const tableTop = box(2.4, 0.04, 0.6, MAT.steelDark, 'GearTable_Top'); tableTop.position.set(GEAR_X, H + 0.9, TABLE_Z); gearTable.add(tableTop);
+[-1.1, 1.1].forEach(x => { const l = box(0.05, 0.9, 0.5, MAT.steelDark, 'GearTable_Leg'); l.position.set(GEAR_X + x, H + 0.45, TABLE_Z); gearTable.add(l); });
+const binMesh = box(0.34, 0.3, 0.34, MAT.concrete, 'PocketBin'); binMesh.position.set(GEAR_X - 1.7, H + 0.15, TABLE_Z - 0.3); gearTable.add(binMesh);
+const binLabel = makeLabel('BUCKET', 0.34, 0.1, false, '#99ccff'); binLabel.position.set(GEAR_X - 1.7, H + 0.36, TABLE_Z - 0.3); binLabel.rotation.x = -Math.PI / 2; gearTable.add(binLabel);
 
 const grabbables = [];          // {mesh, kind, r, held, ...}
 function registerGrab(mesh, kind, r, extra) { const g = Object.assign({ mesh, kind, r: r || 0.14, held: null, home: mesh.position.clone(), homeParent: mesh.parent }, extra || {}); grabbables.push(g); mesh.userData.grab = g; return g; }
@@ -647,7 +684,7 @@ const POCKET_DEFS = [
 const gear = {};      // id -> {def, mesh, grab, worn, ring}
 const pocket = {};    // id -> {def, mesh, grab, onBody, cleared}
 GEAR_DEFS.forEach((def, i) => {
-  const mesh = def.build(); mesh.name = 'Gear_' + def.id; mesh.position.set(GEAR_X - 1.05 + i * 0.27, H + 0.98, 0.7); gearTable.add(mesh);
+  const mesh = def.build(); mesh.name = 'Gear_' + def.id; mesh.position.set(GEAR_X - 1.05 + i * 0.27, H + 0.98, TABLE_Z); gearTable.add(mesh);
   const grab = registerGrab(mesh, 'gear', 0.16, { id: def.id });
   gear[def.id] = { def, mesh, grab, worn: false, ring: null };
 });
@@ -708,13 +745,62 @@ let hudDirty = true;
 const toastEl = document.getElementById('toast'); let toastT = null;
 function toast(msg, bad) { toastEl.textContent = msg; toastEl.className = bad ? 'alert' : ''; toastEl.style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => toastEl.style.opacity = 0, bad ? 3200 : 2200); vrPanelDirty = true; lastToast = { msg, bad, t: perfNow() }; }
 let lastToast = null;
+/* ───────────────────── the radio ─────────────────────
+   One channel, everybody on it. Lines queue up and come out of the speaker one at a time, in a voice
+   per person (Web Speech, when the browser has it). While anyone is talking the channel is busy —
+   key up over them and you have stepped on the call. */
 const radioLogEl = document.getElementById('radio-log'); const radioLines = [];
-function radio(who, text, delay) {
-  const say = () => { radioLines.push({ who, text }); if (radioLines.length > 4) radioLines.shift();
-    radioLogEl.innerHTML = radioLines.map(l => '<div class="' + (l.who === 'You' ? 'me' : '') + '"><b>' + l.who + '</b> — ' + l.text + '</div>').join('');
-    AudioKit.radioTx(); vrPanelDirty = true; };
-  if (delay) setTimeout(say, delay * 1000); else say();
+const Radio = { queue: [], speaking: null, busyUntil: 0, chatterAt: 0, voices: null, stepped: 0, keyed: 0, muted: false };
+const VOICES = { Ground: { pitch: 0.75, rate: 1.0, pick: /male|david|daniel|fred|alex|google us english/i }, 'Rigger B': { pitch: 1.05, rate: 1.08, pick: /female|samantha|zira|karen|moira|google uk english female/i },
+  'Spot 2': { pitch: 0.9, rate: 1.1, pick: /male|george|rishi/i }, 'Truss 3': { pitch: 1.2, rate: 1.0, pick: /female|victoria|tessa/i }, Stage: { pitch: 0.85, rate: 0.95, pick: /male/i }, Deck: { pitch: 1.1, rate: 1.15, pick: /female/i } };
+function radioLog(who, text) {
+  radioLines.push({ who, text }); if (radioLines.length > 4) radioLines.shift();
+  radioLogEl.innerHTML = radioLines.map(l => '<div class="' + (l.who === 'You' ? 'me' : '') + '"><b>' + l.who + '</b> — ' + l.text + '</div>').join('');
+  hudDirty = true;
 }
+function radioVoiceFor(who) {
+  const synth = window.speechSynthesis; if (!synth) return null;
+  if (!Radio.voices) { const v = synth.getVoices(); if (!v || !v.length) return null; Radio.voices = v.filter(x => /^en/i.test(x.lang)).length ? v.filter(x => /^en/i.test(x.lang)) : v; }
+  const spec = VOICES[who] || VOICES.Ground; const hit = Radio.voices.find(x => spec.pick.test(x.name)); return hit || Radio.voices[0];
+}
+/* a line from someone on the channel: queued, spoken when the channel is clear, logged when it starts */
+function radio(who, text, delay) { Radio.queue.push({ who, text, at: game.t + (delay || 0) }); }
+function radioSpeak(line) {
+  radioLog(line.who, line.text); AudioKit.radioKey();
+  const secs = 0.5 + line.text.length * 0.055; Radio.busyUntil = game.t + secs; Radio.speaking = line;
+  const synth = window.speechSynthesis;
+  if (synth && !Radio.muted) {
+    try { const u = new SpeechSynthesisUtterance(line.text); const spec = VOICES[line.who] || VOICES.Ground; const v = radioVoiceFor(line.who); if (v) u.voice = v;
+      u.pitch = spec.pitch; u.rate = spec.rate; u.volume = Math.min(1, SETTINGS.vol + 0.2);
+      u.onend = () => { if (Radio.speaking === line) { Radio.speaking = null; Radio.busyUntil = Math.min(Radio.busyUntil, game.t + 0.25); AudioKit.radioTx(); } };
+      u.onerror = u.onend; synth.speak(u); } catch (e) {}
+  }
+}
+function radioBusy() { return Radio.speaking !== null || game.t < Radio.busyUntil || Radio.queue.length > 0; }   // someone talking, a reply on its way, or the channel still settling
+/* other crews on the same channel — you wait for them to finish */
+const CHATTER = [
+  [['Spot 2', 'Ground, spot two. Ready for your motor whenever you are.'], ['Ground', 'Copy, spot two. Two minutes.']],
+  [['Truss 3', 'Truss three to ground, we\'re bridled and squared, send the chain.'], ['Ground', 'Chain coming to truss three.']],
+  [['Stage', 'Ground, stage. Where do you want the video wall motors?'], ['Ground', 'Stage, hold them at the loading dock, I\'ll call you.']],
+  [['Deck', 'Deck to ground, who has the twelve-foot burlap?'], ['Ground', 'Look in the up-rigger crate by spot one.'], ['Deck', 'Got it, thanks.']],
+  [['Spot 2', 'Spot two, hoist is hooked, coming up on the count.'], ['Ground', 'Copy. All stop on spot two until I say.']],
+  [['Truss 3', 'Ground, truss three, we need one more shackle up here.'], ['Ground', 'On its way on the next rope.']],
+];
+function radioTick(dt) {
+  if (game.phase !== 'arena' || game.over) return;
+  // spoken lines end themselves; if the synth has no voice, the estimate does
+  if (Radio.speaking && game.t > Radio.busyUntil + 0.05 && (game.t > Radio.busyUntil + 2.5 || !(window.speechSynthesis && window.speechSynthesis.speaking))) { Radio.speaking = null; Radio.busyUntil = game.t + 0.25; }
+  if (!Radio.speaking && Radio.queue.length && game.t >= Radio.queue[0].at && game.t >= Radio.busyUntil) radioSpeak(Radio.queue.shift());
+  // chatter: something else is always going on in the building
+  if (!Radio.chatterAt) Radio.chatterAt = game.t + 18 + Math.random() * 20;
+  if (game.t > Radio.chatterAt && !Radio.queue.length && !Radio.speaking) {
+    const ex = CHATTER[Math.floor(Math.random() * CHATTER.length)]; let t = 0.2; ex.forEach(([who, text]) => { radio(who, text, t); t += 0.5 + text.length * 0.055 + 0.6; });
+    Radio.chatterAt = game.t + 28 + Math.random() * 25;
+  }
+}
+/* the player keying up: needs the radio in a hand, and a clear channel */
+function playerSays(text) { Radio.keyed++; radioLog('You', text); AudioKit.radioKey(); Radio.busyUntil = Math.max(Radio.busyUntil, game.t + 0.4 + text.length * 0.05); }
+function holdingRadio() { return hands.some(h => { const g = heldOf(h.index); return g && g.kind === 'gear' && g.id === 'radio'; }); }
 
 
 /* ───────────────────── the rope ─────────────────────
@@ -726,12 +812,26 @@ function radio(who, text, delay) {
    Index 0 is the end that went down; index n-1 is the tail that stays with you. */
 const rope = { state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, hitchIdx: -1, pcdFed: false, pcdDir: 'ok', pcdIdx: -1, hauled: 0,
   bowline: false, looseT: 0, droppedIn: false, deployT: -1, landed: false, groundCarry: false, runBackFired: false, tail: new THREE.Vector3(), groundEnd: new THREE.Vector3() };
-const R = { n: 150, L0: 0, pos: [], prev: [], pins: new Map(), alive: false, r: 0.012, mesh: null, tension: [] };
-R.L0 = WORLD.ropeLen / (R.n - 1);
-for (let i = 0; i < R.n; i++) { R.pos.push(new THREE.Vector3()); R.prev.push(new THREE.Vector3()); R.tension.push(1); }
+const R = { n: 0, L0: 0, pos: [], prev: [], pins: new Map(), alive: false, r: 0.012, mesh: null, tension: [], substeps: 8, iters: 2, inches: 0, renderInches: 0, renderSub: 1 };
 const ropeGroup = new THREE.Group(); ropeGroup.name = 'Rope'; arena.add(ropeGroup);
-const ropeInst = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 6, 1), MAT.rope, R.n - 1); ropeInst.name = 'Rope_Segments'; ropeInst.frustumCulled = false; ropeGroup.add(ropeInst);
+let ropeInst = null;
+/* (re)build the chain at a particle spacing in inches, and the instanced tube at a render spacing */
+function ropeBuild(inches, renderInches) {
+  inches = Math.max(0.5, inches || 1); renderInches = Math.max(0.25, Math.min(inches, renderInches || inches));
+  if (R.inches === inches && R.renderInches === renderInches) return;
+  R.inches = inches; R.renderInches = renderInches;
+  R.n = Math.max(20, Math.round(WORLD.ropeLen / (inches * 0.0254)) + 1); R.L0 = WORLD.ropeLen / (R.n - 1);
+  R.pos.length = 0; R.prev.length = 0; R.tension.length = 0; R.pins.clear(); R.alive = false;
+  for (let i = 0; i < R.n; i++) { R.pos.push(new THREE.Vector3()); R.prev.push(new THREE.Vector3()); R.tension.push(1); }
+  // small steps: many substeps with a couple of sweeps each keeps a long fine chain stiff
+  R.substeps = Math.max(4, Math.min(36, Math.round(3 + 0.7 * Math.sqrt(R.n)))); R.iters = 1;
+  R.renderSub = Math.max(1, Math.round(inches / renderInches));
+  if (ropeInst) { ropeGroup.remove(ropeInst); ropeInst.geometry.dispose(); }
+  ropeInst = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 6, 1), MAT.rope, (R.n - 1) * R.renderSub); ropeInst.name = 'Rope_Segments'; ropeInst.frustumCulled = false; ropeGroup.add(ropeInst);
+}
+ropeBuild(SETTINGS.ropePhys, SETTINGS.ropeDetail);
 const knotMesh = torus(0.05, 0.022, MAT.rope, 'Rope_Hitch'); knotMesh.visible = false; arena.add(knotMesh);
+const _rv = new THREE.Vector3();
 const _rm = new THREE.Matrix4(), _rq = new THREE.Quaternion(), _rd = new THREE.Vector3(), _rmid = new THREE.Vector3(), _rs = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 
 /* pins: kind is 'hand' (target follows a hand), 'hitch', 'pcd', 'foot', 'ground', 'eye' */
@@ -747,12 +847,13 @@ function deployRope(handIndex) {
   const from = handIndex !== undefined ? hands[handIndex].pos.clone() : rope.tail.clone();
   for (let i = 0; i < R.n; i++) { R.pos[i].copy(from); R.prev[i].copy(R.pos[i]); }
   R.pins.clear(); R.alive = true;
-  R.pos[0].add(new THREE.Vector3(0, 0.01, -0.05)); R.prev[0].copy(from);   // the toss: out over the void, then gravity
-  rope.coilNext = 1; rope.coilRest = 0.05; rope.coilHand = handIndex !== undefined ? handIndex : -1;
+  const subDt = (1 / 60) / R.substeps;   // the toss: about 3 m/s out over the void, then gravity
+  R.prev[0].copy(from); R.pos[0].add(new THREE.Vector3(0, 0.6 * subDt, -3.0 * subDt));
+  rope.coilNext = 1; rope.coilRest = 0; rope.coilHand = handIndex !== undefined ? handIndex : -1;
   for (let i = 1; i < R.n; i++) pinSet(i, 'coil', from);
   rope.state = 'deployed'; rope.deployT = 0; rope.landed = false;
   gear.rope.worn = false; releaseAll(gear.rope.grab); const coil = gear.rope.mesh; arena.attach(coil); coil.position.copy(from);
-  AudioKit.rope(); toast('Rope going down — hold the coil'); radio('You', 'Rope coming down!'); hudDirty = true;
+  AudioKit.rope(); toast('Rope going down — hold the coil'); if (holdingRadio()) playerSays('Rope coming down!'); else radio('Rigger B', 'Rope coming down on A!', 0.3); hudDirty = true;
 }
 /* the coil pays out: the next coiled particle is released when the rope ahead of it goes taut */
 function coilTick() {
@@ -766,12 +867,25 @@ function coilTick() {
     rope.coilNext = R.n; gear.rope.mesh.visible = false; gear.rope.mesh.scale.setScalar(1); toast('That is the end of the rope — hold it'); AudioKit.grab();
   }
 }
+/* the end is down: whatever is still in the coil gets flaked onto the deck at your feet in a loose
+   figure-eight, and the tail is what stays in your hand */
+function flakeCoil() {
+  if (rope.coilNext === undefined || rope.coilNext >= R.n) { toast('Rope is on the floor'); return; }
+  const holder = rope.coilHand >= 0 ? hands[rope.coilHand] : null; const at = holder ? holder.pos.clone() : R.pos[rope.coilNext].clone();
+  // the pile: on the nearest deck under the hand, half a metre back from the edge
+  const cx = at.x, cz = Math.max(0.55, Math.min(WORLD.catwalkDepth - 0.3, at.z + 0.6)), cy = H + R.r;
+  const first = rope.coilNext, count = R.n - first; const perLoop = Math.max(8, Math.round(2.4 / R.L0));
+  for (let i = first; i < R.n; i++) { pinClear(i); const u = (i - first) / perLoop, a = u * 2 * Math.PI; const layer = Math.floor(u) * R.r * 2.2;
+    R.pos[i].set(cx + 0.38 * Math.sin(a), cy + layer, cz + 0.2 * Math.sin(2 * a)); R.prev[i].copy(R.pos[i]); }
+  rope.coilNext = R.n; rope.coilHand = -1; gear.rope.mesh.visible = false; gear.rope.mesh.scale.setScalar(1);
+  if (holder) { pinSet(R.n - 1, 'hand', holder.pos, { hand: holder.index }); R.pos[R.n - 1].copy(holder.pos); R.prev[R.n - 1].copy(holder.pos); }
+  toast('Rope is on the floor — the rest is flaked at your feet, you have the tail'); AudioKit.rope();
+}
 /* letting go of the coil before it is paid out: it falls as a coil */
 function coilDropped() { if (rope.coilNext === undefined || rope.coilNext >= R.n) return; for (let i = rope.coilNext; i < R.n; i++) pinClear(i); rope.coilNext = R.n; rope.coilHand = -1; gear.rope.mesh.visible = false; toast('YOU LET GO OF THE COIL', true); }
 /* one PBD step */
-const ROPE_ITERS = 12, ROPE_SUBSTEPS = 2;
 function ropeStep(dt) {
-  const g = -WORLD.g * dt * dt, damp = 0.999;   // a little air and internal friction per substep
+  const g = -WORLD.g * dt * dt, damp = 1 - 0.06 * dt;   // a little air and internal friction, per second not per step
   const v = _rd;
   for (let i = 0; i < R.n; i++) {
     const p = R.pos[i], q = R.prev[i];
@@ -786,24 +900,29 @@ function ropeStep(dt) {
     // the coil feeds whatever the rope asks for, less a little friction (in PBD a position pull-back
     // per substep IS a deceleration, so this has to stay well under g·dt²)
     const d = R.pos[c].distanceTo(at);
-    if (d > rope.coilRest) rope.coilRest = Math.min(R.L0, Math.max(rope.coilRest, d - 0.0001));
+    if (d > rope.coilRest) rope.coilRest = Math.min(R.L0, Math.max(rope.coilRest, d - 0.12 * dt * dt * 60));   // a whisper of coil friction, scaled to the step
     if (rope.coilRest >= R.L0 - 1e-4) { // release it moving with the rope, so it takes nothing out of the fall
-      const i = rope.coilNext; pinClear(i); R.pos[i].copy(at); R.prev[i].copy(at).sub(R.pos[c]).add(R.prev[c]); rope.coilNext++; rope.coilRest = 0; }
+      const i = rope.coilNext; pinClear(i); R.pos[i].copy(at);
+      // picked up from rest: the rope pays for every foot it takes out of the coil (the classic
+      // chain-off-a-pile result, a ≈ g/3). A little of the rope's speed carries into the new particle.
+      _rv.copy(R.pos[c]).sub(R.prev[c]).multiplyScalar(0.5); R.prev[i].copy(at).sub(_rv);
+      rope.coilNext++; rope.coilRest = 0; }
   }
   // hard pins land the particle on its target; soft ones (hands) pull it there and can slip
   R.pins.forEach((pin, i) => { R.pos[i].copy(pin.target); if (pin.kind === 'coil') R.prev[i].copy(pin.target); });
-  for (let it = 0; it < ROPE_ITERS; it++) {
-    const fwd = it % 2 === 0;
+  R.stepNo = (R.stepNo || 0) + 1;
+  for (let it = 0; it < R.iters; it++) {
+    const fwd = (it + R.stepNo) % 2 === 0;   // one sweep per small step, direction alternating step to step
     for (let s = 0; s < R.n - 1; s++) {
       const j = fwd ? s : R.n - 2 - s; const a = R.pos[j], b = R.pos[j + 1];
       v.copy(b).sub(a); const d = v.length(); if (d < 1e-6) continue;
       const rest = (rope.coilNext !== undefined && j === rope.coilNext - 1 && rope.coilNext < R.n) ? rope.coilRest : R.L0;
+      if (d <= rest) continue;   // a rope only pulls: slack is free, it never pushes
       const diff = (d - rest) / d; const pa = R.pins.has(j), pb = R.pins.has(j + 1);
       if (pa && pb) continue;
       const wa = pa ? 0 : pb ? 1 : 0.5, wb = pb ? 0 : pa ? 1 : 0.5;
       a.addScaledVector(v, diff * wa); b.addScaledVector(v, -diff * wb);
     }
-    if (it % 3 === 2) ropeCollide();
   }
   ropeCollide(); pcdStrands();
   for (let s = 0; s < R.n - 1; s++) R.tension[s] = R.pos[s].distanceTo(R.pos[s + 1]) / R.L0;
@@ -812,33 +931,40 @@ function ropeStep(dt) {
 const _ls = new THREE.Vector3(), _pd = new THREE.Vector3();
 function pcdStrands() {
   if (!rope.pcdFed) return; const k = rope.pcdIdx, P = R.pins.get(k).target; pcdLoadSide(_ls);
-  for (let i = Math.max(0, k - 8); i <= Math.min(R.n - 1, k + 8); i++) {
+  const span = Math.max(3, Math.round(1.2 / R.L0));
+  for (let i = Math.max(0, k - span); i <= Math.min(R.n - 1, k + span); i++) {
     if (i === k || R.pins.has(i)) continue; const p = R.pos[i]; if (Math.abs(p.y - P.y) > 1.2) continue;
     _pd.copy(p).sub(P); _pd.y = 0; const d = _pd.dot(_ls); const want = i < k ? 0.06 : -0.06;
     if (i < k ? d < want : d > want) p.addScaledVector(_ls, want - d);
   }
 }
 function inCatwalkGap(x) { return Math.abs(x) < 0.5 || Math.abs(x - GAP) < 0.5; }
+/* Coulomb-ish friction for a particle pushed out of a surface by `push` along the normal: the
+   tangential motion this step is cut by up to μ·push, so rope resting under its own weight slides
+   when something pulls it, and a rope lying still stays still. */
+const MU_DECK = 0.45, MU_STEEL = 0.3;
+function frictionXZ(p, q, push, mu) { const tx = p.x - q.x, tz = p.z - q.z, t = Math.hypot(tx, tz); if (t < 1e-9) return; const f = Math.min(1, mu * push / t); p.x -= tx * f; p.z -= tz * f; }
 function ropeCollide() {
   const r = R.r, deckX = 22;
   for (let i = 0; i < R.n; i++) {
     if (R.pins.has(i)) continue;
     const p = R.pos[i], q = R.prev[i];
-    // arena floor: sticky
-    if (p.y < r) { p.y = r; q.x = p.x; q.z = p.z; }
-    const onCatwalkXZ = p.z > -0.02 && p.z < WORLD.catwalkDepth && Math.abs(p.x - GAP / 2) < deckX;
+    // arena floor
+    if (p.y < r) { const push = r - p.y; p.y = r; frictionXZ(p, q, push, 0.6); }
+    const onCatwalkXZ = (p.z > -0.02 && p.z < WORLD.catwalkDepth && Math.abs(p.x - GAP / 2) < deckX) || inPrep(p.x, p.z);
     // the deck: a slab. Land on top, be pushed off the front edge, or run underneath it
     if (onCatwalkXZ && p.y < H + r && p.y > H - 0.06 - r) {
-      if (p.y > H - 0.03) { p.y = H + r; q.x += (p.x - q.x) * 0.6; q.z += (p.z - q.z) * 0.6; }
+      if (p.y > H - 0.03) { const push = H + r - p.y; p.y = H + r; frictionXZ(p, q, push, MU_DECK); }
       else if (p.z < 0.12) p.z = -0.02 - r;
       else p.y = H - 0.06 - r;
     }
     // the back wall
-    if (onCatwalkXZ && p.z > WORLD.catwalkDepth - r && p.y > H - 0.6 && p.y < H + 2.2) p.z = WORLD.catwalkDepth - r;
+    if (onCatwalkXZ && p.z > WORLD.catwalkDepth - r && p.y > H - 0.6 && p.y < H + 2.2 && !(p.x > PREP.x0 && p.x < PREP.x1)) p.z = WORLD.catwalkDepth - r;
+    if (inPrep(p.x, p.z) && p.z > PREP.z1 - r && p.y > H - 0.6 && p.y < H + 2.2) p.z = PREP.z1 - r;
     // beam A: a box you can lie on, hang off the side of, or run under
     if (Math.abs(p.x) < BW / 2 + r && p.z <= 0.05 && p.z >= -BL && p.y < H + r && p.y > H - 0.78 - r) {
       const dTop = H + r - p.y, dBot = p.y - (H - 0.78 - r), dSide = BW / 2 + r - Math.abs(p.x);
-      if (dTop <= dSide && dTop <= dBot) { p.y = H + r; q.x += (p.x - q.x) * 0.6; q.z += (p.z - q.z) * 0.6; }
+      if (dTop <= dSide && dTop <= dBot) { p.y = H + r; frictionXZ(p, q, dTop, MU_STEEL); }
       else if (dSide < dBot) p.x = Math.sign(p.x || 1) * (BW / 2 + r);
       else p.y = H - 0.78 - r;
     }
@@ -866,18 +992,21 @@ function pcdSlideTick() {
   for (const h of hands) {
     const i = handPin(h.index); if (i <= k) continue;
     if (h.pos.y > P.y - 0.05 || h.vel.y > -0.001) continue;
-    const between = (i - rope.pcdIdx) * R.L0 / Math.max(1, SETTINGS.haul);
-    if (h.pos.distanceTo(P) >= between * 0.97) {
-      if (!haulAllowed()) continue;
-      pinClear(rope.pcdIdx); rope.pcdIdx--; pinSet(rope.pcdIdx, 'pcd', P); ropeHauledFromPCD();
-      if (Math.random() < 0.3) AudioKit.haul(); haptic(h, 0.6, 30);
+    let guard = 0, moved = false;
+    while (guard++ < 200 && rope.pcdIdx > 1) {
+      const between = (handPin(h.index) - rope.pcdIdx) * R.L0 / Math.max(1, SETTINGS.haul);
+      if (h.pos.distanceTo(P) < between * 0.97) break;
+      if (!haulAllowed()) break;
+      pinClear(rope.pcdIdx); rope.pcdIdx--; pinSet(rope.pcdIdx, 'pcd', P); moved = true;
     }
+    if (moved) { ropeHauledFromPCD(); if (Math.random() < 0.3) AudioKit.haul(); haptic(h, 0.6, 30); }
   }
   if (rope.pcdDir !== 'ok' && rope.hauled > 0.01 && !hands.some(h => handPin(h.index) > rope.pcdIdx)) {
     const feetOn = pinsOfKind('foot').filter(i => i > rope.pcdIdx);
     if (feetOn.length) { feetOn.forEach(i => { R.pins.get(i).forced = true; }); return; }   // a boot on it buys you a moment
-    // fed backwards and nothing holding the pull side: the load takes it back through
-    pinClear(rope.pcdIdx); rope.pcdIdx++; pinSet(rope.pcdIdx, 'pcd', P); ropeHauledFromPCD();
+    // fed backwards and nothing holding the pull side: the load takes it back through, fast
+    const runSteps = Math.max(1, Math.round(0.3 / R.L0));
+    for (let s = 0; s < runSteps && rope.pcdIdx < R.n - 2 && rope.hauled > 0.01; s++) { pinClear(rope.pcdIdx); rope.pcdIdx++; pinSet(rope.pcdIdx, 'pcd', P); ropeHauledFromPCD(); }
     if (!rope.runBackFired) { rope.runBackFired = true; AudioKit.whoosh(); AudioKit.alarm(); toast('THE ROPE IS RUNNING BACK THROUGH THE PCD — IT IS FED BACKWARDS', true); }
     if (rope.hauled <= 0.01) runBackLanded();
   }
@@ -891,14 +1020,27 @@ function haulBy(dy) {
   ropeHauledFromPCD();
 }
 
+const _ca = new THREE.Vector3(), _cb = new THREE.Vector3();
+/* Catmull-Rom between particles, so the tube is smooth at any render spacing */
+function ropePointAt(s, t, out) {
+  const p0 = R.pos[Math.max(0, s - 1)], p1 = R.pos[s], p2 = R.pos[Math.min(R.n - 1, s + 1)], p3 = R.pos[Math.min(R.n - 1, s + 2)];
+  const t2 = t * t, t3 = t2 * t;
+  out.x = 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3);
+  out.y = 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3);
+  out.z = 0.5 * ((2 * p1.z) + (-p0.z + p2.z) * t + (2 * p0.z - 5 * p1.z + 4 * p2.z - p3.z) * t2 + (-p0.z + 3 * p1.z - 3 * p2.z + p3.z) * t3);
+  return out;
+}
 function ropeRender() {
   ropeGroup.visible = R.alive;
   if (!R.alive) { knotMesh.visible = false; return; }
+  const m = R.renderSub; let k = 0;
   for (let s = 0; s < R.n - 1; s++) {
-    const a = R.pos[s], b = R.pos[s + 1];
-    _rd.copy(b).sub(a); const len = _rd.length() || 1e-4; _rd.multiplyScalar(1 / len);
-    _rq.setFromUnitVectors(_up, _rd); _rmid.copy(a).add(b).multiplyScalar(0.5); _rs.set(R.r, len * 1.06, R.r);
-    _rm.compose(_rmid, _rq, _rs); ropeInst.setMatrixAt(s, _rm);
+    for (let j = 0; j < m; j++) {
+      if (m === 1) { _ca.copy(R.pos[s]); _cb.copy(R.pos[s + 1]); } else { ropePointAt(s, j / m, _ca); ropePointAt(s, (j + 1) / m, _cb); }
+      _rd.copy(_cb).sub(_ca); const len = _rd.length() || 1e-4; _rd.multiplyScalar(1 / len);
+      _rq.setFromUnitVectors(_up, _rd); _rmid.copy(_ca).add(_cb).multiplyScalar(0.5); _rs.set(R.r, len * 1.06, R.r);
+      _rm.compose(_rmid, _rq, _rs); ropeInst.setMatrixAt(k++, _rm);
+    }
   }
   ropeInst.instanceMatrix.needsUpdate = true;
   ropeInst.material = rope.looseT > 0.2 ? MAT.ropeHot : MAT.rope;
@@ -925,6 +1067,7 @@ function ropeTick(dt) {
     }
     const t = Math.max(R.tension[Math.max(0, i - 1)], R.tension[Math.min(R.n - 2, i)]); if (t > 1.08) haptic(h, Math.min(1, (t - 1) * 4), 16);
   }
+  handLoadTick(dt);
   // feet: standing on the rope pins it under the sole
   const footPins = pinsOfKind('foot');
   footPins.forEach(i => { const pin = R.pins.get(i); const f = feetPos[pin.foot];
@@ -945,10 +1088,10 @@ function ropeTick(dt) {
   // the bridle eye holds the far end once you are tied in
   if (rope.bowline) { const e = eyeAPos(new THREE.Vector3()); e.y += 0.06; const pin = R.pins.get(0); if (pin) pin.target.copy(e); else pinSet(0, 'eye', e); }
   coilTick();
-  const sub = dt / ROPE_SUBSTEPS; for (let s = 0; s < ROPE_SUBSTEPS; s++) ropeStep(sub);
+  const sub = dt / R.substeps; for (let s = 0; s < R.substeps; s++) ropeStep(sub);
   pcdSlideTick();
   // landing
-  if (!rope.landed && R.pos[0].y < 0.1) { rope.landed = true; rope.deployT = -1; AudioKit.thud(); toast('Rope is on the floor'); radio('Ground', 'Rope\'s down. I\'ve got the end.', 1); pinSet(0, 'ground', R.pos[0]); }
+  if (!rope.landed && R.pos[0].y < 0.1) { rope.landed = true; rope.deployT = -1; AudioKit.thud(); radio('Ground', 'Rope\'s down. I\'ve got the end.', 1); pinSet(0, 'ground', R.pos[0]); flakeCoil(); }
   if (rope.deployT >= 0) rope.deployT += dt;
   // what is holding the working end?
   const coilHeld = rope.coilNext !== undefined && rope.coilNext < R.n && rope.coilHand >= 0;
@@ -970,6 +1113,41 @@ function ropeDroppedIn() {
   rope.droppedIn = true; rope.state = 'gone'; game.ropeDrops++; AudioKit.whoosh(); setTimeout(() => AudioKit.thud(), 2400);
   radio('Ground', 'HEADS UP! Rope coming in!', 0.2);
   endProgram(false, 'The rope went in', 'Nothing was holding the working end. 108 feet of hanging rope took the rest over the edge — and anyone under it is lucky. Tie it off, stand on it, or keep it in your hand.');
+}
+/* ───────────────────── weight in the hands ─────────────────────
+   What a hand is holding up: on the pull strand with the strand taut, the whole load through the
+   device; on a free rope, the rope hanging below it. Heavier means the trigger has to be squeezed
+   harder or it slips; hold weight long enough and the hand shakes, then lets go. */
+const MAX_LOAD = 65;   // kg — a 1-ton motor and its chain at the top, through a bridle
+function gripNeeded(load) { return load < 8 ? 0 : Math.min(0.95, 0.15 + 0.8 * (load - 8) / (MAX_LOAD - 8)); }
+function handLoadTick(dt) {
+  const fat = SETTINGS.fatigue;
+  for (const h of hands) {
+    const i = handPin(h.index); let load = 0; h.taut = false;
+    if (i >= 0) {
+      if (rope.pcdFed && i > rope.pcdIdx) {
+        const P = R.pins.get(rope.pcdIdx).target, between = (i - rope.pcdIdx) * R.L0;
+        h.taut = h.pos.distanceTo(P) >= between * 0.9 || h.vel.y < -0.002;
+        if (h.taut) { const sharers = hands.filter(o => o.taut && handPin(o.index) > rope.pcdIdx).length || 1; load = bridle.loadA / sharers; }
+      } else load = MASS.ropePerM * Math.min(i * R.L0, Math.max(0, h.pos.y)) * SETTINGS.loadScale;   // rope hanging below the hand
+    }
+    h.load = load;
+    // grip: the trigger has to match the weight
+    if (i >= 0 && load > 8 && h.effort < gripNeeded(load) && game.mode !== 'desk') {
+      ropeRelease(h); h.slipping = true; haptic(h, 1.0, 120); AudioKit.rope();
+      if (!h.gripToast || game.t - h.gripToast > 2) { h.gripToast = game.t; toast('SQUEEZE THE TRIGGER — it is slipping', true); }
+    }
+    // fatigue: builds under load, shakes, then fails; rests when the cam has it
+    if (i >= 0 && load > 2 && fat > 0) {
+      h.fatigue = Math.min(1, h.fatigue + dt * fat * Math.pow(load / MAX_LOAD, 1.5) / 12);
+      const a = Math.max(0, (h.fatigue - 0.35) / 0.65);
+      if (a > 0) { const shake = a * (0.4 + 0.6 * Math.abs(Math.sin(game.t * 2 * Math.PI * 9))); haptic(h, Math.min(1, shake), 20);
+        const pin = R.pins.get(i); if (pin) pin.target.add(new THREE.Vector3((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)).multiplyScalar(0.03 * a)); }
+      else if (load > 4) haptic(h, Math.min(0.5, load / MAX_LOAD * 0.5), 20);
+      if (h.fatigue >= 1) { ropeRelease(h); h.slipping = true; haptic(h, 1.0, 200); AudioKit.rope(); toast('YOUR HAND IS DONE — rest it on the cam', true); }
+    } else h.fatigue = Math.max(0, h.fatigue - dt / 6);
+  }
+  hudDirty = true;
 }
 /* grabbing the rope: the nearest particle to the hand becomes a soft pin */
 function ropeGrab(h) {
@@ -1012,10 +1190,13 @@ function dressKnot(hp, handIndex) {
   else if (rope.knot === 'wrap' && rope.turns >= need) { rope.knot = 'clove'; toast('CLOVE HITCH'); AudioKit.ack(); }
   else { toast('Put a turn on first'); return; }
   rope.hitchX = Math.min(HITCH_RAIL.x1, Math.max(HITCH_RAIL.x0, hp.x)); rope.acc = 0; rope.turns = 0;
-  if (made) { // the particle in your hand becomes the knot
+  if (made) { // the knot forms a few feet back from your hand, and the tail stays in your hand for the next turn
     let i = handIndex !== undefined ? handPin(handIndex) : -1; if (i < 0) i = nearestParticle(hp, 0.4); if (i < 0) return;
+    const tailSegs = Math.max(2, Math.round(0.9 / R.L0));
+    const knotIdx = Math.max(1, Math.min(i, R.n - 1 - tailSegs)), handIdx = Math.min(R.n - 1, knotIdx + tailSegs);
     if (handIndex !== undefined) ropeRelease(hands[handIndex]);
-    rope.hitchIdx = i; pinSet(i, 'hitch', new THREE.Vector3(rope.hitchX, RAIL_Y + 0.045, RAIL_Z));
+    rope.hitchIdx = knotIdx; pinSet(knotIdx, 'hitch', new THREE.Vector3(rope.hitchX, RAIL_Y + 0.045, RAIL_Z));
+    if (handIndex !== undefined && !R.pins.has(handIdx)) { pinSet(handIdx, 'hand', hands[handIndex].pos, { hand: handIndex }); toast(rope.knot === 'clove' ? 'CLOVE HITCH — now one more turn and trigger for the half hitch' : 'Dressed — you still have the tail'); }
   }
   hudDirty = true;
 }
@@ -1050,7 +1231,7 @@ function feedPCD(hp, handIndex) {
   const rel = hp.clone().sub(gear.pcd.mesh.position); rel.y = 0;
   const ok = rel.dot(pcdLoadSide()) > 0;
   // take a bite: the rope goes through and a couple of feet come out the other side to hold
-  const k = Math.max(1, Math.min(i, R.n - 10)); const P = pcdPoint();
+  const k = Math.max(1, Math.min(i, R.n - 1 - Math.round(2.5 / R.L0))); const P = pcdPoint();
   if (handIndex !== undefined) ropeRelease(hands[handIndex]);
   rope.pcdFed = true; rope.pcdDir = ok ? 'ok' : 'back'; rope.pcdIdx = k; rope.runBackFired = false;
   if (rope.knot !== 'none') { pinClear(rope.hitchIdx); rope.knot = 'none'; rope.hitchIdx = -1; }
@@ -1071,7 +1252,11 @@ function runBackLanded() {
    Two legs meet at an apex shackle; a short deck chain to the hoist hook below it. Your rope is
    bowlined into the top of your leg. Metres of rope through the PCD = metres your leg's eye has
    risen. The other up-rigger does the same on the other beam, at their pace. */
-const bridle = { legLen: WORLD.legSplit, hauledB: 0, stage: 'idle', togetherCalled: false, continueCalled: false, drift: 0, fouled: false, foulT: 0, twist: false,
+/* what hangs on the rope, in kilograms. A 1-ton Lodestar with a 60' bag of chain, 3/8" wire legs,
+   a 5/8" apex shackle on a foot of deck chain, half-inch rope. The motor's load chain pays out of the
+   bag as the motor rises (the bottom hook stays on the floor) — so the load grows with height. */
+const MASS = { ropePerM: 0.1, wirePerM: 0.39, legHardware: 1.0, apex: 3.0, motor: 63, chainPerM: 1.1, bag: 3 };
+const bridle = { legLen: WORLD.legSplit, hauledB: 0, stage: 'idle', loadA: 0, loadW: 0, shareA: 0.5, angA: 0, angB: 0, chainOut: 0, togetherCalled: false, continueCalled: false, drift: 0, fouled: false, foulT: 0, twist: false,
   arrived: false, burlapOff: false, wrapStage: 0, mated: false, burlapUnder: false, steelDown: false, squared: false, foulChecked: false, zB: WORLD.slingZ, zA: WORLD.slingZ, pointChecked: false, holdT: 0 };
 const bridleGroup = new THREE.Group(); bridleGroup.name = 'Bridle'; arena.add(bridleGroup);
 const legA = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1, 6), MAT.wireRope); legA.name = 'Bridle_Leg_A'; bridleGroup.add(legA);
@@ -1099,27 +1284,57 @@ const squareGhost = cyl(0.006, GAP, MAT.ghost, 'Square_GhostLine'); squareGhost.
 const wrapPts = [];
 function placeCyl(m, a, b) { m.position.copy(a).add(b).multiplyScalar(0.5); m.scale.y = a.distanceTo(b) || 0.001; m.lookAt(b); m.rotateX(Math.PI / 2); }
 const MATE_POS = new THREE.Vector3(BW / 2 + 0.2, H - 0.45, WORLD.slingZ);
-function eyeAPos(out) { return out.set(BW / 2 + 0.15, Math.min(rope.hauled, H - 0.1), WORLD.slingZ); }
+/* Bridle geometry, properly. Each side is a rope from its device point down to an eye, and a leg
+   of wire from the eye to the apex. A massless eye can only balance collinear forces, so rope and leg
+   lie on one line: the apex sits where two circles meet — radius rope-out + leg length about each
+   device point. Haul more on your side and the apex swings toward you and up; that is the drift. */
+const _PA = new THREE.Vector3(), _PB = new THREE.Vector3(), _apexG = new THREE.Vector3(GAP / 2, 0.42, WORLD.slingZ), _dirA = new THREE.Vector3(), _dirB = new THREE.Vector3();
+let apexOnFloor = true;
+function bridleGeometry() {
+  const L = bridle.legLen, top = H - 0.1;
+  if (rope.pcdFed) _PA.copy(R.pins.get(rope.pcdIdx).target); else _PA.set(SLING_X, SLING_POINT.y - 0.28, WORLD.slingZ);
+  _PB.set(GAP - SLING_X, SLING_POINT.y - 0.28, WORLD.slingZ);
+  const outA = Math.max(0, _PA.y - Math.min(rope.hauled, top)), outB = Math.max(0, _PB.y - Math.min(bridle.hauledB, top));
+  const rA = outA + L, rB = outB + L, d = _PB.x - _PA.x;
+  const a = (rA * rA - rB * rB + d * d) / (2 * d); const h2 = rA * rA - a * a;
+  let ax = _PA.x + a, ay = _PA.y - Math.sqrt(Math.max(0, h2));
+  if (h2 < 0) { ay = _PA.y - Math.min(rA, rB); ax = rA < rB ? _PA.x : _PB.x; }   // one side cannot reach: it hangs straight down
+  apexOnFloor = ay <= 0.42;
+  if (apexOnFloor) { ay = 0.42; ax = Math.max(_PA.x + 0.3, Math.min(_PB.x - 0.3, ax)); }
+  _apexG.set(ax, ay, WORLD.slingZ);
+}
+function eyeOnLine(P, out, ropeOut, dir) {
+  const top = H - 0.1;
+  if (apexOnFloor) { out.set(P.x, Math.max(0.05, P.y - ropeOut), P.z); return out; }   // slack leg: the rope just hangs
+  dir.copy(_apexG).sub(P); if (dir.y > -0.05) dir.y = -0.05; dir.normalize();
+  out.copy(P).addScaledVector(dir, ropeOut); out.y = Math.max(0.05, Math.min(out.y, top)); return out;
+}
+function eyeAPos(out) {
+  const top = H - 0.1;
+  if (!rope.pcdFed || bridle.arrived) return out.set(SLING_X, Math.min(rope.hauled, top), WORLD.slingZ);
+  bridleGeometry(); return eyeOnLine(_PA, out, Math.max(0, _PA.y - Math.min(rope.hauled, top)), _dirA);
+}
 const _ea = new THREE.Vector3(), _eb = new THREE.Vector3(), _ap = new THREE.Vector3();
 function bridleTick(dt) {
   bridleGroup.visible = rope.state === 'deployed' && rope.bowline;
   if (!bridleGroup.visible) return;
   const L = bridle.legLen;
-  eyeAPos(_ea); _eb.set(GAP - BW / 2 - 0.15, Math.min(bridle.hauledB, H - 0.1), WORLD.slingZ);
+  eyeAPos(_ea); eyeOnLine(_PB, _eb, Math.max(0, _PB.y - Math.min(bridle.hauledB, H - 0.1)), _dirB);
+  if (bridle.arrived) { bridleGeometry(); }
   bridle.drift = rope.hauled - bridle.hauledB;
-  // apex: pulled toward the side that is ahead
-  const ax = GAP / 2 + Math.max(-2.2, Math.min(2.2, bridle.drift * 0.6));
-  const dropA = Math.sqrt(Math.max(0, L * L - (ax - _ea.x) ** 2)), dropB = Math.sqrt(Math.max(0, L * L - (_eb.x - ax) ** 2));
-  const ay = Math.max(0.42, Math.min(_ea.y - dropA, _eb.y - dropB));
-  _ap.set(ax, ay, WORLD.slingZ);
+  _ap.copy(_apexG); const ax = _ap.x, ay = _ap.y;
   placeCyl(legA, bridle.mated ? MATE_POS : _ea, _ap); placeCyl(legB, _eb, _ap);
   apexShackle.position.copy(_ap); apexPin.position.copy(_ap).y -= 0.06;
   eyeA.position.copy(_ea); eyeA.visible = !bridle.arrived; burlap.visible = !bridle.burlapOff && !bridle.arrived ? true : burlap.visible;
   eyeB.position.copy(_eb);
   if (game.prog === 'split15') { midShackleA.visible = !bridle.mated; midShackleA.position.lerpVectors(_ea, _ap, WORLD.leg5 / L); } else midShackleA.visible = false;
-  // hoist: hangs on the deck chain once the apex is off the floor
+  // hoist: hangs on the deck chain once the apex is off the floor; its chain pays out behind it
   const hoistY = Math.max(0, ay - 1.05);
   hoist.position.set(ax, hoistY, WORLD.slingZ);
+  bridle.chainOut = SETTINGS.chainDown ? Math.max(0, hoistY - 0.2) : 0;
+  loadChain.visible = bridle.chainOut > 0.3; if (loadChain.visible) placeCyl(loadChain, new THREE.Vector3(ax, hoistY, WORLD.slingZ), new THREE.Vector3(ax + 0.15, 0.12, WORLD.slingZ + 0.1));
+  bottomHook.position.set(ax + 0.15, 0.12, WORLD.slingZ + 0.1); bottomHook.visible = true;
+  loadTick(_ea, _eb, _ap, ay);
   deckChain.visible = ay > 0.5; placeCyl(deckChain, _ap, new THREE.Vector3(ax, hoistY + 0.44, WORLD.slingZ));
   // the other rigger's rope: from their PCD down to their eye
   placeCyl(ropeB, new THREE.Vector3(GAP, SLING_POINT.y - 0.3, WORLD.slingZ), _eb);
@@ -1164,7 +1379,7 @@ function haulTick(dt) {
     if (bridle.fouled) rateB = bridle.drift > 0 ? SETTINGS.pace * 1.4 : 0; }   // fouled: whoever is behind catches up, the other holds
   if (rateB > 0) { bridle.hauledB = Math.min(top, bridle.hauledB + rateB * dt); otherRigger.userData.armL.position.y = 1.15 + 0.12 * Math.sin(game.t * 6); otherRigger.userData.armR.position.y = 1.15 - 0.12 * Math.sin(game.t * 6); }
   if (bridle.stage === 'apex') {
-    if (atApexA && !bridle.calledApexA) { bridle.calledApexA = true; radio('You', 'Split at the apex.'); }
+    if (atApexA && !bridle.calledApexA) { bridle.calledApexA = true; if (holdingRadio()) playerSays('Split at the apex.'); }
     if (atApexA && atApexB && !bridle.togetherCalled) { bridle.togetherCalled = true; bridle.stage = 'hook';
       radio('Ground', 'Both legs at the apex. TOGETHER — pull to the hook.', 1.2); toast('TOGETHER — pull to the hook eye'); }
   } else if (bridle.stage === 'hook') {
@@ -1186,6 +1401,27 @@ function haulTick(dt) {
       toast('At the beam — burlap out, then wrap it'); }
   }
 }
+/* the load on YOUR rope, from what has left the floor and the angles of the bridle */
+function loadTick(ea, eb, ap, ay) {
+  const L = bridle.legLen, s = SETTINGS.loadScale;
+  const legW = MASS.wirePerM * L + MASS.legHardware;
+  const ropeHang = MASS.ropePerM * Math.max(0, (rope.pcdFed ? R.pins.get(rope.pcdIdx).target.y : H) - ea.y);
+  let load = ropeHang + legW * Math.min(1, rope.hauled / L);           // the leg comes off the floor with the eye
+  const apexUp = ay > 0.45;
+  bridle.loadW = 0; bridle.shareA = 0.5;
+  if (apexUp) {
+    // bridle statics: T_A = W·cos(αB) / sin(αA + αB), angles from horizontal
+    const aA = Math.atan2(ea.y - ay, Math.max(0.05, Math.abs(ap.x - ea.x))), aB = Math.atan2(eb.y - ay, Math.max(0.05, Math.abs(eb.x - ap.x)));
+    bridle.angA = aA; bridle.angB = aB;
+    const hoistY = Math.max(0, ay - 1.05), hoistUp = hoistY > 0.02;
+    const W = MASS.apex + (hoistUp ? MASS.motor + MASS.bag + MASS.chainPerM * bridle.chainOut : 0);
+    bridle.loadW = W;
+    const sinSum = Math.max(0.15, Math.sin(aA + aB));                 // legs pulled nearly straight: tension climbs, capped
+    bridle.shareA = Math.max(0.2, Math.min(3, Math.cos(aB) / sinSum));
+    load += W * bridle.shareA;
+  }
+  bridle.loadA = load * s;
+}
 /* may another segment pass through the PCD right now? The calls gate the stages. */
 function haulAllowed() {
   const L = bridle.legLen;
@@ -1199,7 +1435,7 @@ function haulAllowed() {
 }
 /* the ground rigger, once the rope is at the sling, ties in */
 function groundTiesIn() {
-  if (rope.bowline) return; rope.bowline = true; bridle.legLen = game.prog === 'split15' ? WORLD.legSplit : WORLD.leg10;
+  if (rope.bowline) return; rope.bowline = true; bridle.legLen = WORLD.legSplit;   // beam to apex is 15' either way; the basket only changes the top
   radio('Ground', game.prog === 'split15' ? 'Tying in — twelve-inch bowline into the eye of the 5.' : 'Tying in — three-foot bowline into the shackle on the 10.', 0.5);
   radio('Ground', 'You\'re tied. Ready when you are.', 4);
   bridle.readyT = game.t + 4.5;
@@ -1249,14 +1485,14 @@ const falling = [];
 function startFall(mesh, label, from) {
   arena.attach(mesh); mesh.position.copy(from); falling.push({ mesh, label, vy: 0 }); AudioKit.whoosh();
   game.drops++; hudDirty = true; toast('DROPPED — ' + label.toUpperCase(), true);
-  radio('You', 'HEADACHE! ' + label + ' coming in!');
+  if (holdingRadio()) playerSays('HEADACHE! ' + label + ' coming in!'); else radio('Rigger B', 'HEADACHE! Something coming in off A!', 0.4);
 }
 function fallingTick(dt) {
   for (let i = falling.length - 1; i >= 0; i--) { const f = falling[i]; f.vy -= WORLD.g * dt; f.mesh.position.y += f.vy * dt;
     if (f.mesh.position.y <= 0.05) { f.mesh.position.y = 0.05; falling.splice(i, 1); AudioKit.thud(); radio('Ground', 'Got a ' + f.label + ' on the floor here. Everybody OK.', 0.3); f.mesh.userData.landed = true; } }
 }
 /* is a point standing on something? */
-function onCatwalk(x, z) { return z >= -0.02 && z <= WORLD.catwalkDepth && Math.abs(x - GAP / 2) < 22; }
+function onCatwalk(x, z) { return (z >= -0.02 && z <= WORLD.catwalkDepth && Math.abs(x - GAP / 2) < 22) || inPrep(x, z); }
 function onBeam(x, z, tol) { return Math.abs(x) <= BW / 2 + (tol === undefined ? SETTINGS.edge : tol) && z <= 0.05 && z >= -BL; }
 function supported(x, z, tol) { return onCatwalk(x, z) || onBeam(x, z, tol); }
 
@@ -1266,7 +1502,8 @@ function supported(x, z, tol) { return onCatwalk(x, z) || onBeam(x, z, tol); }
 const hands = [];
 function makeHand(i) {
   const h = { index: i, pos: new THREE.Vector3(), prevPos: new THREE.Vector3(), vel: new THREE.Vector3(), quat: new THREE.Quaternion(), grip: false, trig: false, prevGrip: false, prevTrig: false,
-    prevUpper: false, prevLower: false, lowerT: 0, lowerFired: false, src: null, active: false, mesh: null, ray: null, ropeLost: false };
+    prevUpper: false, prevLower: false, lowerT: 0, lowerFired: false, src: null, active: false, mesh: null, ray: null, ropeLost: false,
+    effort: 0, load: 0, fatigue: 0, slipping: false, taut: false };
   const g = new THREE.Group(); g.name = 'Hand_' + i;
   const palm = box(0.07, 0.03, 0.1, MAT.skin, 'Hand_Palm'); g.add(palm);
   const tip = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), MAT.lcarsPale); tip.name = 'Hand_GrabPoint'; tip.position.z = -0.06; g.add(tip);
@@ -1289,7 +1526,8 @@ function grabCandidate(h) {
     if (g.held !== null || g.locked || !g.mesh.visible || !g.mesh.parent) continue;
     if (g.kind === 'conn' && !bridle.mated) continue;
     const p = new THREE.Vector3(); g.mesh.getWorldPosition(p);
-    const d = p.distanceTo(h.pos); if (d < reach + g.r && d < bd) { bd = d; best = g; }
+    let d = p.distanceTo(h.pos); if (d < reach + g.r) { if (g.kind === 'hook') d -= 0.08;   // a lanyard hook wins a tie with the kit clipped beside it — you can clip in any time the harness is on
+      if (d < bd) { bd = d; best = g; } }
   }
   if (R.alive) { const i = nearestParticle(h.pos, reach); if (i >= 0 && R.pos[i].distanceTo(h.pos) < bd) { const pin = R.pins.get(i); if (!pin || pin.kind === 'foot') return { kind: 'rope', idx: i }; } }
   return best;
@@ -1299,9 +1537,7 @@ function grabStart(h) {
   if (g.kind === 'rope') { ropeGrab(h); return; }
   if (g.kind === 'gear' && g.id === 'rope' && rope.coilNext !== undefined && rope.coilNext < R.n) { rope.coilHand = h.index; AudioKit.grab(); return; }
   if (g.kind === 'hook') { const hk = lanyard.hooks[g.hook]; if (!harness.worn) return; hk.held = h.index; g.held = h.index; AudioKit.grab(); haptic(h, 0.5, 40); return; }
-  if (g.kind === 'gear' && gear[g.id].worn && g.id !== 'rope' && g.id !== 'pcd' && g.id !== 'radio') { // clipped kit comes off its ring to be used or moved
-    unclipGear(g.id); }
-  else if (g.kind === 'gear' && gear[g.id].worn && (g.id === 'rope' || g.id === 'pcd')) unclipGear(g.id);
+  if (g.kind === 'gear' && gear[g.id].worn && g.id !== 'helmet' && g.id !== 'harness') unclipGear(g.id);   // clipped kit comes off its ring into the hand — the radio too, to talk
   if (g.kind === 'pocket' && pocket[g.id].onBody) { pocket[g.id].onBody = false; hudDirty = true; }
   g.held = h.index; AudioKit.grab(); haptic(h, 0.5, 40); hudDirty = true;
 }
@@ -1324,7 +1560,7 @@ function grabEnd(h) {
   if (supported(p.x, p.z, 0)) { arena.attach(g.mesh); const surfY = onTable(p) ? H + 0.94 : H + 0.06; g.mesh.position.set(p.x, Math.max(surfY, Math.min(p.y, surfY + 0.02)), p.z); if (g.kind === 'pocket') { toast(pocket[g.id].def.label + ' is not in the bucket'); hudDirty = true; } }
   else startFall(g.mesh, g.kind === 'gear' ? gear[g.id].def.label : g.kind === 'pocket' ? pocket[g.id].def.label : 'burlap', p);
 }
-function onTable(p) { return Math.abs(p.x - GEAR_X) < 1.25 && Math.abs(p.z - 0.7) < 0.35 && p.y > H + 0.6; }
+function onTable(p) { return Math.abs(p.x - GEAR_X) < 1.25 && Math.abs(p.z - TABLE_Z) < 0.35 && p.y > H + 0.6; }
 
 /* ───────────────────── fall arrest ─────────────────────
    A double 6' lanyard off the back ring. Its two snap hooks park on the shoulder straps; take one
@@ -1346,23 +1582,46 @@ function nearAnchor(p) {
   if (Math.abs(p.y - RAIL_Y) < 0.3 && Math.abs(p.z - RAIL_Z) < 0.3 && p.x > -22 && p.x < 22 + GAP && !inCatwalkGap(p.x)) return { kind: 'rail', pos: new THREE.Vector3(p.x, RAIL_Y, RAIL_Z) };
   return null;
 }
+/* trigger on a hook: open the gate. Clipped → it comes off in your hand; in hand near steel → it clips. */
 function tryClip(hp, hookIndex) {
-  const hk = lanyard.hooks[hookIndex]; const a = nearAnchor(hp);
-  if (!a) { if (hk.anchor !== 'parked') { hk.anchor = 'parked'; hk.held = null; releaseAll(hk.mesh.userData.grab); toast('Hook unclipped' + (lanyard.hooks.some(o => o.anchor !== 'parked') ? '' : ' — NOT CLIPPED'), !lanyard.hooks.some(o => o.anchor !== 'parked')); AudioKit.deny(); } else toast('Nothing to clip to here'); lanyardState(); return; }
+  const hk = lanyard.hooks[hookIndex];
+  if (hk.anchor !== 'parked') {
+    hk.anchor = 'parked'; AudioKit.click();   // the gate opens; the hook stays in the hand that is holding it
+    const still = lanyard.hooks.some(o => o.anchor !== 'parked');
+    toast(still ? 'Hook off — the other one has you' : 'HOOK OFF — NOT CLIPPED', !still); if (!still) AudioKit.deny();
+    lanyardState(); return;
+  }
+  const a = nearAnchor(hk.held !== null ? heldHookPos(hk, new THREE.Vector3()) : hk.mesh.getWorldPosition(new THREE.Vector3()));
+  if (!a) { toast('Nothing to clip to here'); return; }
   hk.anchor = a.kind; hk.anchorPos.copy(a.pos); hk.held = null; releaseAll(hk.mesh.userData.grab); AudioKit.click(); AudioKit.ack();
   toast('CLIPPED — ' + (a.kind === 'lifeline' ? 'lifeline' : 'top rail')); lanyardState();
 }
 function lanyardState() { const on = lanyard.hooks.filter(h => h.anchor !== 'parked'); lanyard.clipped = on.length > 0; lanyard.anchor = on.length ? on[0].anchor : 'none'; if (on.length) lanyard.anchorPos.copy(on[0].anchorPos); hudDirty = true; }
 const _dorsal = new THREE.Vector3();
+/* 6 feet of webbing is 6 feet: a held hook can go no farther from the back ring than that, and a
+   clipped one holds the body inside its reach — on the deck it tugs you back; in a fall it is the
+   tether the pack pays out of. */
+const _lv = new THREE.Vector3();
+/* where a held hook actually is: the hand, but never more than the webbing's length from the back ring */
+function heldHookPos(hk, out) { ringWorld('dorsal', _dorsal); _lv.copy(hands[hk.held].pos).sub(_dorsal); const d = _lv.length(); if (d > WORLD.lanyard) _lv.multiplyScalar(WORLD.lanyard / d); return out.copy(_dorsal).add(_lv); }
 function lanyardTick() {
   ringWorld('dorsal', _dorsal);
   lanyard.taut = false;
   lanyard.hooks.forEach(hk => {
-    hk.mesh.visible = harness.worn; hk.line.visible = harness.worn && hk.anchor !== 'parked';
+    hk.mesh.visible = harness.worn;
     if (hk.anchor === 'lifeline') hk.anchorPos.z = Math.max(-BL, Math.min(0.3, _dorsal.z));
-    if (hk.anchor !== 'parked') { arena.attach(hk.mesh); hk.mesh.position.copy(hk.anchorPos); placeCyl(hk.line, hk.anchorPos, _dorsal); if (hk.anchorPos.distanceTo(_dorsal) > WORLD.lanyard) lanyard.taut = true; }
-    else if (hk.held !== null) { arena.attach(hk.mesh); hk.mesh.position.copy(hands[hk.held].pos); }
-    else { body.attach(hk.mesh); hk.mesh.position.copy(hk.park); hk.mesh.rotation.set(0, 0, 0); }
+    if (hk.anchor !== 'parked') {
+      arena.attach(hk.mesh); hk.mesh.position.copy(hk.anchorPos); hk.line.visible = harness.worn; placeCyl(hk.line, hk.anchorPos, _dorsal);
+      const reach = WORLD.lanyard + (fall.packExt || 0);
+      if (!player.falling) { _lv.copy(_dorsal).sub(hk.anchorPos); const d = _lv.length();
+        if (d > reach) { lanyard.taut = true; _lv.multiplyScalar((d - reach) / d); playerRig.position.x -= _lv.x; playerRig.position.z -= _lv.z; if (!lanyard.tautToast || game.t - lanyard.tautToast > 3) { lanyard.tautToast = game.t; toast('Lanyard is taut — move a hook'); } } }
+    }
+    else if (hk.held !== null) { // in a hand, on a fixed length of webbing from the back ring
+      arena.attach(hk.mesh); _lv.copy(hands[hk.held].pos).sub(_dorsal); const d = _lv.length(); if (d > WORLD.lanyard) _lv.multiplyScalar(WORLD.lanyard / d);
+      hk.mesh.position.copy(_dorsal).add(_lv); hk.line.visible = harness.worn; placeCyl(hk.line, hk.mesh.position, _dorsal);
+      if (d > WORLD.lanyard + 0.05 && hands[hk.held].src) haptic(hands[hk.held], 0.4, 20);
+    }
+    else { body.attach(hk.mesh); hk.mesh.position.copy(hk.park); hk.mesh.rotation.set(0, 0, 0); hk.line.visible = false; }
   });
   lanyardState();
 }
@@ -1404,38 +1663,93 @@ function railCollide() {
   if (!atDeck) return;
   const onDeckX = Math.abs(_head.x - GAP / 2) < 22;
   if (onDeckX && _head.z > -0.35 && _head.z < 0.12 && !inCatwalkGap(_head.x) && _head.y > H - 0.5) { playerRig.position.z += 0.12 - _head.z; camera.getWorldPosition(_head); }
-  if (onDeckX && _head.z > WORLD.catwalkDepth - 0.15 && _head.z < WORLD.catwalkDepth + 0.6) { playerRig.position.z -= _head.z - (WORLD.catwalkDepth - 0.15); camera.getWorldPosition(_head); }
-  if (_head.z > 0 && _head.z < WORLD.catwalkDepth) { const lim = GAP / 2 + 21.8; if (_head.x > lim) playerRig.position.x -= _head.x - lim; if (_head.x < GAP / 2 - 21.8) playerRig.position.x += GAP / 2 - 21.8 - _head.x; }
+  const prepDoor = _head.x > PREP.x0 + 0.15 && _head.x < PREP.x1 - 0.15;
+  if (onDeckX && !prepDoor && _head.z > WORLD.catwalkDepth - 0.15 && _head.z < WORLD.catwalkDepth + 0.6) { playerRig.position.z -= _head.z - (WORLD.catwalkDepth - 0.15); camera.getWorldPosition(_head); }
+  if (_head.z > PREP.z0 - 0.05) { // inside the prep area: its walls
+    if (_head.z > PREP.z1 - 0.15) { playerRig.position.z -= _head.z - (PREP.z1 - 0.15); camera.getWorldPosition(_head); }
+    if (_head.x < PREP.x0 + 0.15) { playerRig.position.x += PREP.x0 + 0.15 - _head.x; camera.getWorldPosition(_head); }
+    if (_head.x > PREP.x1 - 0.15) { playerRig.position.x -= _head.x - (PREP.x1 - 0.15); camera.getWorldPosition(_head); }
+  }
+  if (_head.z > 0 && _head.z < WORLD.catwalkDepth + 0.05) { const lim = GAP / 2 + 21.8; if (_head.x > lim) playerRig.position.x -= _head.x - lim; if (_head.x < GAP / 2 - 21.8) playerRig.position.x += GAP / 2 - 21.8 - _head.x; }
 }
 function moveRig(dx, dz) {
   const before = playerRig.position.clone(); playerRig.position.x += dx; playerRig.position.z += dz;
   camera.getWorldPosition(_head);
   if (onBeam(_head.x, _head.z, 0.6) && _head.z < -BL + 0.2) playerRig.position.z = before.z;
   railCollide();
-  if (lanyard.taut) { ringWorld('dorsal', _dorsal); if (lanyard.anchorPos.distanceTo(_dorsal) > WORLD.lanyard + 0.1) { playerRig.position.copy(before); toast('Lanyard is taut — move a hook'); } }
+}
+/* ───────────────────── the fall ─────────────────────
+   Free fall until the webbing comes taut, six feet below the hook. Then the energy absorber — the
+   blowout pack — tears open at a few kilonewtons, paying out up to 42 inches while it eats the
+   speed. Then it is a rope: whatever is left swings you in under the anchor until you hang still.
+   Rigger plus kit is taken as 100 kg. */
+const FALL = { mass: 100, packStart: 1000, packFull: 2800, packRamp: 0.3, packMax: 1.07, swingDamp: 0.975 };   // a ~630 lbf pack: a 6-foot fall pays out about two feet
+const fall = { packExt: 0, freeFall: 0, peakF: 0, packForce: 0, phase: 'none', hangT: 0, v: new THREE.Vector3(), anchor: null };
+function fallStart() {
+  player.falling = true; player.arrested = false; fall.v.set(0, 0, 0); fall.packExt = 0; fall.freeFall = 0; fall.peakF = 0; fall.phase = 'free'; fall.hangT = 0;
+  fall.startY = _dorsal.y; AudioKit.whoosh();
+}
+function tetherAnchor() { const on = lanyard.hooks.filter(h => h.anchor !== 'parked'); if (!on.length) return null; return on.reduce((a, b) => a.anchorPos.y > b.anchorPos.y ? a : b).anchorPos; }
+const _fu = new THREE.Vector3();
+function fallTick(dt) {
+  // integrate
+  fall.v.y -= WORLD.g * dt; playerRig.position.addScaledVector(fall.v, dt);
+  ringWorld('dorsal', _dorsal);
+  const anchor = tetherAnchor(); fall.anchor = anchor;
+  if (anchor) {
+    _fu.copy(_dorsal).sub(anchor); const d = _fu.length(); if (d > 1e-6) _fu.multiplyScalar(1 / d);
+    const reach = WORLD.lanyard + fall.packExt;
+    if (d > reach) {
+      const vRad = fall.v.dot(_fu);   // outward speed along the webbing
+      if (fall.phase === 'free') { fall.phase = 'pack'; fall.freeFall = fall.startY - _dorsal.y; AudioKit.steel(); hands.forEach(h => haptic(h, 1.0, 250)); }
+      if (fall.phase === 'pack' && fall.packExt < FALL.packMax && vRad > 0.25) {
+        // the pack tears: force ramps up over the first quarter metre, then holds
+        const F = FALL.packStart + (FALL.packFull - FALL.packStart) * Math.min(1, fall.packExt / FALL.packRamp);
+        fall.packForce = F; fall.peakF = Math.max(fall.peakF, F);
+        const vNew = Math.max(0, vRad - (F / FALL.mass) * dt);
+        fall.packExt = Math.min(FALL.packMax, fall.packExt + vNew * dt);
+        fall.v.addScaledVector(_fu, vNew - vRad);
+        if (fall.packExt >= FALL.packMax - 1e-4 && vNew > 0.5) { fall.peakF = Math.max(fall.peakF, 6000); fall.v.addScaledVector(_fu, -vNew); toast('THE PACK BOTTOMED OUT — a hard stop', true); }
+        hands.forEach(h => haptic(h, Math.min(1, F / 4000), 40));
+      } else {
+        // a rope now: no outward speed; the rest of the motion is a swing
+        if (vRad > 0) fall.v.addScaledVector(_fu, -vRad);
+        if (fall.phase !== 'hang') { fall.phase = 'hang'; player.arrested = true; game.falls++; document.getElementById('vignette').classList.add('on');
+          const ff = fall.freeFall * 3.281, pk = fall.packExt * 3.281, lbf = fall.peakF * 0.2248;
+          toast('ARRESTED — ' + ff.toFixed(1) + ' ft free fall, pack paid out ' + pk.toFixed(1) + ' ft, peak ' + Math.round(lbf) + ' lbf', true);
+          radio('Rigger B', 'You OK over there?!', 0.8); radio('Ground', 'Fall! Everybody hold. Rigger A, talk to me.', 2.0); }
+      }
+      // project the ring back onto the sphere of the webbing's reach
+      const reachNow = WORLD.lanyard + fall.packExt; const over = _dorsal.distanceTo(anchor) - reachNow;
+      if (over > 0) playerRig.position.addScaledVector(_fu, -over);
+    }
+    if (fall.phase !== 'free') fall.v.multiplyScalar(Math.pow(FALL.swingDamp, dt * 60));   // webbing, harness and body soak up the swing
+    if (fall.phase === 'hang') fall.hangT += dt;
+  }
+  // the floor
+  if (playerRig.position.y <= 0) { playerRig.position.y = 0; player.falling = false; AudioKit.thud();
+    endProgram(false, 'Gravity won', anchor ? 'The lanyard could not take it.' : 'You stepped off a 24-inch beam 108 feet up without a fall-arrest connection. Clip in before you touch the steel — the lifeline overhead or the top rail of the catwalk.'); }
+}
+function climbBack() {
+  player.falling = player.arrested = false; fall.phase = 'none'; fall.packExt = 0; fall.v.set(0, 0, 0);
+  playerRig.position.copy(player.safe); document.getElementById('vignette').classList.remove('on'); toast('Back on the steel — that pack is done, it gets replaced'); hudDirty = true;
 }
 function playerTick(dt) {
   camera.getWorldPosition(_head);
   if (game.phase !== 'arena') return;
   if (player.falling) {
-    player.vy -= WORLD.g * dt; playerRig.position.y += player.vy * dt;
-    if (lanyard.clipped && !player.arrested && (lanyard.anchorPos.y - _dorsal.y) > WORLD.lanyard - 0.2) {
-      player.arrested = true; player.vy = 0; player.arrestT = 0; AudioKit.steel(); AudioKit.alarm(); game.falls++;
-      toast('ARRESTED — the lanyard has you. Grip with both hands to climb back on.', true); radio('Rigger B', 'You OK over there?!', 0.8);
-      document.getElementById('vignette').classList.add('on');
+    fallTick(dt);
+    if (player.arrested && fall.hangT > 1.5 && fall.v.length() < 0.6) {
+      if (!fall.hangToast) { fall.hangToast = true; toast('Hanging. Grip with both hands to climb back onto the steel.'); }
+      if ((hands[0].grip && hands[1].grip) || (game.mode === 'desk' && hands[0].grip && hands[0].trig)) { fall.hangToast = false; climbBack(); }
     }
-    if (player.arrested) { player.arrestT += dt; playerRig.position.y += Math.sin(player.arrestT * 2) * 0.002;
-      if (hands[0].grip && hands[1].grip && player.arrestT > 1.5 || (game.mode === 'desk' && hands[0].grip && hands[0].trig && player.arrestT > 1.5)) {
-        player.falling = player.arrested = false; playerRig.position.copy(player.safe); document.getElementById('vignette').classList.remove('on'); toast('Back on the steel'); } }
-    else if (playerRig.position.y <= 0) { playerRig.position.y = 0; player.falling = false; AudioKit.thud();
-      endProgram(false, 'Gravity won', 'You stepped off a 24-inch beam 108 feet up without a fall-arrest connection. Clip in before you touch the steel — the lifeline overhead or the top rail of the catwalk.'); }
     return;
   }
   railCollide();
   const tol = SETTINGS.edge;
   let ok = supported(_head.x, _head.z, tol);
   if (ok && bodyTracked) ok = feetPos.some(f => supported(f.x, f.z, tol + 0.15));
-  if (!ok) { player.offBeamT += dt; if (player.offBeamT > 0.12) { player.falling = true; player.vy = 0; AudioKit.whoosh(); toast(lanyard.clipped ? 'OFF THE BEAM' : 'OFF THE BEAM — NOT CLIPPED', true); } }
+  if (!ok) { player.offBeamT += dt; if (player.offBeamT > 0.12) { fallStart(); toast(lanyard.clipped ? 'OFF THE BEAM' : 'OFF THE BEAM — NOT CLIPPED', true); } }
   else { player.offBeamT = 0; player.safe.copy(playerRig.position); }
   if (onBeam(_head.x, _head.z, 0.8) && !lanyard.clipped) { game.unclippedOnBeam += dt; if (Math.floor(game.unclippedOnBeam * 2) % 6 === 0 && game.unclippedOnBeam > 0.5) document.getElementById('vignette').classList.add('on'); }
   else if (!player.arrested) document.getElementById('vignette').classList.remove('on');
@@ -1444,7 +1758,7 @@ function playerTick(dt) {
 /* ───────────────────── the six steps ───────────────────── */
 const STEPS = [
   null,
-  { title: 'Gear up', body: 'Pockets first — take the phone, keys and change off your body and drop them in the bucket by the table. Then the harness: bring it to your chest to shoulder it, trigger at the chest, the belly, and each thigh. Helmet straight onto your head. Clip the rest of the kit into the harness rings. Key the radio for a check. Then grab the rope and go.',
+  { title: 'Gear up', body: 'Pockets first — take the phone, keys and change off your body and drop them in the bucket by the table. To talk, take the radio in your hand and press B or Y (R on desktop); listen first — if someone is on the channel, wait. Then the harness: bring it to your chest to shoulder it, trigger at the chest, the belly, and each thigh. Helmet straight onto your head. Clip the rest of the kit into the harness rings. Key the radio for a check. Then grab the rope and go.',
     list: () => POCKET_DEFS.map(d => ({ t: d.label + ' in the bucket', ok: pocket[d.id].cleared, bad: !pocket[d.id].onBody && !pocket[d.id].cleared })).concat([
       { t: 'Harness — shoulders', ok: harness.stage >= 1 }, { t: 'Harness — chest clip', ok: harness.stage >= 2 }, { t: 'Harness — belt', ok: harness.stage >= 3 }, { t: 'Harness — leg clips', ok: harness.worn },
       { t: 'Helmet on', ok: gear.helmet.worn }],
@@ -1457,8 +1771,8 @@ const STEPS = [
   { title: 'Out to the sling', body: 'Hold the rope beside the knot and trigger to untie. Now nothing holds the rope but you — keep it in a hand or stand on it. Walk out to the sling (the blue loop overhead, 46 feet out; the board there has this list). Hang the PCD on it, then bring the rope to the PCD and pull the trigger. Feed it from the load side — the white arrow.',
     list: () => [{ t: 'Hitch untied', ok: rope.knot === 'none' && rope.landed }, { t: 'PCD on the sling', ok: pcd.hung }, { t: 'Rope fed through the PCD', ok: rope.pcdFed }],
     done: () => rope.knot === 'none' && pcd.hung && rope.pcdFed },
-  { title: 'Haul', body: 'The ground rigger is tying you into your leg. When they say ready, key the radio and take it up: grip the rope below the PCD and pull down, hand over hand. Slack first, then the leg to the apex. On TOGETHER, up to the hook eye. On CONTINUE, bring the load up matching the other rigger — get ahead and it bellies and fouls at the apex shackle.',
-    list: () => [{ t: 'Tied in (bowline)', ok: rope.bowline }, { t: 'Leg at the apex', ok: rope.hauled >= bridle.legLen - R.L0 * 1.1 }, { t: 'Together — to the hook', ok: bridle.continueCalled }, { t: 'Load to the beam', ok: bridle.arrived }, { t: 'Drift: ' + (bridle.drift * 3.281).toFixed(1) + ' ft', ok: Math.abs(bridle.drift) < 0.7, bad: Math.abs(bridle.drift) > 1.5 }],
+  { title: 'Haul', body: 'The ground rigger is tying you into your leg. When they say ready, key the radio and take it up: grip the rope below the PCD and pull down, hand over hand. Slack first, then the leg, then on TOGETHER the apex, and on CONTINUE the motor — and its chain, paying out behind it, so it gets heavier all the way up. Squeeze the trigger harder as it does or the rope slips. Match the other rigger; get ahead and your leg takes more of the weight, then it fouls at the apex shackle. Rest on the cam when your hand shakes.',
+    list: () => [{ t: 'Tied in (bowline)', ok: rope.bowline }, { t: 'Leg at the apex', ok: rope.hauled >= bridle.legLen - R.L0 * 1.1 }, { t: 'Together — to the hook', ok: bridle.continueCalled }, { t: 'Load to the beam', ok: bridle.arrived }, { t: 'Drift: ' + (bridle.drift * 3.281).toFixed(1) + ' ft', ok: Math.abs(bridle.drift) < 0.7, bad: Math.abs(bridle.drift) > 1.5 }, { t: 'On your rope: ' + Math.round(bridle.loadA * 2.205) + ' lb' + (bridle.loadW ? ' (' + Math.round(bridle.shareA * 100) + '% of ' + Math.round(bridle.loadW * 2.205) + ' lb)' : ''), ok: bridle.loadA < MAX_LOAD * 0.9, bad: bridle.loadA >= MAX_LOAD * 0.9 }],
     done: () => bridle.arrived },
   { title: 'Wrap the beam', body: 'Burlap out of the bowline. Grab the eye, take it OVER the beam, UNDER, and back around to the shackle — the cable goes in the BOW, the rope belongs on the pin (P.Ro.C.S). Then the burlap folded under the steel, set the connection down on the beam, and slide it square to the other rigger. Check it for fouls.',
     list: () => [{ t: 'Burlap off', ok: bridle.burlapOff }, { t: 'Over, under, around', ok: bridle.wrapStage >= 3 }, { t: 'Mated — cable in the bow', ok: bridle.mated }, { t: 'Burlap under the steel', ok: bridle.burlapUnder }, { t: 'Steel down on the beam', ok: bridle.steelDown }, { t: 'Squared to the other side', ok: bridle.squared }, { t: 'No fouls', ok: bridle.mated && !bridle.twist, bad: bridle.twist }],
@@ -1484,6 +1798,7 @@ function stepTick(dt) {
 function triggerAction(h) {
   const hp = h.pos; const held = heldOf(h.index);
   if (game.phase === 'lobby') { pickProgramWithRay(h); return; }
+  if (held && held.kind === 'hook') { tryClip(hp, held.hook); return; }   // a hook in the hand comes first, rope or no rope
   if (handHoldsRope(h)) {
     if (pcd.hung && hp.distanceTo(gear.pcd.mesh.position) < 0.4) { if (!rope.pcdFed) feedPCD(hp, h.index); else if (rope.hauled < 0.2) unfeedPCD(h.index); return; }
     if (rope.turns >= 1 && nearHitchRail(hp)) { dressKnot(hp, h.index); return; }   // turns on the rail: dress them
@@ -1509,26 +1824,27 @@ function triggerAction(h) {
 /* the radio */
 function keyRadio() {
   if (game.phase !== 'arena' || game.over) return;
-  if (!gear.radio.worn) { toast('The radio is not on you', true); return; }
-  AudioKit.radioKey();
-  if (game.step === 1 && !game.radioChecked) { game.radioChecked = true; radio('You', 'Radio check, up-rigger.'); radio('Ground', 'Loud and clear. Get your rope.', 1.0); hudDirty = true; return; }
-  if (game.step === 4 && rope.bowline && bridle.stage === 'idle') { radio('You', 'Ready on the ' + (game.prog === 'split15' ? 'split 15' : '10 basket') + '?'); radio('Ground', 'Go ahead and pull. I\'m watching the steel.', 1.4); bridle.stage = 'apex'; return; }
-  if (game.step === 6 && !bridle.pointChecked) { bridle.pointChecked = true; radio('You', 'Point check on the ' + (game.prog === 'split15' ? 'split 15' : '10 basket') + '?');
+  if (!holdingRadio()) { toast(gear.radio.worn || gear.radio.grab.held !== null ? 'Take the radio in your hand to talk' : 'The radio is not on you', true); AudioKit.deny(); return; }
+  if (radioBusy()) { Radio.stepped++; toast('Channel is busy — wait for them to finish', true); AudioKit.deny(); return; }
+  if (game.step === 1 && !game.radioChecked) { game.radioChecked = true; playerSays('Radio check, up-rigger.'); radio('Ground', 'Loud and clear. Get your rope.', 1.2); hudDirty = true; return; }
+  if (game.step === 4 && rope.bowline && bridle.stage === 'idle') { playerSays('Ready on the ' + (game.prog === 'split15' ? 'split 15' : '10 basket') + '?'); radio('Ground', 'Go ahead and pull. I\'m watching the steel.', 1.6); bridle.stage = 'apex'; return; }
+  if (game.step === 6 && !bridle.pointChecked) { bridle.pointChecked = true; playerSays('Point check on the ' + (game.prog === 'split15' ? 'split 15' : '10 basket') + '?');
     const off = Math.abs(bridle.zA - WORLD.slingZ) * 3.281;
     radio('Ground', 'Stand by... ' + (off < 1.0 ? 'Point\'s good. Chain\'s coming down.' : 'You\'re about ' + off.toFixed(0) + ' feet off the mark. Both of you slide it ' + (bridle.zA > WORLD.slingZ ? 'upstage' : 'downstage') + '.'), 3.0);
-    setTimeout(() => endProgram(true, 'Point\'s good', 'Bridle up, wrapped, mated, squared and checked — and nothing went in.'), 5200); return; }
-  radio('You', 'Radio check.'); radio('Ground', 'Loud and clear.', 1.0);
+    setTimeout(() => endProgram(true, 'Point\'s good', 'Bridle up, wrapped, mated, squared and checked — and nothing went in.'), 7000); return; }
+  playerSays('Radio check.'); radio('Ground', 'Loud and clear.', 1.2);
 }
 /* ───────────────────── program start / end ───────────────────── */
 const lobbyEl = document.getElementById('lobby'), hudEl = document.getElementById('hud'), pauseEl = document.getElementById('pause');
 function resetWorld() {
   game.step = 0; game.t = 0; game.drops = 0; game.earlyPulls = 0; game.unclippedOnBeam = 0; game.falls = 0; game.ropeDrops = 0; game.fouls = 0; game.procsMisses = 0; game.bestDrift = 0; game.over = false; game.result = null; game.radioChecked = false;
   Object.assign(rope, { state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, hitchIdx: -1, pcdFed: false, pcdDir: 'ok', pcdIdx: -1, hauled: 0, bowline: false, looseT: 0, droppedIn: false, deployT: -1, landed: false, groundCarry: false, runBackFired: false, wrapT: 0, coilNext: undefined, coilHand: -1 });
-  R.alive = false; R.pins.clear();
-  Object.assign(bridle, { hauledB: 0, stage: 'idle', togetherCalled: false, continueCalled: false, drift: 0, fouled: false, twist: false, arrived: false, burlapOff: false, wrapStage: 0, mated: false, burlapUnder: false, steelDown: false, squared: false, zB: WORLD.slingZ, zA: WORLD.slingZ, pointChecked: false, calledApexA: false, readyT: 0, readyToast: false, warned: false, earlyToast: false });
+  R.alive = false; R.pins.clear(); ropeBuild(SETTINGS.ropePhys, SETTINGS.ropeDetail);
+  hands.forEach(h => { h.fatigue = 0; h.load = 0; h.slipping = false; h.taut = false; });
+  Object.assign(bridle, { loadA: 0, loadW: 0, shareA: 0.5, chainOut: 0, hauledB: 0, stage: 'idle', togetherCalled: false, continueCalled: false, drift: 0, fouled: false, twist: false, arrived: false, burlapOff: false, wrapStage: 0, mated: false, burlapUnder: false, steelDown: false, squared: false, zB: WORLD.slingZ, zA: WORLD.slingZ, pointChecked: false, calledApexA: false, readyT: 0, readyToast: false, warned: false, earlyToast: false });
   wrapPts.length = 0; const set = wrapLine.getObjectByName('Bridle_Wrap_Set'); if (set) wrapLine.remove(set); const tw = wrapLine.getObjectByName('Bridle_Twist'); if (tw) wrapLine.remove(tw);
   pcd.hung = false; Object.assign(lanyard, { clipped: false, anchor: 'none', taut: false }); lanyard.hooks.forEach(h => { h.anchor = 'parked'; h.held = null; });
-  Object.assign(player, { falling: false, vy: 0, arrested: false, offBeamT: 0 });
+  Object.assign(player, { falling: false, vy: 0, arrested: false, offBeamT: 0 }); Object.assign(fall, { packExt: 0, freeFall: 0, peakF: 0, phase: 'none', hangT: 0, hangToast: false }); fall.v.set(0, 0, 0);
   falling.length = 0; grabbables.forEach(g => { g.held = null; g.locked = false; });
   Object.assign(harness, { stage: 0, legL: false, legR: false, worn: false }); harnessVisuals();
   GEAR_DEFS.forEach(d => { const g = gear[d.id]; g.worn = false; g.ring = null; g.mesh.visible = true; gearTable.attach(g.mesh); g.mesh.position.copy(g.grab.home); g.mesh.rotation.set(0, 0, 0); g.mesh.scale.set(1, 1, 1); });
@@ -1536,7 +1852,7 @@ function resetWorld() {
   wornHelmet.visible = false; lanyard.hooks.forEach(h => { h.line.visible = false; });
   eyeA.attach(burlap); burlap.position.set(0, -0.02, 0); burlap.scale.set(1, 1, 1); burlap.rotation.set(0, 0, 0); burlap.visible = true;
   groundRigger.position.set(POINT.x + 1.5, 0, POINT.z + 1.5);
-  radioLines.length = 0; radioLogEl.innerHTML = ''; document.getElementById('vignette').classList.remove('on');
+  radioLines.length = 0; radioLogEl.innerHTML = ''; Radio.queue.length = 0; Radio.speaking = null; Radio.busyUntil = 0; Radio.chatterAt = 0; Radio.stepped = 0; Radio.keyed = 0; try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {} document.getElementById('vignette').classList.remove('on');
   playerRig.position.set(0, 0, 0); player.safe.set(0, 0, 0);
 }
 function enterHolodeck(mode) {
@@ -1557,8 +1873,8 @@ function startProgram(prog) {
   setTimeout(() => {
     resetWorld(); game.phase = 'arena'; holodeck.visible = false; arena.visible = true;
     scene.background.set(0x0b0a0e); hemi.intensity = 0.55; key.intensity = 1.0;
-    playerRig.position.set(GEAR_X + 1.0, H + (game.mode === 'vr' && refTypeUsed === 'local' ? 1.6 : 0), 0.6); playerRig.rotation.y = 0; player.safe.copy(playerRig.position);
-    if (game.mode === 'desk') { player.yaw = 0; player.pitch = 0; }   // facing out over the arena
+    playerRig.position.set(GEAR_X + 0.6, H + (game.mode === 'vr' && refTypeUsed === 'local' ? 1.6 : 0), TABLE_Z - 1.8); playerRig.rotation.y = Math.PI; player.safe.copy(playerRig.position);   // in the prep area, facing the table
+    if (game.mode === 'desk') { player.yaw = Math.PI; player.pitch = 0; playerRig.rotation.y = 0; }
     document.getElementById('c-eyebrow').textContent = (prog === 'split15' ? 'Split 15' : '10 Basket') + ' · 108 ft';
     setStep(1); radio('Ground', 'Morning. Building your ' + (prog === 'split15' ? 'split 15' : '10 basket') + ' down here. Get your gear on.', 2);
   }, 700);
@@ -1571,7 +1887,7 @@ function endProgram(ok, title, body) {
   const st = document.getElementById('p-stats'); st.hidden = false;
   const m = Math.floor(game.t / 60), s = Math.floor(game.t % 60);
   st.innerHTML = [['Time', m + ':' + (s < 10 ? '0' : '') + s], ['Things dropped', game.drops], ['Rope dropped in', game.ropeDrops], ['Falls arrested', game.falls], ['Seconds on the beam unclipped', game.unclippedOnBeam.toFixed(0)],
-    ['Worst drift', (game.bestDrift * 3.281).toFixed(1) + ' ft'], ['Apex fouls', game.fouls], ['Pulled before the go', game.earlyPulls], ['PROCS misses', game.procsMisses]].map(([k, v]) => '<dt>' + k + '</dt><dd>' + v + '</dd>').join('');
+    ['Worst drift', (game.bestDrift * 3.281).toFixed(1) + ' ft'], ['Apex fouls', game.fouls], ['Pulled before the go', game.earlyPulls], ['Stepped on radio traffic', Radio.stepped], ['PROCS misses', game.procsMisses]].map(([k, v]) => '<dt>' + k + '</dt><dd>' + v + '</dd>').join('');
   document.getElementById('btn-resume').hidden = true; document.getElementById('btn-retry').hidden = false;
   pauseEl.hidden = false; if (ok) AudioKit.program(); else AudioKit.alarm();
 }
@@ -1605,6 +1921,7 @@ function lobbyTick() {
 /* ───────────────────── HUD (DOM) and the boards ─────────────────────
    In the headset the checklist lives in the world: a board on the catwalk wall above the gear
    table, and a second one hanging by the sling. Only the pause / result card follows your head. */
+const hLoad = document.getElementById('h-load'), hArm = document.getElementById('h-arm');
 const hStep = document.getElementById('h-step'), hAlt = document.getElementById('h-alt'), hClip = document.getElementById('h-clip'), hRope = document.getElementById('h-rope'), hDrops = document.getElementById('h-drops'), hTime = document.getElementById('h-time');
 const cTitle = document.getElementById('c-title'), cBody = document.getElementById('c-body'), cList = document.getElementById('c-list');
 let boardsDirty = true;
@@ -1617,6 +1934,9 @@ function hudTick() {
   const ra = rope.state === 'coil' ? 'COIL' : rope.state === 'gone' ? 'GONE' : rope.anchor === 'hitch' ? (rope.knot === 'wrap' ? 'WRAP!' : rope.knot === 'clove' ? 'CLOVE' : 'HITCHED') : rope.anchor === 'pcd' ? 'PCD' : rope.anchor === 'hand' ? 'IN HAND' : rope.anchor === 'foot' ? 'UNDERFOOT' : rope.landed ? 'LOOSE!' : 'FALLING';
   hRope.textContent = ra; hRope.className = 'val ' + (ra === 'LOOSE!' || ra === 'WRAP!' || ra === 'GONE' ? 'bad' : 'good');
   hDrops.textContent = game.drops; hDrops.className = 'val ' + (game.drops ? 'bad' : '');
+  const inHand = Math.max(...hands.map(h => h.load)), shown = inHand > 0.5 ? inHand : bridle.loadA;
+  hLoad.textContent = Math.round(shown * 2.205) + ' lb'; hLoad.className = 'val ' + (inHand > 8 ? (inHand > MAX_LOAD * 0.7 ? 'bad' : '') : 'good');
+  const arm = Math.round((1 - Math.max(...hands.map(h => h.fatigue))) * 100); hArm.textContent = arm + '%'; hArm.className = 'val ' + (arm < 35 ? 'bad' : arm < 65 ? '' : 'good');
   const st = STEPS[game.step];
   if (game.phase === 'lobby') { cTitle.textContent = 'Choose a build'; cBody.textContent = 'Two pedestals in front of the arch: a split 15 or a 10 basket. Point and pull the trigger (desktop: look at one and click).'; cList.innerHTML = ''; }
   else if (st) { cTitle.textContent = game.step + ' · ' + st.title; cBody.textContent = st.body; cList.innerHTML = st.list().map(i => '<li class="' + (i.ok ? 'done' : i.bad ? 'bad' : '') + '">' + i.t + '</li>').join(''); }
@@ -1629,7 +1949,7 @@ function makeBoard(name, w, h) {
   const frame = box(w + 0.06, h + 0.06, 0.02, MAT.archDark, name + '_Frame'); frame.position.z = -0.012; m.add(frame);
   return m;
 }
-const boardTable = makeBoard('Board_GearTable', 1.05, 0.875); boardTable.position.set(GEAR_X, H + 1.75, WORLD.catwalkDepth - 0.05); boardTable.rotation.y = Math.PI; arena.add(boardTable);
+const boardTable = makeBoard('Board_GearTable', 1.05, 0.875); boardTable.position.set(GEAR_X, H + 1.75, PREP.z1 - 0.06); boardTable.rotation.y = Math.PI; arena.add(boardTable);   // on the prep area's back wall, above the table
 const boardSling = makeBoard('Board_Sling', 0.84, 0.7); boardSling.position.set(SLING_X + 0.55, H + 1.45, WORLD.slingZ + 0.15); boardSling.rotation.y = -0.55; arena.add(boardSling);
 const boardHanger = cyl(0.006, 1.0, MAT.wireRope, 'Board_Sling_Hanger'); boardHanger.position.set(SLING_X + 0.55, H + 2.3, WORLD.slingZ + 0.15); arena.add(boardHanger);
 function drawBoard(b) {
@@ -1637,7 +1957,7 @@ function drawBoard(b) {
   x.fillStyle = 'rgba(12,12,19,0.92)'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#ff9c00'; x.fillRect(0, 0, 12, c.height);
   const st = STEPS[game.step];
   x.fillStyle = '#cc99cc'; x.font = '400 22px Antonio, Arial Narrow, sans-serif';
-  x.fillText(((game.prog === 'split15' ? 'SPLIT 15' : '10 BASKET') + ' · ' + Math.round(_head.y * 3.281) + ' FT · ' + (lanyard.clipped ? 'CLIPPED' : 'NOT CLIPPED') + ' · ROPE ' + hRope.textContent + ' · DROPS ' + game.drops).toUpperCase(), 34, 40);
+  x.fillText(((game.prog === 'split15' ? 'SPLIT 15' : '10 BASKET') + ' · ' + Math.round(_head.y * 3.281) + ' FT · ' + (lanyard.clipped ? 'CLIPPED' : 'NOT CLIPPED') + ' · ROPE ' + hRope.textContent + ' · LOAD ' + hLoad.textContent + ' · ARM ' + hArm.textContent + ' · DROPS ' + game.drops).toUpperCase(), 34, 40);
   x.fillStyle = '#f2c14e'; x.font = '700 44px Antonio, Arial Narrow, sans-serif'; x.fillText(st ? ('STEP ' + game.step + ' · ' + st.title).toUpperCase() : 'UP-RIGGER', 34, 92);
   x.fillStyle = '#e8e4d8'; x.font = '300 21px Titillium Web, Segoe UI, sans-serif';
   let y = st ? wrapText(x, st.body, 700, 26, 34, 128, 7) : 140;
@@ -1714,7 +2034,7 @@ function desktopTick(dt) {
   }
   if (!game.paused && !player.falling && game.phase === 'arena') railCollide();
   // the desktop hand: a point out along the gaze
-  const h = hands[0]; h.active = true; h.mesh.visible = false;
+  const h = hands[0]; h.active = true; h.mesh.visible = false; h.effort = h.trig ? 1 : 0;
   if (!window.RIG_PIN_HAND) { camera.getWorldQuaternion(h.quat); camera.getWorldPosition(h.pos); h.pos.addScaledVector(new THREE.Vector3(0, 0, -1).applyQuaternion(h.quat), deskReach); h.pos.y -= 0.12; }
   hands[1].active = false;
   document.getElementById('reticle').classList.toggle('hit', !!grabCandidate(h) || heldOf(0) !== null);
@@ -1741,6 +2061,7 @@ function vrTick(dt) {
     h.mesh.visible = true; h.mesh.position.copy(h.pos); h.mesh.quaternion.copy(h.quat); h.ray.visible = game.phase === 'lobby';
     const gp = h.src && h.src.gamepad; if (!gp || !gp.buttons) continue;
     const lower = !!(gp.buttons[4] && gp.buttons[4].pressed), upper = !!(gp.buttons[5] && gp.buttons[5].pressed);
+    h.effort = Math.max(gp.buttons[0] ? gp.buttons[0].value || 0 : 0, h.trig ? 1 : 0);   // how hard the trigger is squeezed
     const ax = gp.axes && gp.axes.length > 3 ? gp.axes[2] : 0, ay = gp.axes && gp.axes.length > 3 ? gp.axes[3] : 0;
     if (game.paused) {
       if (lower && !h.prevLower) { if (game.over) { game.paused = false; pauseEl.hidden = true; startProgram(game.prog); } else quitToArch(); }
@@ -1769,7 +2090,8 @@ function handsTick(dt) {
     if (!game.paused) {
       if (h.grip && !h.prevGrip) grabStart(h);
       if (!h.grip && h.prevGrip) grabEnd(h);
-      if (h.trig && !h.prevTrig) triggerAction(h);
+      if (h.trig && !h.prevTrig && !(handHoldsRope(h) && h.load > 8)) triggerAction(h);   // on a loaded rope the trigger is your grip, not an action
+      if (h.slipping && h.grip && !handHoldsRope(h) && h.fatigue < 0.75 && h.effort >= gripNeeded(h.load)) { if (ropeGrab(h)) { h.slipping = false; toast('Got it'); } }
       const held = heldOf(h.index);
       if (held && (held.kind === 'gear' || held.kind === 'pocket' || held.kind === 'burlap')) { arena.attach(held.mesh); held.mesh.position.copy(h.pos); held.mesh.quaternion.copy(h.quat); }
       if (handHoldsRope(h) && rope.state === 'deployed' && rope.knot !== 'clove+half' && !rope.pcdFed) knotTick(h.pos);
@@ -1791,12 +2113,15 @@ document.querySelectorAll('.prog').forEach(b => b.addEventListener('click', () =
 document.getElementById('btn-settings').addEventListener('click', e => { const s = document.getElementById('settings'); s.hidden = !s.hidden; e.currentTarget.setAttribute('aria-expanded', String(!s.hidden)); });
 function bindRange(id, key, fmt) { const el = document.getElementById(id), out = document.getElementById('o-' + id.slice(2)); const show = () => { el.value = SETTINGS[key]; out.textContent = fmt(SETTINGS[key]); };
   el.addEventListener('input', () => { SETTINGS[key] = parseFloat(el.value); out.textContent = fmt(SETTINGS[key]); saveSettings(); if (key === 'vol') AudioKit.setVol(SETTINGS.vol); }); show(); return show; }
-const shows = [bindRange('s-edge', 'edge', v => (v * 39.37).toFixed(0) + ' in'), bindRange('s-haul', 'haul', v => v + '×'), bindRange('s-pace', 'pace', v => (v * 3.281).toFixed(1) + ' ft/s'), bindRange('s-turns', 'turns', v => v), bindRange('s-vol', 'vol', v => Math.round(v * 100) + '%')];
+const shows = [bindRange('s-edge', 'edge', v => (v * 39.37).toFixed(0) + ' in'), bindRange('s-haul', 'haul', v => v + '×'), bindRange('s-pace', 'pace', v => (v * 3.281).toFixed(1) + ' ft/s'), bindRange('s-turns', 'turns', v => v), bindRange('s-vol', 'vol', v => Math.round(v * 100) + '%'), bindRange('s-load', 'loadScale', v => v + '×'), bindRange('s-fat', 'fatigue', v => v + '×')];
+function bindSelect(id, key) { const el = document.getElementById(id); el.value = String(SETTINGS[key]); el.addEventListener('change', () => { SETTINGS[key] = parseFloat(el.value); saveSettings(); }); return () => { el.value = String(SETTINGS[key]); }; }
+const selShows = [bindSelect('s-rphys', 'ropePhys'), bindSelect('s-rdet', 'ropeDetail')];
+const chainChk = document.getElementById('s-chain'); chainChk.checked = SETTINGS.chainDown; chainChk.addEventListener('change', () => { SETTINGS.chainDown = chainChk.checked; saveSettings(); });
 const bodyChk = document.getElementById('s-body'); bodyChk.checked = SETTINGS.body; bodyChk.addEventListener('change', () => { SETTINGS.body = bodyChk.checked; saveSettings(); });
 document.getElementsByName('dom').forEach(r => { r.checked = r.value === SETTINGS.dom; r.addEventListener('change', () => { SETTINGS.dom = r.value; saveSettings(); }); });
 const refVal = () => SETTINGS.moveRef === 'head' ? 'headset' : 'controller';
 document.getElementsByName('moveref').forEach(r => { r.checked = r.value === refVal(); r.addEventListener('change', () => { SETTINGS.moveRef = r.value === 'headset' ? 'head' : 'controller'; saveSettings(); }); });
-document.getElementById('btn-reset').addEventListener('click', () => { Object.assign(SETTINGS, DEFAULTS); saveSettings(); shows.forEach(f => f()); bodyChk.checked = SETTINGS.body; document.getElementsByName('dom').forEach(r => r.checked = r.value === SETTINGS.dom); document.getElementsByName('moveref').forEach(r => r.checked = r.value === refVal()); });
+document.getElementById('btn-reset').addEventListener('click', () => { Object.assign(SETTINGS, DEFAULTS); saveSettings(); shows.forEach(f => f()); selShows.forEach(f => f()); bodyChk.checked = SETTINGS.body; chainChk.checked = SETTINGS.chainDown; document.getElementsByName('dom').forEach(r => r.checked = r.value === SETTINGS.dom); document.getElementsByName('moveref').forEach(r => r.checked = r.value === refVal()); });
 
 btnDesk.addEventListener('click', () => { enterHolodeck('desk'); setTimeout(() => canvasEl.requestPointerLock && canvasEl.requestPointerLock(), 50); });
 function offerStandalone(msg) { if (isFramed && hasRealURL) { btnPop.hidden = false; xrStatus.textContent = msg + '. Try OPEN STANDALONE, then enter from the new tab.'; } else xrStatus.textContent = msg + ' — desktop walkthrough only.'; btnVR.disabled = !(navigator.xr); }
@@ -1831,7 +2156,7 @@ renderer.setAnimationLoop((time, frame) => {
     desktopTick(dt); vrTick(dt); bodyTick(); handsTick(dt);
     if (!game.paused) {
       if (game.phase === 'lobby') lobbyTick();
-      else { playerTick(dt); lanyardTick(); ropeTick(dt); ropeRender(); bridleTick(dt); fallingTick(dt); stepTick(dt); }
+      else { playerTick(dt); lanyardTick(); ropeTick(dt); ropeRender(); bridleTick(dt); fallingTick(dt); stepTick(dt); radioTick(dt); }
     }
     if (renderer.xr.isPresenting) feetTick(frame || (renderer.xr.getFrame && renderer.xr.getFrame())); else feetTick(null);
     hudTick(); boardsTick(); vrPanelTick(dt);
@@ -1843,7 +2168,7 @@ renderer.setAnimationLoop((time, frame) => {
 /* debug / test hooks: drive the flow without a headset */
 
 /* debug / test hooks: drive the flow without a headset */
-window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, nearestParticle, pinSet, pinClear, handPin, playerRig, camera, scene, holodeck, arena, feetPos };
+window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, playerRig, camera, scene, holodeck, arena, feetPos };
 </script>
 </body>
 </html>
