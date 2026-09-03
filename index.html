@@ -173,6 +173,12 @@
         <div class="row"><label for="s-turns">Hitch turns</label>
           <input type="range" id="s-turns" min="1" max="3" step="1"><output id="o-turns"></output></div>
         <p class="hint">Full turns around the rail that count as a clove hitch. Two is the knot.</p>
+        <h2>Walking</h2>
+        <div class="racklist">
+          <label><input type="radio" name="moveref" value="controller"> Forward is where the controller points</label>
+          <label><input type="radio" name="moveref" value="headset"> Forward is where the headset looks</label>
+        </div>
+        <p class="hint">Push the stick forward and you walk that way. Controller-relative lets you look around while you walk a straight line down the beam.</p>
         <h2>Hands</h2>
         <div class="racklist">
           <label><input type="radio" name="dom" id="dom-right" value="right"> Right-handed</label>
@@ -201,11 +207,11 @@
         <dt>Knots</dt><dd>Hold the rope end at the rail and <b>circle your hand around the rail</b> &mdash; the game counts the turns. Trigger to dress it</dd>
         <dt>Haul</dt><dd>Grip the rope below the PCD and <b>pull down</b>, hand over hand</dd>
         <dt>B / Y</dt><dd>Key the radio</dd>
-        <dt>Thumbstick</dt><dd>Walk where the <b>controller</b> points, not where you look. <b>Hold A / X 0.6&thinsp;s to pause</b></dd>
+        <dt>Thumbstick</dt><dd>Push it and you walk where that <b>controller</b> points (or where you look &mdash; Settings). <b>Hold A / X 0.6&thinsp;s to pause</b></dd>
         <dt>Feet</dt><dd>Where the headset says they are. Stand on the rope to hold it; step off the beam and gravity has you</dd>
         <dt>Desktop</dt><dd>Mouse look · WASD walk · <b>left mouse = grip</b> · right mouse / F = trigger · mouse wheel wraps a knot or hauls · E reach · R radio · P pause</dd>
       </dl>
-      <p class="footnote">M0.2 &mdash; real rope, a real harness, boards at the table and the sling. On Quest, open this page in the headset browser.
+      <p class="footnote">M0.3 &mdash; real rope, a harness that sits on your chest, boards at the table and the sling, walking that goes where you push. On Quest, open this page in the headset browser.
         If the Enter button stays unavailable inside an embedded viewer, open the page in its own tab.</p>
       <p class="footnote" id="diag" style="font-family:monospace;font-size:11px;color:#6a6a5c;line-height:1.6"></p>
     </div>
@@ -273,7 +279,7 @@ const WORLD = {
   lanyard: 6 * FT,
   g: 9.81,
 };
-const DEFAULTS = { body: true, edge: 0.1, haul: 3, pace: 0.9, turns: 2, dom: 'right', vol: 0.7 };
+const DEFAULTS = { body: true, edge: 0.1, haul: 3, pace: 0.9, turns: 2, dom: 'right', vol: 0.7, moveRef: 'controller' };
 const SETTINGS = Object.assign({}, DEFAULTS);
 try { Object.assign(SETTINGS, JSON.parse(localStorage.getItem('uprigger.settings') || '{}')); } catch (e) {}
 function saveSettings() { try { localStorage.setItem('uprigger.settings', JSON.stringify(SETTINGS)); } catch (e) {} }
@@ -568,33 +574,42 @@ const GEAR_X = -4.5;
 const tableTop = box(2.4, 0.04, 0.6, MAT.steelDark, 'GearTable_Top'); tableTop.position.set(GEAR_X, H + 0.9, 0.7); gearTable.add(tableTop);
 [-1.1, 1.1].forEach(x => { const l = box(0.05, 0.9, 0.5, MAT.steelDark, 'GearTable_Leg'); l.position.set(GEAR_X + x, H + 0.45, 0.7); gearTable.add(l); });
 const binMesh = box(0.34, 0.3, 0.34, MAT.concrete, 'PocketBin'); binMesh.position.set(GEAR_X - 1.6, H + 0.15, 0.85); gearTable.add(binMesh);
-const binLabel = makeLabel('POCKETS', 0.34, 0.1, false, '#99ccff'); binLabel.position.set(GEAR_X - 1.6, H + 0.36, 0.85); binLabel.rotation.x = -Math.PI / 2; gearTable.add(binLabel);
+const binLabel = makeLabel('BUCKET', 0.34, 0.1, false, '#99ccff'); binLabel.position.set(GEAR_X - 1.6, H + 0.36, 0.85); binLabel.rotation.x = -Math.PI / 2; gearTable.add(binLabel);
 
 const grabbables = [];          // {mesh, kind, r, held, ...}
 function registerGrab(mesh, kind, r, extra) { const g = Object.assign({ mesh, kind, r: r || 0.14, held: null, home: mesh.position.clone(), homeParent: mesh.parent }, extra || {}); grabbables.push(g); mesh.userData.grab = g; return g; }
 
 /* the body rides under the head; body space faces -Z (your front) */
 const body = new THREE.Group(); body.name = 'PlayerBody'; playerRig.add(body);
-function bodyTick() { body.position.set(camera.position.x, 0, camera.position.z); const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ'); body.rotation.set(0, e.y, 0); }
+/* The eyes sit about 10 cm in front of the spine, so the body's origin is that far behind the camera;
+   its proportions are laid out for 1.65 m eyes and scaled to whoever is wearing the headset. */
+const BODY_EYE = 1.65;
+function bodyTick() {
+  const e = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ'); const yaw = e.y;
+  const eyeY = game.mode === 'desk' ? 1.6 : Math.max(1.2, Math.min(2.0, camera.position.y));
+  const s = eyeY / BODY_EYE;
+  body.position.set(camera.position.x + Math.sin(yaw) * 0.1 * s, 0, camera.position.z + Math.cos(yaw) * 0.1 * s);
+  body.rotation.set(0, yaw, 0); body.scale.setScalar(s);
+}
 /* the seven rings, in body space */
 const RINGS = {
-  dorsal: { p: new THREE.Vector3(0, 1.36, 0.14), label: 'back' },
-  sternal: { p: new THREE.Vector3(0, 1.28, -0.15), label: 'chest' },
-  ventral: { p: new THREE.Vector3(0, 0.98, -0.17), label: 'belly' },
-  hipL: { p: new THREE.Vector3(-0.21, 0.95, -0.02), label: 'left hip' },
-  hipR: { p: new THREE.Vector3(0.21, 0.95, -0.02), label: 'right hip' },
-  rearL: { p: new THREE.Vector3(-0.14, 0.95, 0.15), label: 'left rear' },
-  rearR: { p: new THREE.Vector3(0.14, 0.95, 0.15), label: 'right rear' },
+  dorsal: { p: new THREE.Vector3(0, 1.30, 0.13), label: 'back' },
+  sternal: { p: new THREE.Vector3(0, 1.22, -0.10), label: 'chest' },
+  ventral: { p: new THREE.Vector3(0, 0.95, -0.13), label: 'belly' },
+  hipL: { p: new THREE.Vector3(-0.2, 0.92, -0.02), label: 'left hip' },
+  hipR: { p: new THREE.Vector3(0.2, 0.92, -0.02), label: 'right hip' },
+  rearL: { p: new THREE.Vector3(-0.13, 0.92, 0.14), label: 'left rear' },
+  rearR: { p: new THREE.Vector3(0.13, 0.92, 0.14), label: 'right rear' },
 };
 const harness = { stage: 0, legL: false, legR: false, worn: false };   // 0 table · 1 shouldered · 2 chest · 3 belt · 4 legs (worn)
 const wornHarness = new THREE.Group(); wornHarness.name = 'Worn_Harness'; body.add(wornHarness);
-const strapL = box(0.06, 0.62, 0.02, MAT.harness, 'Harness_ShoulderStrap_L'); strapL.position.set(-0.11, 1.2, -0.15); wornHarness.add(strapL);
+const strapL = box(0.06, 0.55, 0.02, MAT.harness, 'Harness_ShoulderStrap_L'); strapL.position.set(-0.11, 1.15, -0.10); wornHarness.add(strapL);
 const strapR = strapL.clone(); strapR.name = 'Harness_ShoulderStrap_R'; strapR.position.x = 0.11; wornHarness.add(strapR);
-const strapBackL = strapL.clone(); strapBackL.name = 'Harness_BackStrap_L'; strapBackL.position.z = 0.14; strapBackL.position.x = -0.08; wornHarness.add(strapBackL);
+const strapBackL = strapL.clone(); strapBackL.name = 'Harness_BackStrap_L'; strapBackL.position.z = 0.13; strapBackL.position.x = -0.08; wornHarness.add(strapBackL);
 const strapBackR = strapBackL.clone(); strapBackR.name = 'Harness_BackStrap_R'; strapBackR.position.x = 0.08; wornHarness.add(strapBackR);
-const chestBuckle = box(0.18, 0.05, 0.03, MAT.steelDark, 'Harness_ChestBuckle'); chestBuckle.position.set(0, 1.28, -0.16); wornHarness.add(chestBuckle);
-const wornBelt = torus(0.21, 0.025, MAT.harness, 'Harness_Belt'); wornBelt.rotation.x = Math.PI / 2; wornBelt.position.y = 0.96; wornHarness.add(wornBelt);
-const legLoopL = torus(0.1, 0.02, MAT.harness, 'Harness_LegLoop_L'); legLoopL.rotation.x = Math.PI / 2; legLoopL.position.set(-0.11, 0.72, -0.02); wornHarness.add(legLoopL);
+const chestBuckle = box(0.18, 0.05, 0.03, MAT.steelDark, 'Harness_ChestBuckle'); chestBuckle.position.set(0, 1.22, -0.11); wornHarness.add(chestBuckle);
+const wornBelt = torus(0.2, 0.025, MAT.harness, 'Harness_Belt'); wornBelt.rotation.x = Math.PI / 2; wornBelt.position.y = 0.93; wornHarness.add(wornBelt);
+const legLoopL = torus(0.1, 0.02, MAT.harness, 'Harness_LegLoop_L'); legLoopL.rotation.x = Math.PI / 2; legLoopL.position.set(-0.11, 0.68, -0.02); wornHarness.add(legLoopL);
 const legLoopR = legLoopL.clone(); legLoopR.name = 'Harness_LegLoop_R'; legLoopR.position.x = 0.11; wornHarness.add(legLoopR);
 const ringMeshes = {};
 Object.keys(RINGS).forEach(k => { const r = torus(0.03, 0.007, MAT.steel, 'Harness_Ring_' + k); r.position.copy(RINGS[k].p); r.rotation.y = k === 'hipL' || k === 'hipR' ? Math.PI / 2 : 0; wornHarness.add(r); ringMeshes[k] = r; });
@@ -625,9 +640,9 @@ const GEAR_DEFS = [
 ];
 const CLIPPABLE = ['rope', 'pcd', 'biner1', 'biner2', 'sling4', 'sling6', 'radio'];
 const POCKET_DEFS = [
-  { id: 'phone', label: 'Phone', p: new THREE.Vector3(-0.17, 0.86, -0.12), build: () => box(0.07, 0.14, 0.01, MAT.radio, 'Pocket_Phone') },
-  { id: 'keys', label: 'Keys', p: new THREE.Vector3(0.17, 0.86, -0.12), build: () => { const t = torus(0.02, 0.005, MAT.pocket, 'Pocket_Keyring'); const g = new THREE.Group(); g.add(t); const k = box(0.01, 0.05, 0.003, MAT.pocket, 'Pocket_Key'); k.position.y = -0.04; g.add(k); return g; } },
-  { id: 'coins', label: 'Loose change', p: new THREE.Vector3(0.2, 0.86, 0.1), build: () => cyl(0.014, 0.01, MAT.pocket, 'Pocket_Coins') },
+  { id: 'phone', label: 'Phone', p: new THREE.Vector3(-0.17, 0.82, -0.11), build: () => box(0.07, 0.14, 0.01, MAT.radio, 'Pocket_Phone') },
+  { id: 'keys', label: 'Keys', p: new THREE.Vector3(0.17, 0.82, -0.11), build: () => { const t = torus(0.02, 0.005, MAT.pocket, 'Pocket_Keyring'); const g = new THREE.Group(); g.add(t); const k = box(0.01, 0.05, 0.003, MAT.pocket, 'Pocket_Key'); k.position.y = -0.04; g.add(k); return g; } },
+  { id: 'coins', label: 'Loose change', p: new THREE.Vector3(0.19, 0.82, 0.1), build: () => cyl(0.014, 0.01, MAT.pocket, 'Pocket_Coins') },
 ];
 const gear = {};      // id -> {def, mesh, grab, worn, ring}
 const pocket = {};    // id -> {def, mesh, grab, onBody, cleared}
@@ -646,21 +661,21 @@ const wornHelmet = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 8, 0, Math.
 function pocketsEmpty() { return POCKET_DEFS.every(d => !pocket[d.id].onBody); }
 function pocketsCleared() { return POCKET_DEFS.every(d => pocket[d.id].cleared); }
 /* the chest zone: bring the bundle here to shoulder the harness */
-function chestZone(p) { const l = bodyLocal(p); return Math.abs(l.x) < 0.3 && l.y > 1.0 && l.y < 1.6 && l.z > -0.45 && l.z < 0.2; }
+function chestZone(p) { const l = bodyLocal(p); return Math.abs(l.x) < 0.3 && l.y > 0.95 && l.y < 1.5 && l.z > -0.45 && l.z < 0.2; }
 function headZone(p) { const c = new THREE.Vector3(); camera.getWorldPosition(c); return p.distanceTo(c) < 0.3; }
 function nearestRing(p, maxD) { let best = null, bd = maxD || 0.16; const w = new THREE.Vector3(); Object.keys(RINGS).forEach(k => { ringWorld(k, w); const d = w.distanceTo(p); if (d < bd) { bd = d; best = k; } }); return best; }
 function shoulderHarness() {
-  if (!pocketsEmpty()) { toast('Empty your pockets first', true); AudioKit.deny(); return false; }
+  if (!pocketsCleared()) { toast(pocketsEmpty() ? 'Your pocket stuff goes in the bucket first' : 'Empty your pockets first — into the bucket', true); AudioKit.deny(); return false; }
   harness.stage = 1; gear.harness.mesh.visible = false; releaseAll(gear.harness.grab); harnessVisuals(); AudioKit.ack(); toast('Harness over the shoulders — now clip the chest'); hudDirty = true; return true;
 }
 /* trigger with an empty hand on your own body: the buckles */
 function harnessClipAt(p) {
   if (harness.stage < 1 || harness.worn) return false;
   const l = bodyLocal(p);
-  if (harness.stage === 1) { if (Math.abs(l.x) < 0.2 && l.y > 1.15 && l.y < 1.45 && l.z < 0 && l.z > -0.4) { harness.stage = 2; AudioKit.click(); toast('Chest clipped — now the belt'); } else toast('Clip the chest first'); }
-  else if (harness.stage === 2) { if (Math.abs(l.x) < 0.25 && l.y > 0.85 && l.y < 1.1 && l.z < 0.05 && l.z > -0.4) { harness.stage = 3; AudioKit.click(); toast('Belt on — now the leg clips'); } else toast('Fasten the belt at your waist'); }
+  if (harness.stage === 1) { if (Math.abs(l.x) < 0.2 && l.y > 1.08 && l.y < 1.4 && l.z < 0.02 && l.z > -0.4) { harness.stage = 2; AudioKit.click(); toast('Chest clipped — now the belt'); } else toast('Clip the chest first'); }
+  else if (harness.stage === 2) { if (Math.abs(l.x) < 0.25 && l.y > 0.8 && l.y < 1.07 && l.z < 0.08 && l.z > -0.4) { harness.stage = 3; AudioKit.click(); toast('Belt on — now the leg clips'); } else toast('Fasten the belt at your waist'); }
   else if (harness.stage === 3) {
-    if (l.y > 0.5 && l.y < 0.85 && l.z < 0.15 && l.z > -0.35 && Math.abs(l.x) > 0.04 && Math.abs(l.x) < 0.3) { if (l.x < 0) harness.legL = true; else harness.legR = true; AudioKit.click(); toast((l.x < 0 ? 'Left' : 'Right') + ' leg clipped'); }
+    if (l.y > 0.42 && l.y < 0.8 && l.z < 0.18 && l.z > -0.35 && Math.abs(l.x) > 0.04 && Math.abs(l.x) < 0.3) { if (l.x < 0) harness.legL = true; else harness.legR = true; AudioKit.click(); toast((l.x < 0 ? 'Left' : 'Right') + ' leg clipped'); }
     else toast('Clip each leg loop at the thigh');
     if (harness.legL && harness.legR) { harness.stage = 4; harness.worn = true; gear.harness.worn = true; AudioKit.ack(); toast('HARNESS ON — seven rings live'); radio('Ground', 'Looking good up there.', 0.4); }
   }
@@ -674,7 +689,9 @@ function clipGear(id, ring) {
 }
 function unclipGear(id) { const g = gear[id]; g.worn = false; g.ring = null; hudDirty = true; }
 function putOnHelmet() { gear.helmet.worn = true; wornHelmet.visible = true; gear.helmet.mesh.visible = false; releaseAll(gear.helmet.grab); AudioKit.ack(); toast('Helmet on'); hudDirty = true; }
-function clearPocket(id) { const p = pocket[id]; p.onBody = false; p.cleared = true; p.mesh.visible = false; AudioKit.ack(); toast(p.def.label + ' — in the bin'); hudDirty = true; }
+function clearPocket(id) { const p = pocket[id]; p.onBody = false; p.cleared = true; p.mesh.visible = false; AudioKit.ack(); toast(p.def.label + ' — in the bucket'); hudDirty = true; }
+/* the bucket: anything let go over its mouth is in it */
+function inBucket(p) { const b = new THREE.Vector3(); binMesh.getWorldPosition(b); return Math.abs(p.x - b.x) < 0.24 && Math.abs(p.z - b.z) < 0.24 && p.y > b.y - 0.15 && p.y < b.y + 0.7; }
 function gearClipped() { return CLIPPABLE.every(id => id === 'rope' ? true : gear[id].worn); }
 function ropeInHand() { return gear.rope.grab.held !== null || gear.rope.worn; }
 function gearReady() { return pocketsCleared() && harness.worn && gear.helmet.worn && gearClipped() && game.radioChecked && (ropeInHand() || rope.state !== 'coil'); }
@@ -1303,8 +1320,8 @@ function grabEnd(h) {
     if (CLIPPABLE.indexOf(g.id) >= 0 && harness.worn) { const ring = nearestRing(p, 0.18); if (ring) { clipGear(g.id, ring); return; } }
     if (CLIPPABLE.indexOf(g.id) >= 0 && !harness.worn && chestZone(p)) { toast('Nothing to clip it to — harness first', true); }
   }
-  if (g.kind === 'pocket' && p.distanceTo(binMesh.getWorldPosition(new THREE.Vector3())) < 0.4) { clearPocket(g.id); return; }
-  if (supported(p.x, p.z, 0)) { arena.attach(g.mesh); const surfY = onTable(p) ? H + 0.94 : H + 0.06; g.mesh.position.set(p.x, Math.max(surfY, Math.min(p.y, surfY + 0.02)), p.z); if (g.kind === 'pocket') { pocket[g.id].cleared = true; hudDirty = true; } }
+  if (g.kind === 'pocket' && inBucket(p)) { clearPocket(g.id); return; }
+  if (supported(p.x, p.z, 0)) { arena.attach(g.mesh); const surfY = onTable(p) ? H + 0.94 : H + 0.06; g.mesh.position.set(p.x, Math.max(surfY, Math.min(p.y, surfY + 0.02)), p.z); if (g.kind === 'pocket') { toast(pocket[g.id].def.label + ' is not in the bucket'); hudDirty = true; } }
   else startFall(g.mesh, g.kind === 'gear' ? gear[g.id].def.label : g.kind === 'pocket' ? pocket[g.id].def.label : 'burlap', p);
 }
 function onTable(p) { return Math.abs(p.x - GEAR_X) < 1.25 && Math.abs(p.z - 0.7) < 0.35 && p.y > H + 0.6; }
@@ -1319,7 +1336,7 @@ function makeHook(i) {
   const b = torus(0.045, 0.012, MAT.carabiner, 'SnapHook_Body'); g.add(b); const gate = box(0.02, 0.07, 0.02, MAT.steelDark, 'SnapHook_Gate'); gate.position.x = 0.045; g.add(gate);
   g.visible = false; body.add(g);
   const line = cyl(0.01, 1, MAT.webbingRed, 'Lanyard_Line_' + (i ? 'B' : 'A')); line.visible = false; scene.add(line);
-  const hk = { mesh: g, line, anchor: 'parked', anchorPos: new THREE.Vector3(), held: null, park: new THREE.Vector3(i ? 0.12 : -0.12, 1.42, -0.1) };
+  const hk = { mesh: g, line, anchor: 'parked', anchorPos: new THREE.Vector3(), held: null, park: new THREE.Vector3(i ? 0.12 : -0.12, 1.32, -0.09) };
   registerGrab(g, 'hook', 0.14, { hook: i });
   lanyard.hooks.push(hk); return hk;
 }
@@ -1427,8 +1444,8 @@ function playerTick(dt) {
 /* ───────────────────── the six steps ───────────────────── */
 const STEPS = [
   null,
-  { title: 'Gear up', body: 'Pockets first — take the phone, keys and change off your body and drop them in the bin. Then the harness: bring it to your chest to shoulder it, trigger at the chest, the belly, and each thigh. Helmet straight onto your head. Clip the rest of the kit into the harness rings. Key the radio for a check. Then grab the rope and go.',
-    list: () => POCKET_DEFS.map(d => ({ t: d.label + ' off', ok: pocket[d.id].cleared, bad: !pocket[d.id].onBody && !pocket[d.id].cleared })).concat([
+  { title: 'Gear up', body: 'Pockets first — take the phone, keys and change off your body and drop them in the bucket by the table. Then the harness: bring it to your chest to shoulder it, trigger at the chest, the belly, and each thigh. Helmet straight onto your head. Clip the rest of the kit into the harness rings. Key the radio for a check. Then grab the rope and go.',
+    list: () => POCKET_DEFS.map(d => ({ t: d.label + ' in the bucket', ok: pocket[d.id].cleared, bad: !pocket[d.id].onBody && !pocket[d.id].cleared })).concat([
       { t: 'Harness — shoulders', ok: harness.stage >= 1 }, { t: 'Harness — chest clip', ok: harness.stage >= 2 }, { t: 'Harness — belt', ok: harness.stage >= 3 }, { t: 'Harness — leg clips', ok: harness.worn },
       { t: 'Helmet on', ok: gear.helmet.worn }],
       CLIPPABLE.filter(id => id !== 'rope').map(id => ({ t: gear[id].def.label + (gear[id].ring ? ' · ' + RINGS[gear[id].ring].label : ''), ok: gear[id].worn })),
@@ -1689,7 +1706,7 @@ function desktopTick(dt) {
   camera.rotation.set(0, 0, 0); camera.rotation.order = 'YXZ'; camera.rotation.y = player.yaw; camera.rotation.x = player.pitch;
   camera.position.set(0, keys.KeyC ? 1.0 : 1.6, 0);
   if (!game.paused && !player.falling) {
-    const sp = (keys.ShiftLeft ? 2.4 : 1.4) * dt, f = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw)), r = new THREE.Vector3(f.z, 0, -f.x);
+    const sp = (keys.ShiftLeft ? 2.4 : 1.4) * dt, f = new THREE.Vector3(-Math.sin(player.yaw), 0, -Math.cos(player.yaw)), r = new THREE.Vector3(-f.z, 0, f.x);   // right = forward turned clockwise
     let dx = 0, dz = 0;
     if (keys.KeyW) { dx += f.x * sp; dz += f.z * sp; } if (keys.KeyS) { dx -= f.x * sp; dz -= f.z * sp; }
     if (keys.KeyD) { dx += r.x * sp; dz += r.z * sp; } if (keys.KeyA) { dx -= r.x * sp; dz -= r.z * sp; }
@@ -1733,11 +1750,11 @@ function vrTick(dt) {
       if (lower && !h.prevLower) { h.lowerT = perfNow(); h.lowerFired = false; }
       if (lower && !h.lowerFired && perfNow() - h.lowerT > 0.6) { h.lowerFired = true; setPause(true); }
       if (upper && !h.prevUpper) keyRadio();
-      // thumbstick: walk where THIS controller points, not where you look
+      // thumbstick: walk where this controller points (or where you look — a setting)
       if ((Math.abs(ax) > 0.2 || Math.abs(ay) > 0.2) && !player.falling) {
-        const fwdC = new THREE.Vector3(0, 0, -1).applyQuaternion(h.quat); fwdC.y = 0; if (fwdC.length() < 0.05) fwdC.set(0, 0, -1); fwdC.normalize();
-        const yaw = Math.atan2(-fwdC.x, -fwdC.z);
-        const f = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), r = new THREE.Vector3(f.z, 0, -f.x);
+        const ref = SETTINGS.moveRef === 'head' ? camera.getWorldQuaternion(new THREE.Quaternion()) : h.quat;
+        const fwdC = new THREE.Vector3(0, 0, -1).applyQuaternion(ref); fwdC.y = 0; if (fwdC.length() < 0.05) fwdC.set(0, 0, -1); fwdC.normalize();
+        const f = fwdC, r = new THREE.Vector3(-f.z, 0, f.x);   // right = forward turned clockwise
         const sp = 1.2 * dt; const dx = (f.x * -ay + r.x * ax) * sp, dz = (f.z * -ay + r.z * ax) * sp;
         if (game.phase === 'arena') moveRig(dx, dz); else { playerRig.position.x += dx; playerRig.position.z += dz; }
       }
@@ -1777,7 +1794,9 @@ function bindRange(id, key, fmt) { const el = document.getElementById(id), out =
 const shows = [bindRange('s-edge', 'edge', v => (v * 39.37).toFixed(0) + ' in'), bindRange('s-haul', 'haul', v => v + '×'), bindRange('s-pace', 'pace', v => (v * 3.281).toFixed(1) + ' ft/s'), bindRange('s-turns', 'turns', v => v), bindRange('s-vol', 'vol', v => Math.round(v * 100) + '%')];
 const bodyChk = document.getElementById('s-body'); bodyChk.checked = SETTINGS.body; bodyChk.addEventListener('change', () => { SETTINGS.body = bodyChk.checked; saveSettings(); });
 document.getElementsByName('dom').forEach(r => { r.checked = r.value === SETTINGS.dom; r.addEventListener('change', () => { SETTINGS.dom = r.value; saveSettings(); }); });
-document.getElementById('btn-reset').addEventListener('click', () => { Object.assign(SETTINGS, DEFAULTS); saveSettings(); shows.forEach(f => f()); bodyChk.checked = SETTINGS.body; document.getElementsByName('dom').forEach(r => r.checked = r.value === SETTINGS.dom); });
+const refVal = () => SETTINGS.moveRef === 'head' ? 'headset' : 'controller';
+document.getElementsByName('moveref').forEach(r => { r.checked = r.value === refVal(); r.addEventListener('change', () => { SETTINGS.moveRef = r.value === 'headset' ? 'head' : 'controller'; saveSettings(); }); });
+document.getElementById('btn-reset').addEventListener('click', () => { Object.assign(SETTINGS, DEFAULTS); saveSettings(); shows.forEach(f => f()); bodyChk.checked = SETTINGS.body; document.getElementsByName('dom').forEach(r => r.checked = r.value === SETTINGS.dom); document.getElementsByName('moveref').forEach(r => r.checked = r.value === refVal()); });
 
 btnDesk.addEventListener('click', () => { enterHolodeck('desk'); setTimeout(() => canvasEl.requestPointerLock && canvasEl.requestPointerLock(), 50); });
 function offerStandalone(msg) { if (isFramed && hasRealURL) { btnPop.hidden = false; xrStatus.textContent = msg + '. Try OPEN STANDALONE, then enter from the new tab.'; } else xrStatus.textContent = msg + ' — desktop walkthrough only.'; btnVR.disabled = !(navigator.xr); }
