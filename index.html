@@ -123,6 +123,10 @@
   .pausecard .actions{margin-bottom:12px}
   .pausecard dl{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:13px;color:var(--dim);margin:0 0 14px}
   .pausecard dt{font-family:var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--lav);font-size:12px}
+  .ropecard{margin:0 0 14px;padding:12px 14px;border-left:3px solid var(--lav);background:rgba(204,153,204,.06)}
+  .ropecard h3{font-family:var(--display);text-transform:uppercase;letter-spacing:.2em;font-size:12px;color:var(--lav);margin:0 0 10px;font-weight:400}
+  .ropecard .row{grid-template-columns:14ch 1fr 6ch}
+  .ropecard .hint{margin-bottom:10px}
   .pausecard dd{margin:0;color:var(--ink)}
   @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
 </style>
@@ -142,11 +146,10 @@
         <b>Gravity is always on. Gravity is the opponent.</b></p>
       <div class="progpick" role="group" aria-label="Program">
         <button type="button" class="prog" data-prog="knots">Knots</button>
-        <button type="button" class="prog is-on" data-prog="split15">Up-rig · Split 15</button>
-        <button type="button" class="prog" data-prog="basket10">Up-rig · 10 Basket</button>
+        <button type="button" class="prog is-on" data-prog="uprig">Up-rigging</button>
         <button type="button" class="prog" data-prog="ground" title="Comes with the crew build">Ground rigging</button>
       </div>
-      <p class="hint" id="prog-hint">A 5 and a 10 shackled together. The 5 wraps the beam; the 10 swings under and its shackle mates to the eye of the 5. The ground rigger's bowline is a 12-inch loop in the eye of the 5.</p>
+      <p class="hint" id="prog-hint">Two points on the same beam, 108 feet over the Moda Center floor. First a split 15 — a 5 and a 10 shackled together, the 5 wraps the beam, the 10 swings under and mates to the eye of the 5. Then a 10 basket — one 10 around the beam, both eyes in the bow. Gear up once; the rope comes back up between points.</p>
       <p id="xrstatus">Checking headset support&hellip;</p>
       <div class="actions">
         <button class="lcars" id="btn-vr" disabled>Enter the holodeck</button>
@@ -189,8 +192,12 @@
           <select id="s-rdet"><option value="0.5">Half inch</option><option value="1">Every inch</option><option value="2">Every 2 in</option><option value="4">Every 4 in</option></select><output id="o-rdet"></output></div>
         <p class="hint">How finely the tube is drawn between particles.</p>
         <div class="racklist">
-          <label><input type="radio" name="selfc" value="hands"> Rope on rope near the hands (wraps stack, knots bite)</label>
+          <label><input type="radio" name="selfc" value="deck"> Rope on rope up at the steel — the deck, the rails, the hands (knots read and bite; the pile on the arena floor is left alone)</label>
+          <label><input type="radio" name="selfc" value="hands"> Rope on rope near the hands only (cheaper)</label>
           <label><input type="radio" name="selfc" value="off"> Rope passes through itself</label>
+        </div>
+        <div id="rope-card-lobby" class="ropecard"></div>
+        <div class="racklist" hidden>
         </div>
         <p class="hint">Rope within about five feet of either hand is kept a rope's width apart from itself, with friction between the strands. Elsewhere it is free to pass through itself, which keeps the headset happy.</p>
         <h2>Radio</h2>
@@ -249,7 +256,7 @@
         <dt>Feet</dt><dd>Where the headset says they are. Stand on the rope to hold it; step off the beam and gravity has you</dd>
         <dt>Desktop</dt><dd>Mouse look · WASD walk · <b>left mouse = grip</b> · right mouse / F = trigger · mouse wheel wraps a knot or hauls · E reach · R radio · P pause</dd>
       </dl>
-      <p class="footnote">M0.12 &mdash; balance by centre of gravity: lean out over the edge with your feet planted, get a warning and a moment when your weight goes over, longer crouched or sitting. On Quest, open this page in the headset browser.
+      <p class="footnote">M0.13 &mdash; the Moda Center at size, one up-rigging section with both points, drops that land on the floor or on the ground rigger, the hitch read off the rope on the rail, the lifeline and posts as colliders, a rope card in the pause menu, a grip that turns with the wrist and a reach clamp. On Quest, open this page in the headset browser.
         If the Enter button stays unavailable inside an embedded viewer, open the page in its own tab.</p>
       <p class="footnote" id="diag" style="font-family:monospace;font-size:11px;color:#6a6a5c;line-height:1.6"></p>
     </div>
@@ -266,8 +273,10 @@
       <button class="lcars" id="btn-resume">Resume</button>
       <button class="lcars alt" id="btn-retry" hidden>Run it again</button>
       <button class="lcars alt" id="btn-quit">Back to the arch</button>
+      <button class="lcars alt" id="btn-rope" aria-expanded="false" aria-controls="rope-card">Rope</button>
     </div>
-    <p class="footnote">Desktop: P pauses. Headset: hold A / X 0.6&thinsp;s to pause; trigger resumes, a fresh A / X press returns to the arch.</p>
+    <div id="rope-card" class="ropecard" hidden></div>
+    <p class="footnote">Desktop: P pauses. Headset: hold A / X 0.6&thinsp;s to pause; trigger resumes, a fresh A / X press returns to the arch. Thumbstick right on the pause card opens the rope settings.</p>
   </div>
 </div>
 
@@ -310,6 +319,11 @@ const WORLD = {
   beamGap: 20 * FT,            // 6.1 m between the two beams the bridle spans
   railHeight: 42 * 0.0254,     // 1.07 m top rail
   catwalkDepth: 1.2,
+  catwalkHalf: 30,             // the catwalk runs 60 m along the roof steel
+  /* the room is the Moda Center, Portland (Rose Quarter tech pack, Aug 2015; Wikipedia): the event
+     floor is 120' × 248' without seating sections, the ice sheet 85' × 200', the steel 105' above the
+     floor, the follow-spot perches at 95', the saddle roof 140' at its pinnacle. Long axis along X. */
+  floorLen: 248 * FT, floorWid: 120 * FT, roofPeak: 140 * FT, spotHeight: 95 * FT,
   lifelineHeight: 2.1,         // above the beam surface
   slingZ: -14,                 // where the sling hangs over the beam
   slingBottom: 1.9,            // above the beam surface — reach up for it
@@ -319,7 +333,7 @@ const WORLD = {
   lanyard: 6 * FT,
   g: 9.81,
 };
-const DEFAULTS = { body: true, edge: 0.1, haul: 3, pace: 0.9, turns: 2, dom: 'right', vol: 0.7, moveRef: 'controller', loadScale: 1, chainDown: true, fatigue: 1, ropePhys: 1, ropeDetail: 1, feet: 'planted', selfCollide: 'hands', voice: 'auto' };
+const DEFAULTS = { body: true, edge: 0.1, haul: 3, pace: 0.9, turns: 2, dom: 'right', vol: 0.7, moveRef: 'controller', loadScale: 1, chainDown: true, fatigue: 1, ropePhys: 1, ropeDetail: 1, feet: 'planted', selfCollide: 'deck', voice: 'auto' };
 const SETTINGS = Object.assign({}, DEFAULTS);
 try { Object.assign(SETTINGS, JSON.parse(localStorage.getItem('uprigger.settings') || '{}')); } catch (e) {}
 function saveSettings() { try { localStorage.setItem('uprigger.settings', JSON.stringify(SETTINGS)); } catch (e) {} }
@@ -429,6 +443,7 @@ const MAT = {
   chain: new THREE.MeshStandardMaterial({ color: 0x55585e, roughness: 0.5, metalness: 0.8, name: 'Mat_Chain' }),
   burlap: new THREE.MeshStandardMaterial({ color: 0xa8895a, roughness: 1, name: 'Mat_Burlap' }),
   floor: new THREE.MeshStandardMaterial({ color: 0x2a2620, roughness: 0.95, name: 'Mat_ArenaFloor' }),
+  eventFloor: new THREE.MeshStandardMaterial({ color: 0x4a4744, roughness: 0.9, name: 'Mat_EventFloor_Concrete' }),
   court: new THREE.MeshStandardMaterial({ color: 0x7a5a36, roughness: 0.6, name: 'Mat_CourtHardwood' }),
   seats: new THREE.MeshStandardMaterial({ color: 0x5a1e22, roughness: 0.9, name: 'Mat_Seating_Red' }),
   seatsDark: new THREE.MeshStandardMaterial({ color: 0x24161a, roughness: 0.9, name: 'Mat_Seating_Dark' }),
@@ -537,8 +552,7 @@ function makePedestal(x, z, title, prog, colour) {
   holodeck.add(p); pedestals.push(p); return p;
 }
 makePedestal(-2.1, -2.2, 'KNOTS', 'knots', '#f2c14e');
-makePedestal(-0.7, -2.3, 'UP-RIG · SPLIT 15', 'split15', '#cc99cc');
-makePedestal(0.7, -2.3, 'UP-RIG · 10 BASKET', 'basket10', '#99ccff');
+makePedestal(0, -2.4, 'UP-RIGGING', 'uprig', '#cc99cc');   // one section, two points: the split 15, then the 10 basket
 makePedestal(2.1, -2.2, 'GROUND RIGGING', 'ground', '#8d8a7b');
 const archSign = makeLabel('UP-RIGGER · BRIDLE TRAINING\nPoint at a build and pull the trigger.\nGravity is the opponent.', 2.0, 0.6, false, '#f2c14e');
 archSign.position.set(0, 2.1, -1.4); archSign.rotation.y = Math.PI; holodeck.add(archSign);   // over the pedestals, facing the arch
@@ -548,34 +562,42 @@ archSign.position.set(0, 2.1, -1.4); archSign.rotation.y = Math.PI; holodeck.add
    The point on the floor sits between them under the sling, which hangs just off beam A's
    arena side so the rope drops clear of the steel. */
 const arena = new THREE.Group(); arena.name = 'Arena'; arena.visible = false; scene.add(arena);
-const H = WORLD.beamHeight, BW = WORLD.beamWidth, BL = WORLD.beamLen, GAP = WORLD.beamGap;
+const H = WORLD.beamHeight, BW = WORLD.beamWidth, BL = WORLD.beamLen, GAP = WORLD.beamGap, CWX = WORLD.catwalkHalf;
 const SLING_X = BW / 2 + 0.15;
 /* the prep area: a 6 × 4.5 m platform off the back of the catwalk, where the gear lives */
 const GEAR_X = -4.5;
 const PREP = { x0: GEAR_X - 3.0, x1: GEAR_X + 3.0, z0: WORLD.catwalkDepth, z1: WORLD.catwalkDepth + 4.5 };
 function inPrep(x, z) { return x > PREP.x0 && x < PREP.x1 && z > PREP.z0 - 0.05 && z < PREP.z1; }
 const POINT = { x: GAP / 2, z: WORLD.slingZ };        // where the bridle apex should land
+const RAIL_SEGS = [[-CWX + GAP / 2, -0.5], [0.5, GAP - 0.5], [GAP + 0.5, CWX + GAP / 2]];   // the top rail, with a gap where each beam meets the catwalk
 function buildArena() {
-  const floor = box(90, 0.2, 70, MAT.floor, 'Arena_Floor'); floor.position.set(GAP / 2, -0.1, -12); arena.add(floor);
-  const court = box(29, 0.02, 16, MAT.court, 'Arena_Court'); court.position.set(GAP / 2, 0.01, -14); arena.add(court);
+  const FL = WORLD.floorLen, FW = WORLD.floorWid, FZ = -FW / 2;   // the event floor: its near edge under the catwalk, the far edge 120' out
+  const floor = box(FL + 70, 0.2, FW + 60, MAT.floor, 'Arena_Floor'); floor.position.set(GAP / 2, -0.1, FZ); arena.add(floor);
+  const event = box(FL, 0.02, FW, MAT.eventFloor, 'Arena_EventFloor'); event.position.set(GAP / 2, 0.005, FZ); arena.add(event);
+  const court = box(94 * FT, 0.02, 50 * FT, MAT.court, 'Arena_Court'); court.position.set(GAP / 2, 0.02, FZ); arena.add(court);   // 94' × 50' — the Blazers' floor, centre of the building
   const target = torus(1.2, 0.05, MAT.target, 'Point_Target'); target.rotation.x = Math.PI / 2; target.position.set(POINT.x, 0.05, POINT.z); arena.add(target);
   const tx = box(2.6, 0.01, 0.1, MAT.target, 'Point_Target_X1'); tx.position.set(POINT.x, 0.04, POINT.z); arena.add(tx);
   const tz = box(0.1, 0.01, 2.6, MAT.target, 'Point_Target_X2'); tz.position.set(POINT.x, 0.04, POINT.z); arena.add(tz);
-  for (let t = 0; t < 14; t++) {
-    const y = 1 + t * 1.6, d = 20 + t * 1.5;
-    const side = (sign) => { const s = box(70, 1.6, 1.5, t % 2 ? MAT.seats : MAT.seatsDark, 'Seating_Tier'); s.position.set(GAP / 2, y - 0.8, -12 + sign * d); arena.add(s); };
+  // the bowl: lower deck to a concourse at 30', club level, upper deck to the roof line — 19,393 seats' worth of steps
+  const tiers = [[0, 10, 0.0], [12, 8, 4.0], [22, 10, 6.0]];   // [start row, rows, extra setback]
+  tiers.forEach(([r0, rows, back]) => { for (let t = r0; t < r0 + rows; t++) {
+    const y = 0.6 + t * 0.82, dz = FW / 2 + 1.0 + back + t * 0.95, dx = FL / 2 + 1.0 + back + t * 0.95, mat = t % 2 ? MAT.seats : MAT.seatsDark;
+    const side = (sign) => { const s = box(2 * dx, 0.82, 0.95, mat, 'Seating_Tier'); s.position.set(GAP / 2, y - 0.41, FZ + sign * dz); arena.add(s); };
     side(1); side(-1);
-    const endS = box(1.5, 1.6, 2 * d, t % 2 ? MAT.seats : MAT.seatsDark, 'Seating_Tier_End'); endS.position.set(GAP / 2 - 35 - t * 1.5, y - 0.8, -12); arena.add(endS);
-    const endN = endS.clone(); endN.position.x = GAP / 2 + 35 + t * 1.5; arena.add(endN);
-  }
-  const lid = box(120, 0.5, 100, MAT.steelDark, 'Arena_Roof'); lid.position.set(GAP / 2, H + 6, -12); arena.add(lid);
-  for (let i = -3; i <= 4; i++) { const tr = box(0.5, 1.2, 80, MAT.steel, 'Roof_Truss'); tr.position.set(GAP / 2 + i * 8, H + 4, -12); arena.add(tr); }
-  const trX = box(90, 1.2, 0.5, MAT.steel, 'Roof_Truss_X'); trX.position.set(GAP / 2, H + 4, WORLD.slingZ); arena.add(trX);
+    const endW = box(0.95, 0.82, 2 * dz, mat, 'Seating_Tier_End'); endW.position.set(GAP / 2 - dx, y - 0.41, FZ); arena.add(endW);
+    const endE = endW.clone(); endE.position.x = GAP / 2 + dx; arena.add(endE);
+  } });
+  // the roof: a saddle peaking at 140', on trusses just above the steel; the spot perches ring the room at 95'
+  const lid = box(FL + 90, 0.5, FW + 80, MAT.steelDark, 'Arena_Roof'); lid.position.set(GAP / 2, WORLD.roofPeak, FZ); arena.add(lid);
+  for (let i = -5; i <= 6; i++) { const tr = box(0.5, 1.2, FW + 40, MAT.steel, 'Roof_Truss'); tr.position.set(GAP / 2 + i * 8, H + 4, FZ); arena.add(tr); }
+  const trX = box(FL + 20, 1.2, 0.5, MAT.steel, 'Roof_Truss_X'); trX.position.set(GAP / 2, H + 4, WORLD.slingZ); arena.add(trX);
+  const trX2 = trX.clone(); trX2.name = 'Roof_Truss_X2'; trX2.position.z = -FW + 3; arena.add(trX2);
+  [FZ + FW / 2 + 16, FZ - FW / 2 - 16].forEach((z, i) => { const perch = box(FL, 0.06, 1.2, MAT.grating, 'Spot_Perch_' + (i ? 'S' : 'N')); perch.position.set(GAP / 2, WORLD.spotHeight, z); arena.add(perch); });
   // catwalk: grating, back wall, kick plate, posts and a yellow top rail — with a gap where each beam meets it
-  const cw = box(44, 0.06, WORLD.catwalkDepth, MAT.grating, 'Catwalk_Grating'); cw.position.set(GAP / 2, H - 0.03, WORLD.catwalkDepth / 2); arena.add(cw);
+  const cw = box(2 * CWX, 0.06, WORLD.catwalkDepth, MAT.grating, 'Catwalk_Grating'); cw.position.set(GAP / 2, H - 0.03, WORLD.catwalkDepth / 2); arena.add(cw);
   // the back wall, with an opening onto the prep platform
-  const wallL = box(PREP.x0 - (GAP / 2 - 22), 2.2, 0.04, MAT.steelDark, 'Catwalk_BackWall_L'); wallL.position.set((GAP / 2 - 22 + PREP.x0) / 2, H + 1.1, WORLD.catwalkDepth); arena.add(wallL);
-  const wallR = box((GAP / 2 + 22) - PREP.x1, 2.2, 0.04, MAT.steelDark, 'Catwalk_BackWall_R'); wallR.position.set((PREP.x1 + GAP / 2 + 22) / 2, H + 1.1, WORLD.catwalkDepth); arena.add(wallR);
+  const wallL = box(PREP.x0 - (GAP / 2 - CWX), 2.2, 0.04, MAT.steelDark, 'Catwalk_BackWall_L'); wallL.position.set((GAP / 2 - CWX + PREP.x0) / 2, H + 1.1, WORLD.catwalkDepth); arena.add(wallL);
+  const wallR = box((GAP / 2 + CWX) - PREP.x1, 2.2, 0.04, MAT.steelDark, 'Catwalk_BackWall_R'); wallR.position.set((PREP.x1 + GAP / 2 + CWX) / 2, H + 1.1, WORLD.catwalkDepth); arena.add(wallR);
   // the prep platform: grating, a low wall around its three outer sides, a yellow top rail
   const pw = PREP.x1 - PREP.x0, pd = PREP.z1 - PREP.z0, pcx = (PREP.x0 + PREP.x1) / 2, pcz = (PREP.z0 + PREP.z1) / 2;
   const prep = box(pw, 0.06, pd, MAT.grating, 'Prep_Grating'); prep.position.set(pcx, H - 0.03, pcz); arena.add(prep);
@@ -585,9 +607,8 @@ function buildArena() {
   const prepRail = cyl(0.025, pw, MAT.railYellow, 'Prep_BackRail'); prepRail.rotation.z = Math.PI / 2; prepRail.position.set(pcx, H + WORLD.railHeight, PREP.z1 - 0.06); arena.add(prepRail);
   const prepStripe = box(pw, 0.01, 0.08, MAT.railYellow, 'Prep_Threshold'); prepStripe.position.set(pcx, H + 0.005, PREP.z0); arena.add(prepStripe);
   const prepSign = makeLabel('PREP AREA', 1.2, 0.3, false, '#ff9c00'); prepSign.position.set(pcx, H + 2.45, PREP.z1 - 0.06);   // above the checklist board, not on top of it prepSign.rotation.y = Math.PI; arena.add(prepSign);
-  const kick = box(44, 0.15, 0.03, MAT.railYellow, 'Catwalk_KickPlate'); kick.position.set(GAP / 2, H + 0.075, 0.015); arena.add(kick);
-  const railSegs = [[-22 + GAP / 2, -0.5], [0.5, GAP - 0.5], [GAP + 0.5, 22 + GAP / 2]];
-  railSegs.forEach(([a, b]) => {
+  const kick = box(2 * CWX, 0.15, 0.03, MAT.railYellow, 'Catwalk_KickPlate'); kick.position.set(GAP / 2, H + 0.075, 0.015); arena.add(kick);
+  RAIL_SEGS.forEach(([a, b]) => {
     const r = cyl(0.025, b - a, MAT.railYellow, 'Catwalk_TopRail'); r.rotation.z = Math.PI / 2; r.position.set((a + b) / 2, H + WORLD.railHeight, 0.02); arena.add(r);
     const m = cyl(0.02, b - a, MAT.railYellow, 'Catwalk_MidRail'); m.rotation.z = Math.PI / 2; m.position.set((a + b) / 2, H + WORLD.railHeight / 2, 0.02); arena.add(m);
     for (let x = a; x <= b; x += 2.5) { const p = box(0.05, WORLD.railHeight, 0.05, MAT.railYellow, 'Catwalk_RailPost'); p.position.set(Math.min(x, b), H + WORLD.railHeight / 2, 0.02); arena.add(p); }
@@ -611,7 +632,8 @@ function buildArena() {
   const slingEye = torus(0.06, 0.02, MAT.webbing, 'Sling_Eye'); slingEye.position.set(SLING_X, slingBot, WORLD.slingZ); arena.add(slingEye);
   const s2 = slingA.clone(); s2.position.x = GAP - SLING_X; arena.add(s2); const s2e = slingEye.clone(); s2e.position.x = GAP - SLING_X; arena.add(s2e);
   const pcdB = box(0.08, 0.18, 0.05, MAT.pcd, 'PCD_OtherRigger'); pcdB.position.set(GAP - SLING_X, slingBot - 0.14, WORLD.slingZ); arena.add(pcdB);
-  for (let i = 0; i < 6; i++) { const l = cyl(0.18, 0.5, MAT.steelDark, 'Lighting_Fixture'); l.position.set(GAP / 2 - 10 + i * 4, H + 3.2, -30); arena.add(l); }
+  for (let i = 0; i < 10; i++) { const l = cyl(0.18, 0.5, MAT.steelDark, 'Lighting_Fixture'); l.position.set(GAP / 2 - 18 + i * 4, H + 3.2, -WORLD.floorWid + 3); arena.add(l); }
+  const board = box(31 * FT, 31 * FT * 0.55, 31 * FT, MAT.steelDark, 'Scoreboard'); board.position.set(GAP / 2, 70 * FT + 2.6, -WORLD.floorWid / 2); arena.add(board);   // 31' × 31', motor hook height 70' (tech pack)
 }
 buildArena();
 const SLING_POINT = new THREE.Vector3(SLING_X, H + WORLD.slingBottom, WORLD.slingZ);
@@ -786,7 +808,7 @@ function gearReady() { return pocketsCleared() && harness.worn && gear.helmet.wo
 function wearGear(id) { if (id === 'harness') { POCKET_DEFS.forEach(d => { if (pocket[d.id].onBody) clearPocket(d.id); }); harness.stage = 4; harness.legL = harness.legR = true; harness.worn = true; gear.harness.worn = true; gear.harness.mesh.visible = false; harnessVisuals(); }
   else if (id === 'helmet') putOnHelmet(); else clipGear(id, id === 'radio' ? 'sternal' : id === 'pcd' ? 'hipR' : id === 'rope' ? 'rearL' : id === 'biner1' ? 'hipL' : id === 'biner2' ? 'hipL' : 'rearR'); }
 /* ───────────────────── game state ───────────────────── */
-const game = { mode: null, phase: 'lobby', running: false, perfSim: 0, perfDraw: 0, paused: false, over: false, prog: 'split15',
+const game = { mode: null, phase: 'lobby', running: false, perfSim: 0, perfDraw: 0, paused: false, over: false, prog: 'split15', series: ['split15'], pointNo: 0, section: 'uprig',
   step: 0, t: 0, drops: 0, earlyPulls: 0, unclippedOnBeam: 0, falls: 0, ropeDrops: 0, fouls: 0, procsMisses: 0, bestDrift: 0, result: null };
 const perfNow = () => performance.now() / 1000;
 let hudDirty = true;
@@ -896,7 +918,7 @@ const _rm = new THREE.Matrix4(), _rq = new THREE.Quaternion(), _rd = new THREE.V
 function pinSet(i, kind, target, extra) { R.pins.set(i, Object.assign({ kind, target: target.clone() }, extra || {})); }
 function pinClear(i) { R.pins.delete(i); }
 function pinsOfKind(kind) { const out = []; R.pins.forEach((p, i) => { if (p.kind === kind) out.push(i); }); return out; }
-function handPin(handIndex) { let idx = -1; R.pins.forEach((p, i) => { if (p.kind === 'hand' && p.hand === handIndex && !p.bight) idx = i; }); return idx; }   // the strand the hand is on (a bight's second strand rides along, see bightGrab)
+function handPin(handIndex) { let idx = -1; R.pins.forEach((p, i) => { if (p.kind === 'hand' && p.hand === handIndex && !p.bight && !p.grip) idx = i; }); return idx; }   // the strand the hand is on (a bight's second strand and the grip's neighbours ride along, see bightGrab / handGripSet)
 function nearestParticle(p, maxD) { let best = -1, bd = maxD; for (let i = 0; i < R.n; i++) { const d = R.pos[i].distanceTo(p); if (d < bd) { bd = d; best = i; } } return best; }
 
 /* deploy: the coil is in your hand. The far end is thrown out over the rail and the rope pays out
@@ -951,9 +973,36 @@ function flakeCoil() {
 function coilDropped() { if (rope.coilNext === undefined || rope.coilNext >= R.n) return; for (let i = rope.coilNext; i < R.n; i++) pinClear(i); rope.coilNext = R.n; rope.coilHand = -1; gear.rope.mesh.visible = false; toast('YOU LET GO OF THE COIL', true); }
 /* one PBD step */
 let _pinned = new Uint8Array(0);   // the pin map as a flat array, rebuilt each step: the hot loops ask "is it pinned?" tens of thousands of times a frame
+/* ── the rope's character (Settings → Rope, in the pause menu) ──
+   Every one of these is read live, every substep, so a change in the pause menu is felt the moment
+   the program resumes. The resolution (particles per foot) applies when a program starts. */
+const ROPE_PARAMS = [
+  { key: 'ropeStretch', label: 'Stretch', hint: 'How far a segment may be pulled past its length before it is hauled back, inelastically. Low is a stiff rope; high is a bungee.', min: 1.05, max: 1.5, step: 0.05, def: 1.2, fmt: v => Math.round((v - 1) * 100) + '%' },
+  { key: 'ropeBend', label: 'Kink limit', hint: 'The tightest bend the rope will take, in rope diameters. Zero is a chain that folds flat; three is a stiff laid rope. It is only felt in a bend tighter than this — a wrap on a rail is looser.', min: 0, max: 3, step: 0.25, def: 1.5, fmt: v => v.toFixed(2) + ' dia' },
+  { key: 'ropeVisc', label: 'Internal friction', hint: 'The rope\'s own damping of ripples along it. Low and it wiggles; high and it goes dead.', min: 0, max: 0.6, step: 0.05, def: 0.25, fmt: v => v.toFixed(2) },
+  { key: 'ropeAir', label: 'Air drag', hint: 'Per second. Low falls like a rope; high falls like a feather.', min: 0, max: 1.0, step: 0.04, def: 0.12, fmt: v => v.toFixed(2) },
+  { key: 'ropeMu', label: 'Friction on steel', hint: 'How much the rope grips a bar or the deck. A wrap on a rail holds by this.', min: 0.5, max: 2.0, step: 0.1, def: 1.0, fmt: v => '×' + v.toFixed(1) },
+  { key: 'ropeStick', label: 'Static stick', hint: 'Below this creep (m/s) a contact simply holds. That is what keeps a pile put and a wrap from sliding.', min: 0, max: 0.1, step: 0.01, def: 0.03, fmt: v => v.toFixed(2) + ' m/s' },
+];
+ROPE_PARAMS.forEach(p => { if (SETTINGS[p.key] === undefined || !isFinite(SETTINGS[p.key])) SETTINGS[p.key] = p.def; if (DEFAULTS[p.key] === undefined) DEFAULTS[p.key] = p.def; });
+function ropeParam(key) { const v = SETTINGS[key]; return v === undefined ? ROPE_PARAMS.find(p => p.key === key).def : v; }
+/* bending stiffness as a minimum bend radius: the particle two along is held out to the chord of the
+   tightest bend the rope takes (Settings → Rope → Kink limit, in rope diameters). A gentle curve, a
+   wrap on a rail, a coil on the deck — all looser than that — cost nothing; a hairpin is pushed open.
+   Only ever pushes apart, a fraction per step, and leaves a settled pile alone. */
+const _bs = new THREE.Vector3();
+function ropeBendStiff(dia) {
+  if (dia <= 0) return; const Rmin = dia * 2 * R.r, th = R.L0 / Rmin; if (th > 2.4) return;   // coarse rope: the limit is below a segment's own angle
+  const rest = 2 * R.L0 * Math.cos(th / 2), k = 0.35, end = rope.coilNext !== undefined && rope.coilNext < R.n ? rope.coilNext - 1 : R.n, sl = _asleep.length === R.n;
+  for (let i = 1; i < end - 1; i++) {
+    const a = R.pos[i - 1], c = R.pos[i + 1]; _bs.copy(c).sub(a); const d = _bs.length(); if (d >= rest || d < 1e-6) continue;
+    const pa = _pinned[i - 1] || (sl && _asleep[i - 1]), pc = _pinned[i + 1] || (sl && _asleep[i + 1]); if (pa && pc) continue; const wa = pa ? 0 : pc ? 1 : 0.5, wc = pc ? 0 : pa ? 1 : 0.5;
+    const push = (rest - d) / d * k; a.addScaledVector(_bs, -push * wa); c.addScaledVector(_bs, push * wc);
+  }
+}
 function ropeStep(dt, frac) {
   if (_pinned.length !== R.n) _pinned = new Uint8Array(R.n); else _pinned.fill(0); R.pins.forEach((p, i) => { _pinned[i] = 1; });
-  const g = -WORLD.g * dt * dt, damp = 1 - (window.AIR_OVERRIDE !== undefined ? window.AIR_OVERRIDE : 0.12) * dt;   // air, per second not per step; the ripples are killed by ropeBendDamp, so this can stay light enough for a rope to fall like one
+  const g = -WORLD.g * dt * dt, damp = 1 - (window.AIR_OVERRIDE !== undefined ? window.AIR_OVERRIDE : ropeParam('ropeAir')) * dt;   // air, per second not per step; the ripples are killed by ropeBendDamp, so this can stay light enough for a rope to fall like one
   const v = _rd;
   for (let i = 0; i < R.n; i++) {
     const p = R.pos[i], q = R.prev[i];
@@ -995,10 +1044,11 @@ function ropeStep(dt, frac) {
       a.addScaledVector(v, diff * wa); b.addScaledVector(v, -diff * wb);
     }
   }
+  ropeBendStiff(ropeParam('ropeBend')); prof('bendstiff');
   if (!window.NO_LONG) ropeLongDamp(); prof('longdamp');
   dbgPhase('fine');
-  prof('fine'); if ((R.stepNo & 1) && !window.NO_STRAIN) ropeStrainLimit(); prof('strain'); ropeSelfSolve(); dbgPhase('self'); prof('self'); pcdStrands(); dbgPhase('strands');
-  _stickStep = STICK * dt; ropeCollide(); _ci = -1; dbgPhase('collide'); prof('collide');   // the world has the last word: nothing else moves a particle after the bars and the deck have
+  prof('fine'); if ((R.stepNo & 1) && !window.NO_STRAIN) ropeStrainLimit(); prof('strain'); if (_touched.length !== R.n) _touched = new Uint8Array(R.n); else _touched.fill(0); ropeSelfSolve(); dbgPhase('self'); prof('self'); pcdStrands(); dbgPhase('strands');
+  _stickStep = STICK_NOW() * dt; ropeCollide(); _ci = -1; dbgPhase('collide'); prof('collide');   // the world has the last word: nothing else moves a particle after the bars and the deck have
   ropeBendDamp(); prof("bend"); if (!window.NO_REST) ropeRest(dt); dbgPhase('limit'); prof('rest');
   for (let s = 0; s < R.n - 1; s++) R.tension[s] = R.pos[s].distanceTo(R.pos[s + 1]) / R.L0;
 }
@@ -1074,13 +1124,13 @@ function ropeCoarse() {
    apart, with friction between the strands — what lets a wrap stack on itself and a knot bite.
    Candidate pairs come from a spatial hash built once a frame (the rope moves millimetres per
    substep); the substeps only resolve the pairs. Settings → Rope on rope: near the hands / off. */
-const SELF = { pairs: [], zoneR: 0.9, count: 0 };   // rope on rope within arm's reach of a hand; the pile at your feet is left to itself
+const SELF = { pairs: [], zoneR: 0.9, count: 0 };   // rope on rope within arm's reach of a hand, and (Settings → Rope on rope: deck) everything up at the steel; the pile on the arena floor is left to itself
 const _sh = new Map();
 function ropeSelfBuild(all) {
   SELF.pairs.length = 0; SELF.count = 0; if (SETTINGS.selfCollide === 'off' || !R.alive) return;
   const r2 = R.world === 'knots' ? 1e9 : SELF.zoneR * SELF.zoneR, cell = R.r * 4, inv = 1 / cell; _sh.clear();
-  const near = [];
-  for (let i = 0; i < R.n; i++) { const p = R.pos[i]; let ok = false; for (const h of hands) { const dx = p.x - h.pos.x, dy = p.y - h.pos.y, dz = p.z - h.pos.z; if (dx * dx + dy * dy + dz * dz < r2) { ok = true; break; } } if (!ok) continue;
+  const near = []; const deck = R.world !== 'knots' && SETTINGS.selfCollide === 'deck', deckY = H - 1.0;   // the deck zone: the rope up at the steel, where the knots are tied; the hang and the pile below are left alone
+  for (let i = 0; i < R.n; i++) { const p = R.pos[i]; let ok = deck && p.y > deckY; if (!ok) for (const h of hands) { const dx = p.x - h.pos.x, dy = p.y - h.pos.y, dz = p.z - h.pos.z; if (dx * dx + dy * dy + dz * dz < r2) { ok = true; break; } } if (!ok) continue;
     const pin = R.pins.get(i); if (pin && pin.kind === 'coil') continue;   // the coil is a pile of coincident pins: not rope in the world yet
     near.push(i); const k = (Math.floor(p.x * inv) * 73856093) ^ (Math.floor(p.y * inv) * 19349663) ^ (Math.floor(p.z * inv) * 83492791); let b = _sh.get(k); if (!b) { b = []; _sh.set(k, b); } b.push(i); }
   SELF.count = near.length; const lim = 4 * R.r, lim2 = lim * lim; const skip = Math.max(3, Math.round(0.08 / R.L0));   // neighbours along the rope are not contacts
@@ -1097,6 +1147,7 @@ function ropeSelfSolve() {
     const a = R.pos[i], b = R.pos[j]; _sp.copy(b).sub(a); let d = _sp.length(); if (d >= minD) continue;
     const pa = _pinned[i], pb = _pinned[j]; if (pa && pb) continue; const wa = pa ? 0 : pb ? 1 : 0.5, wb = pb ? 0 : pa ? 1 : 0.5;
     if (d < 1e-6) { _sp.set(1, 0, 0); d = 1e-6; } else _sp.multiplyScalar(1 / d); const push = minD - d;   // dead on top of each other: pick a side
+    if (_touched.length === R.n) { _touched[i] = _touched[i] || 1; _touched[j] = _touched[j] || 1; }   // rope resting on rope is resting on something: it may sleep (ropeRest)
     a.addScaledVector(_sp, -push * wa); b.addScaledVector(_sp, push * wb);
     R.prev[i].addScaledVector(_sp, -push * wa * 0.8); R.prev[j].addScaledVector(_sp, push * wb * 0.8);   // mostly inelastic: strands settle against each other instead of trembling
     // friction between the strands: the sliding of one over the other this step is cut by μ·push
@@ -1110,7 +1161,7 @@ function ropeSelfSolve() {
    free end is brought back, inelastically. */
 const _sl = new THREE.Vector3();
 function ropeStrainLimit() {
-  const lim = R.L0 * 1.35; const coilSeg = rope.coilNext !== undefined && rope.coilNext < R.n ? rope.coilNext - 1 : -1;
+  const lim = R.L0 * ropeParam('ropeStretch'); const coilSeg = rope.coilNext !== undefined && rope.coilNext < R.n ? rope.coilNext - 1 : -1;
   for (let j = 0; j < R.n - 1; j++) {
     if (coilSeg >= 0 && j >= coilSeg - 3) continue;   // the coil feeds freely; the last segments before it carry the pay-out and are not clamped
     const a = R.pos[j], b = R.pos[j + 1]; _sl.copy(b).sub(a); const d = _sl.length(); if (d <= lim) continue;
@@ -1121,9 +1172,9 @@ function ropeStrainLimit() {
 /* the shakes: a fine chain carries transverse ripples that reflect off every end and never die.
    Each particle's velocity is pulled toward the mean of its neighbours' — the ripple goes, the
    swing (where neighbours move together) does not. A rope's own internal friction, in effect. */
-const BEND_DAMP = window.BEND_OVERRIDE !== undefined ? window.BEND_OVERRIDE : 0.25; const _bv = [];
+const _bv = [];
 function ropeBendDamp() {
-  const n = R.n; if (_bv.length < n) for (let i = _bv.length; i < n; i++) _bv.push(new THREE.Vector3());
+  const BEND_DAMP = window.BEND_OVERRIDE !== undefined ? window.BEND_OVERRIDE : ropeParam('ropeVisc'); const n = R.n; if (_bv.length < n) for (let i = _bv.length; i < n; i++) _bv.push(new THREE.Vector3());
   for (let i = 0; i < n; i++) _bv[i].copy(R.pos[i]).sub(R.prev[i]);
   const end = rope.coilNext !== undefined && rope.coilNext < n ? rope.coilNext : n;   // rope still in the coil is not in the world; it must not brake the rope that is
   for (let i = 1; i < end - 1; i++) { if (_pinned[i]) continue;
@@ -1182,6 +1233,7 @@ function cylCollide(p, q, ax, ay, az, dx, dy, dz, rc, mu) {
   // cheap first: nothing within a step of the bar means nothing to do (most particles, most steps)
   if (dx === 1) { if (Math.abs(p.y - ay) > rc + 0.06 || Math.abs(p.z - az) > rc + 0.06) return false; }
   else if (dy === 1) { if (Math.abs(p.x - ax) > rc + 0.06 || Math.abs(p.z - az) > rc + 0.06) return false; }
+  else if (dz === 1) { if (Math.abs(p.x - ax) > rc + 0.06 || Math.abs(p.y - ay) > rc + 0.06) return false; }
   _cyl.set(p.x - ax, p.y - ay, p.z - az); let t = _cyl.x * dx + _cyl.y * dy + _cyl.z * dz; _cyl.x -= t * dx; _cyl.y -= t * dy; _cyl.z -= t * dz;
   const d = _cyl.length(); if (d >= rc + 0.06) return false;
   _cylq.set(q.x - ax, q.y - ay, q.z - az); t = _cylq.x * dx + _cylq.y * dy + _cylq.z * dz; _cylq.x -= t * dx; _cylq.y -= t * dy; _cylq.z -= t * dz;
@@ -1206,6 +1258,7 @@ function cylSegments(ax, ay, az, dx, dy, dz, rc, i0, i1) {
     const a = R.pos[j], b = R.pos[j + 1];
     if (dx === 1) { if ((Math.abs(a.y - ay) > near && Math.abs(b.y - ay) > near) || (Math.abs(a.z - az) > near && Math.abs(b.z - az) > near)) continue; }
     else if (dy === 1) { if ((Math.abs(a.x - ax) > near && Math.abs(b.x - ax) > near) || (Math.abs(a.z - az) > near && Math.abs(b.z - az) > near)) continue; }
+    else if (dz === 1) { if ((Math.abs(a.x - ax) > near && Math.abs(b.x - ax) > near) || (Math.abs(a.y - ay) > near && Math.abs(b.y - ay) > near)) continue; }
     _sa.set(a.x - ax, a.y - ay, a.z - az); let t = _sa.x * dx + _sa.y * dy + _sa.z * dz; _sa.x -= t * dx; _sa.y -= t * dy; _sa.z -= t * dz;
     _sb.set(b.x - ax, b.y - ay, b.z - az); t = _sb.x * dx + _sb.y * dy + _sb.z * dz; _sb.x -= t * dx; _sb.y -= t * dy; _sb.z -= t * dz;
     _cyl.copy(_sb).sub(_sa); const L2 = _cyl.lengthSq(); if (L2 < 1e-10) continue; const u = -_sa.dot(_cyl) / L2; if (u <= 0 || u >= 1) continue;
@@ -1218,15 +1271,18 @@ function cylSegments(ax, ay, az, dx, dy, dz, rc, i0, i1) {
 /* …and below a creep (STICK m/s) a contact simply holds: static friction. That is what lets a
    wrap on a bar hold a hanging rope (the capstan) and a pile on the deck stay put, while a real
    pull still slides the rope over the steel. */
-const STICK = window.STICK_OVERRIDE !== undefined ? window.STICK_OVERRIDE : 0.03; let _stickStep = STICK / 60 / 16, _ci = -1;
+let _stickStep = 0.03 / 60 / 16, _ci = -1; function STICK_NOW() { return window.STICK_OVERRIDE !== undefined ? window.STICK_OVERRIDE : ropeParam('ropeStick'); }
 function underPull() { const i = _ci; return i >= 0 && ((i > 0 && R.tension[i - 1] > 1.01) || (i < R.n - 1 && R.tension[i] > 1.01)); }   // a particle whose rope is taut is being pulled: creep is real motion, not a twitch
 let _touched = new Uint8Array(0);   // which particles a collider held this substep — the coarse chain hangs rope from them
-function frictionN(p, q, push, mu, nx, ny, nz) { if (_ci >= 0) _touched[_ci] = 2; let tx = p.x - q.x, ty = p.y - q.y, tz = p.z - q.z; const vn = tx * nx + ty * ny + tz * nz; tx -= vn * nx; ty -= vn * ny; tz -= vn * nz; const t = Math.hypot(tx, ty, tz);
+function frictionN(p, q, push, mu, nx, ny, nz) { if (_ci >= 0) _touched[_ci] = 2; mu *= ropeParam('ropeMu'); let tx = p.x - q.x, ty = p.y - q.y, tz = p.z - q.z; const vn = tx * nx + ty * ny + tz * nz; tx -= vn * nx; ty -= vn * ny; tz -= vn * nz; const t = Math.hypot(tx, ty, tz);
   if (t < 1e-9) return; const f = (t < _stickStep && !underPull()) ? 1 : Math.min(1, mu * push / t); p.x -= tx * f; p.y -= ty * f; p.z -= tz * f; }
-function frictionXZ(p, q, push, mu) { if (_ci >= 0) _touched[_ci] = 1; const tx = p.x - q.x, tz = p.z - q.z, t = Math.hypot(tx, tz); if (t < 1e-9) return; const f = (t < _stickStep && !underPull()) ? 1 : Math.min(1, mu * push / t); p.x -= tx * f; p.z -= tz * f; }
+function frictionXZ(p, q, push, mu) { if (_ci >= 0) _touched[_ci] = 1; mu *= ropeParam('ropeMu'); const tx = p.x - q.x, tz = p.z - q.z, t = Math.hypot(tx, tz); if (t < 1e-9) return; const f = (t < _stickStep && !underPull()) ? 1 : Math.min(1, mu * push / t); p.x -= tx * f; p.z -= tz * f; }
+const LL_Y = H + WORLD.lifelineHeight;
+/* the rail posts stand every 2.5 m along each rail segment (see buildArena); the one nearest an x, or null off the deck */
+function railPostX(x) { for (const [a, b] of RAIL_SEGS) { if (x < a - 0.1 || x > b + 0.1) continue; const k = Math.round((x - a) / 2.5); return Math.min(a + k * 2.5, b); } return null; }
 function ropeCollide() {
-  const r = R.r, deckX = 22;
-  if (_touched.length !== R.n) _touched = new Uint8Array(R.n); else _touched.fill(0);
+  const r = R.r, deckX = CWX;
+  if (_touched.length !== R.n) _touched = new Uint8Array(R.n);
   if (R.world === 'knots') { knotsCollide(); return; }
   for (let i = 0; i < R.n; i++) {
     if (_pinned[i]) continue;
@@ -1252,6 +1308,9 @@ function ropeCollide() {
     // the back wall
     if (onCatwalkXZ && p.z > WORLD.catwalkDepth - r && p.y > H - 0.6 && p.y < H + 2.2 && !(p.x > PREP.x0 && p.x < PREP.x1)) p.z = WORLD.catwalkDepth - r;
     if (inPrep(p.x, p.z) && p.z > PREP.z1 - r && p.y > H - 0.6 && p.y < H + 2.2) p.z = PREP.z1 - r;
+    // the lifelines over each beam (cables the rope must not pass through, and can be hung over), and A's stanchions
+    if (p.y > LL_Y - 0.1 && p.y < LL_Y + 0.1 && p.z < 1.0 && p.z > -BL - 0.6) { if (Math.abs(p.x) < 0.1) cylCollide(p, q, 0, LL_Y, 0, 0, 0, 1, 0.008 + r, MU_STEEL); else if (Math.abs(p.x - GAP) < 0.1) cylCollide(p, q, GAP, LL_Y, 0, 0, 0, 1, 0.008 + r, MU_STEEL); }
+    if (p.y > H - 0.05 && p.y < LL_Y + 0.35 && Math.abs(p.x + 0.35) < 0.1) { if (Math.abs(p.z - 0.3) < 0.1) cylCollide(p, q, -0.35, 0, 0.3, 0, 1, 0, 0.04 + r, MU_STEEL); else if (Math.abs(p.z + BL - 0.3) < 0.1) cylCollide(p, q, -0.35, 0, -BL + 0.3, 0, 1, 0, 0.04 + r, MU_STEEL); }
     // beam A: a box you can lie on, hang off the side of, or run under
     if (Math.abs(p.x) < BW / 2 + r && p.z <= 0.05 && p.z >= -BL && p.y < H + r && p.y > H - 0.78 - r) {
       const dTop = H + r - p.y, dBot = p.y - (H - 0.78 - r), dSide = BW / 2 + r - Math.abs(p.x);
@@ -1263,6 +1322,8 @@ function ropeCollide() {
       // the top rail and the mid rail: bars the rope bends over
       cylCollide(p, q, 0, RAIL_Y, RAIL_Z, 1, 0, 0, 0.03 + r, MU_STEEL);   // the top rail: rope grips the bar, never passes through it
       cylCollide(p, q, 0, H + WORLD.railHeight / 2, RAIL_Z, 1, 0, 0, 0.025 + r, MU_STEEL);
+      // the nearest rail post: a hitch slid along the rail stops at a post instead of passing through it
+      if (p.y > H - 0.05 && p.y < RAIL_Y + 0.1 && Math.abs(p.z - RAIL_Z) < 0.1) { const px = railPostX(p.x); if (px !== null) cylCollide(p, q, px, 0, RAIL_Z, 0, 1, 0, 0.035 + r, MU_STEEL); }
       // the kick plate: a thin wall with a rounded top edge
       let dy = p.y - (H + 0.15), dz = p.z - 0.015, d = Math.hypot(dy, dz);
       if (d < 0.02 + r) { if (d < 1e-6) { dy = 1; d = 1; }
@@ -1273,6 +1334,7 @@ function ropeCollide() {
     }
   }
   cylSegments(0, RAIL_Y, RAIL_Z, 1, 0, 0, 0.03 + r, 0, R.n); cylSegments(0, H + WORLD.railHeight / 2, RAIL_Z, 1, 0, 0, 0.025 + r, 0, R.n);
+  cylSegments(0, LL_Y, 0, 0, 0, 1, 0.008 + r, 0, R.n);   // a taut rope yanked across the lifeline goes over it, not through it
   // a segment cutting through the kick plate (one particle each side, both below its top) rides up
   // over the edge instead — a rope pulled against a plate climbs it, it never saws through
   const top = H + 0.15 + 0.02 + r, band = H + 0.15 - r;   // only a crossing clearly below the rounded top is a cut-through
@@ -1361,24 +1423,34 @@ function ropeRender() {
   ropeInst.instanceMatrix.needsUpdate = true;
   ropeInst.material = rope.looseT > 0.2 ? MAT.ropeHot : MAT.rope;
   ropeTipA.visible = ropeTipB.visible = R.world === 'knots'; if (ropeTipA.visible) { ropeTipA.position.copy(R.pos[0]); ropeTipB.position.copy(R.pos[R.n - 1]); }
-  knotMesh.visible = rope.knot !== 'none'; if (knotMesh.visible) { knotMesh.position.copy(R.pins.get(rope.hitchIdx).target); knotMesh.rotation.y = Math.PI / 2; }
+  knotMesh.visible = rope.knot !== 'none' && !rope.knotReal; if (knotMesh.visible) { knotMesh.position.copy(R.pins.get(rope.hitchIdx).target); knotMesh.rotation.y = Math.PI / 2; }
 }
 function ropeTick(dt) {
   if (!R.alive) { ropeGroup.visible = false; return; }
   // hands: hard pins that follow the hand. A hand cannot be farther from any other anchor than the
   // rope between them is long — pull past that and the rope slides through your grip instead.
   for (const h of hands) {
-    const i = handPin(h.index); if (i < 0) continue;
-    R.pins.get(i).target.copy(h.pos);
-    R.pins.forEach(p => { if (p.kind === 'hand' && p.hand === h.index && p.bight) p.target.copy(h.pos).add(p.off); });
-    let slipTo = -1, worst = 0;
+    const i = handPin(h.index); if (i < 0) { h.clamped = 0; continue; }
+    // the reach clamp (M0.13): the rope is what decides how far this hand can get from anything else
+    // holding it. Past the rope's length the avatar's hand stops at the rope's end of travel — the
+    // controller keeps going, the hand does not — until the controller is a long way past it, and
+    // then the rope slides through the grip.
+    let slipTo = -1, worst = 0; h.clamped = 0;
     R.pins.forEach((pin, j) => {
-      if (j === i || pin.kind === 'coil' && j !== rope.coilNext) return;
+      if (j === i || pin.kind === 'coil' && j !== rope.coilNext || (pin.kind === 'hand' && pin.hand === h.index)) return;
+      if (pin.kind === 'pcd' && i > j) return;   // on the pull side of the device the pull passes rope through it (pcdSlideTick): neither a clamp nor a slip
       const ropeLen = Math.abs(j - i) * R.L0, dist = h.pos.distanceTo(pin.target);
-      if (dist > ropeLen * 1.03 + 0.05) { const over = dist - ropeLen; if (over > worst) { worst = over; const n = Math.min(Math.abs(j - i) - 1, Math.ceil(over / R.L0)); slipTo = i + Math.sign(j - i) * n; } }
+      if (dist > ropeLen * 1.01) { const over = dist - ropeLen;
+        if (over < 0.3 && ropeLen > 0.02) { _rv.copy(pin.target).sub(h.pos).multiplyScalar(over / dist); h.pos.add(_rv); h.clamped = Math.max(h.clamped, over); }   // the hand stops where the rope stops
+        else if (dist > ropeLen * 1.03 + 0.05 && over > worst) { worst = over; slipTo = i + Math.sign(i - j) * Math.ceil(over / R.L0); } }   // more rope has to be between them: the grip slides AWAY from the anchor along the rope
     });
+    if (h.clamped > 0) { h.mesh.position.copy(h.pos); haptic(h, Math.min(1, 0.3 + h.clamped * 2), 20); }
+    R.pins.get(i).target.copy(h.pos);
+    R.pins.forEach(p => { if (p.kind === 'hand' && p.hand === h.index && p.loc) p.target.copy(p.loc).applyQuaternion(h.quat).add(h.pos); });   // the grip's neighbours and a bight's second strand turn with the wrist
+    if (worst > 0 && (slipTo < 0 || slipTo >= R.n || (rope.coilNext !== undefined && slipTo >= rope.coilNext))) {   // the end ran through the hand (or the rope is still in the coil past it): nothing left to hold
+      ropeRelease(h); h.ropeLost = true; haptic(h, 1.0, 120); AudioKit.rope(); toast('THE END RAN THROUGH YOUR HAND', true); continue; }
     if (slipTo >= 0 && slipTo !== i && !R.pins.has(slipTo)) {
-      pinClear(i); R.prev[i].copy(R.pos[i]); pinSet(slipTo, 'hand', h.pos, { hand: h.index }); R.prev[slipTo].copy(h.pos); haptic(h, 1.0, 60); if (Math.random() < 0.4) AudioKit.rope();
+      ropeRelease(h); pinSet(slipTo, 'hand', h.pos, { hand: h.index }); R.prev[slipTo].copy(h.pos); handGripSet(h, slipTo); haptic(h, 1.0, 60); if (Math.random() < 0.4) AudioKit.rope();
       if (!h.slipToast || game.t - h.slipToast > 2.5) { h.slipToast = game.t; toast('The rope slipped through your hand'); }
     } else if (slipTo >= 0 && slipTo !== i) { // it would slip onto another anchor: that is the end of what you can take
       haptic(h, 0.8, 30);
@@ -1413,7 +1485,7 @@ function ropeTick(dt) {
     // the ground rigger walks the end to the point and drags the pile on the floor along with it (150 feet is 108 down and 42 of slack: the slack has to come too)
     _rv.copy(pin.target); pin.target.lerp(to, Math.min(1, dt * 0.6)); _rv.sub(pin.target).multiplyScalar(-1);
     for (let i = 1; i < R.n; i++) { if (R.pos[i].y < 0.25 && !R.pins.has(i)) { R.pos[i].x += _rv.x; R.pos[i].z += _rv.z; R.prev[i].x += _rv.x; R.prev[i].z += _rv.z; } }
-    groundRigger.position.set(pin.target.x + 0.4, 0, pin.target.z + 0.3); } }
+    if (!crew.dodging) crewGoto(pin.target.x + 0.4, pin.target.z + 0.3); } }
   // the bridle eye holds the far end once you are tied in
   if (rope.bowline) { const e = eyeAPos(new THREE.Vector3()); if (!S.active || bridle.arrived) e.y += 0.06; const pin = R.pins.get(0); if (pin) pin.target.copy(e); else pinSet(0, 'eye', e); }   // the rope's end is the eye
   coilTick();
@@ -1427,8 +1499,13 @@ function ropeTick(dt) {
   if (S.active && rope.pcdFed && !bridle.arrived) { let ex = 0; const k = rope.pcdIdx; for (let i = 0; i < k; i++) { const d = R.pos[i].distanceTo(R.pos[i + 1]); if (d > R.L0) ex += d - R.L0; }
     S.ropePull = Math.min(Math.max(0, ex - 0.002 * k * R.L0) * 0.6, 0.25); S.ropeDir.copy(R.pos[Math.min(k, 3)]).sub(R.pos[0]).normalize(); }   // less the solver's own residual (~0.2 %), and gently
   if (R.world === 'knots') { benchTick(dt); hudDirty = true; return; }
+  railKnotTick(dt);
   // landing
-  if (!rope.landed && R.pos[0].y < 0.1) { rope.landed = true; rope.deployT = -1; AudioKit.thud(); radio('Ground', 'Rope\'s down. I\'ve got the end.', 1); pinSet(0, 'ground', R.pos[0]); flakeCoil(); }
+  if (!rope.landed && R.pos[0].y < 0.1) { rope.landed = true; rope.deployT = -1; AudioKit.thud(); radio('Ground', 'Rope\'s down. I\'ve got the end.', 1); pinSet(0, 'ground', R.pos[0]); flakeCoil(); crewGoto(R.pos[0].x + 0.4, R.pos[0].z + 0.3); }
+  // the rope going in: it falls for real, and the program ends when it is on the floor — or on him
+  if (rope.droppedIn && !game.over) { rope.goneT = (rope.goneT || 0) + dt; const tail = R.pos[R.n - 1];
+    if (!crew.down) { const gp = groundRigger.position; for (let i = 0; i < R.n; i += 2) { const p = R.pos[i]; if (p.y < 1.9 && p.y > 1.0 && (p.y - R.prev[i].y) < -0.004 && Math.hypot(p.x - gp.x, p.z - gp.z) < 0.4) { crewStruck('rope'); break; } } }
+    if (tail.y < 0.3 || rope.goneT > 7) endProgram(false, crew.down ? 'The rope went in — on him' : 'The rope went in', 'Nothing was holding the working end. 108 feet of hanging rope took the rest over the edge' + (crew.down ? ', and the ground rigger was under it. ' : ' — and anyone under it is lucky. ') + 'Tie it off, stand on it, or keep it in your hand.'); }
   if (rope.deployT >= 0) rope.deployT += dt;
   // what is holding the working end?
   const coilHeld = rope.coilNext !== undefined && rope.coilNext < R.n && rope.coilHand >= 0;
@@ -1447,9 +1524,11 @@ function ropeTick(dt) {
 const feetCool = [0, 0];
 function feetOnSurface(f) { return supported(f.x, f.z, 0.05) && Math.abs(f.y - H) < 0.3; }
 function ropeDroppedIn() {
-  rope.droppedIn = true; rope.state = 'gone'; game.ropeDrops++; AudioKit.whoosh(); setTimeout(() => AudioKit.thud(), 2400);
-  radio('Ground', 'HEADS UP! Rope coming in!', 0.2);
-  endProgram(false, 'The rope went in', 'Nothing was holding the working end. 108 feet of hanging rope took the rest over the edge — and anyone under it is lucky. Tie it off, stand on it, or keep it in your hand.');
+  rope.droppedIn = true; rope.state = 'gone'; rope.goneT = 0; game.ropeDrops++; AudioKit.whoosh(); setTimeout(() => AudioKit.thud(), 2400);
+  toast('THE ROPE WENT IN', true);
+  // he has the end in his hand, and he saw it go: he drops the end and gets out from under it
+  const gp = R.pins.get(0); if (gp && gp.kind === 'ground') pinClear(0);
+  if (crewSpeaks()) { radio('Ground', 'HEADS UP! Rope coming in!', 0.2); setTimeout(() => crewDodge(R.pos[Math.min(R.n - 1, 40)].x, R.pos[Math.min(R.n - 1, 40)].z), 450); }
 }
 /* ───────────────────── weight in the hands ─────────────────────
    What a hand is holding up: on the pull strand with the strand taut, the whole load through the
@@ -1495,14 +1574,30 @@ function ropeGrab(h) {
     if (_pd.dot(_ls) < 0 && h.pos.distanceTo(P) < 2.5) { let bd = reach; for (let j = k + 1; j < R.n; j++) { const d = R.pos[j].distanceTo(h.pos); if (d < bd) { bd = d; i = j; } } }
   }
   if (i < 0) i = nearestParticle(h.pos, reach); if (i < 0) return false;
-  const pin = R.pins.get(i);
+  let pin = R.pins.get(i);
+  // the other hand has this bit: take the rope just outside its grip instead (a handoff — the two hands hold it together, then one lets go)
+  if (pin && pin.kind === 'hand' && pin.hand !== h.index) { let best = -1, bd = reach; for (let j = 0; j < R.n; j++) { const q = R.pins.get(j); if (q && !(q.kind === 'foot')) continue; const d = R.pos[j].distanceTo(h.pos); if (d < bd) { bd = d; best = j; } } if (best < 0) return false; i = best; pin = R.pins.get(i); }
   if (pin && pin.kind !== 'foot' && pin.kind !== 'hitch') return false;   // the PCD, the eye and the ground rigger keep theirs
   if (pin && pin.kind === 'hitch') return false;                            // grab beside the knot, not the knot itself
   pinSet(i, 'hand', h.pos, { hand: h.index }); h.ropeLost = false; AudioKit.grab(); haptic(h, 0.5, 40); hudDirty = true;
   if (bightGrab(h, i)) { toast('Bight — both strands in hand'); haptic(h, 0.8, 60); }
+  else handGripSet(h, i);
   return true;
 }
-function ropeRelease(h) { const mine = []; R.pins.forEach((p, i) => { if (p.kind === 'hand' && p.hand === h.index) mine.push(i); }); mine.forEach(i => { pinClear(i); if (R.prev[i] && R.pos[i]) R.prev[i].copy(R.pos[i]); }); hudDirty = true; }   // let go (both strands of a bight): the rope keeps what its neighbours give it, not a throw
+/* the grip (M0.13): a fist holds a hand's width of rope, and holds it the way the hand is turned. The
+   particles either side of the one in the palm are pinned at their offsets in the hand's frame, so
+   turning the wrist turns the rope — an overhand or underhand loop is a twist of the hand with the
+   standing part held or hanging, and the loop can be passed to the other hand (which takes the rope
+   beside this grip, then this hand lets go). Desktop has no wrist: one pin. */
+const _gq = new THREE.Quaternion();
+function handGripSet(h, i) {
+  if (game.mode === 'desk' || R.L0 > 0.12) return; const m = Math.max(1, Math.round(0.045 / R.L0)); _gq.copy(h.quat).invert();
+  [i - m, i + m].forEach(j => { if (j < 0 || j >= R.n || R.pins.has(j)) return; if (rope.coilNext !== undefined && j >= rope.coilNext) return;
+    for (let q = Math.min(i, j) + 1; q < Math.max(i, j); q++) if (R.pins.has(q)) return;   // a fist does not close across the device, a knot or the other hand
+    const loc = R.pos[j].clone().sub(h.pos).applyQuaternion(_gq); if (loc.length() > 0.12) return;
+    pinSet(j, 'hand', R.pos[j], { hand: h.index, grip: true, loc }); R.prev[j].copy(R.pos[j]); });
+}
+function ropeRelease(h) { const mine = []; R.pins.forEach((p, i) => { if (p.kind === 'hand' && p.hand === h.index) mine.push(i); }); mine.forEach(i => { pinClear(i); if (R.prev[i] && R.pos[i]) R.prev[i].copy(R.pos[i]); }); h.clamped = 0; hudDirty = true; }   // let go (both strands of a bight, the whole grip): the rope keeps what its neighbours give it, not a throw
 /* a bight: the rope doubled over. Closing the hand on two strands that lie together takes both —
    the way you hold a bight to push it under a wrap for a slipped hitch, or to tie in the middle of
    a rope. The second strand rides with the hand at the offset it was taken at. */
@@ -1512,7 +1607,7 @@ function bightGrab(h, i) {
   for (let j = 0; j < R.n; j++) { if (Math.abs(j - i) < 8 || R.pins.has(j)) continue; if (rope.pcdFed && (j - rope.pcdIdx) * (i - rope.pcdIdx) < 0) continue;
     const d = R.pos[j].distanceTo(R.pos[i]); if (d < bd && R.pos[j].distanceTo(h.pos) < near + 0.05) { bd = d; best = j; } }
   if (best < 0) return false;
-  pinSet(best, 'hand', h.pos, { hand: h.index, bight: true, off: R.pos[best].clone().sub(h.pos) }); R.prev[best].copy(R.pos[best]); return true;
+  pinSet(best, 'hand', h.pos, { hand: h.index, bight: true, loc: R.pos[best].clone().sub(h.pos).applyQuaternion(_gq.copy(h.quat).invert()) }); R.prev[best].copy(R.pos[best]); return true;
 }
 function handHoldsRope(h) { return handPin(h.index) >= 0; }
 
@@ -1523,6 +1618,7 @@ function handHoldsRope(h) { return handPin(h.index) >= 0; }
 function nearHitchRail(p) { return p.x > HITCH_RAIL.x0 - 0.3 && p.x < HITCH_RAIL.x1 + 0.3 && Math.hypot(p.y - RAIL_Y, p.z - RAIL_Z) < 0.5; }
 let knotPrevAngle = null;
 function knotTick(hp) {
+  if (game.mode !== 'desk') return;   // in VR the rope itself is read (railKnotTick); the hand's circling is not a knot
   if (!hp || !nearHitchRail(hp)) { knotPrevAngle = null; return; }
   const a = Math.atan2(hp.y - RAIL_Y, hp.z - RAIL_Z);
   if (knotPrevAngle !== null) { let d = a - knotPrevAngle; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; rope.acc += d;
@@ -1553,14 +1649,55 @@ function dressKnot(hp, handIndex) {
 /* a wrap slips: once the hanging weight comes on it, it lets go */
 function wrapSlipTick(dt) {
   if (rope.knot !== 'wrap') return; rope.wrapT = (rope.wrapT || 0) + dt;
-  if (rope.wrapT > 4) { rope.knot = 'none'; pinClear(rope.hitchIdx); rope.hitchIdx = -1; rope.wrapT = 0; AudioKit.rope(); toast('THE WRAP SLIPPED', true); }
+  if (rope.wrapT > 4) { rope.knot = 'none'; pinsOfKind('hitch').forEach(k => pinClear(k)); rope.hitchIdx = -1; rope.wrapT = 0; AudioKit.rope(); toast('THE WRAP SLIPPED', true); }
 }
 function untieKnot(handIndex) {
   if (rope.knot === 'none') return;
-  const i = rope.hitchIdx; rope.knot = 'none'; rope.turns = 0; rope.acc = 0; rope.wrapT = 0; pinClear(i); rope.hitchIdx = -1;
-  if (handIndex !== undefined && handPin(handIndex) < 0) pinSet(i, 'hand', hands[handIndex].pos, { hand: handIndex });
-  AudioKit.rope(); toast('Untied — you are holding the rope now'); hudDirty = true;
+  const i = rope.hitchIdx; const real = rope.knotReal; rope.knot = 'none'; rope.turns = 0; rope.acc = 0; rope.wrapT = 0; rope.knotReal = false;
+  pinsOfKind('hitch').forEach(k => pinClear(k)); rope.hitchIdx = -1; railKnot.armed = false; railKnot.idx.length = 0;
+  if (handIndex !== undefined && handPin(handIndex) < 0) { if (real) ropeGrab(hands[handIndex]); if (handPin(handIndex) < 0) pinSet(i, 'hand', hands[handIndex].pos, { hand: handIndex }); }
+  AudioKit.rope(); toast(real ? 'Untied — pull it apart. Keep hold of the rope.' : 'Untied — you are holding the rope now'); hudDirty = true;
   if (!rope.groundCarry) { rope.groundCarry = true; radio('Ground', 'Walking your end over to the point.', 1.5); }
+}
+/* ── the hitch, read off the rope (M0.13) ──
+   The bench's recogniser, on the top rail: turns on the rail with the working end tucked under
+   the crossing is a clove hitch; a turn round the standing part, tucked under itself, is the half
+   hitch that finishes it. When it reads, it locks — the knot's particles pin where they lie — and
+   it holds whatever hangs off it. Trigger by the knot to untie. A single wrap is never locked: the
+   rope's own friction on the bar is all that holds it, and it slips (the desktop keeps the
+   wheel-and-trigger dressing — a mouse cannot wrap a rail). */
+const railKnot = { lastCheck: 0, armed: true, status: '', idx: [] };
+const _rkP = new THREE.Vector3(), _rkD = new THREE.Vector3(1, 0, 0);
+function railKnotTick(dt) {
+  if (R.world === 'knots' || rope.state !== 'deployed' || rope.pcdFed || !R.alive) return;
+  if (rope.knot !== 'none' && !rope.knotReal) return;   // dressed the desktop way
+  if (game.t - railKnot.lastCheck < 0.3) return; railKnot.lastCheck = game.t;
+  _rkP.set(0, RAIL_Y, RAIL_Z); const rc = 0.03 + R.r;
+  // locked as a clove hitch: watch for the half hitch going on below it
+  if (rope.knot === 'clove' && rope.knotReal) { const first = railKnot.idx.length ? Math.min.apply(null, railKnot.idx) : -1, last = railKnot.idx.length ? Math.max.apply(null, railKnot.idx) : -1;
+    if (first > 16) { const ax = standingAxis(first); if (ax.ok) { const hh = halfHitchesOn(ax, last + 1); if (hh.n >= 1) { hh.w.run.forEach(i => { if (!R.pins.has(i)) { pinSet(i, 'hitch', R.pos[i]); railKnot.idx.push(i); } }); rope.knot = 'clove+half'; toast('HALF HITCH — finished'); AudioKit.ack(); hands.forEach(h => haptic(h, 0.6, 90)); hudDirty = true; }
+      else if (hh.turns >= 0.7 && railKnot.status !== 'half') { railKnot.status = 'half'; toast('A turn round the standing part — now under itself for the half hitch'); } } }
+    return; }
+  if (rope.knot !== 'none') return;
+  let found = null, lockSet = null, status = '';
+  const runs = contactRuns(_rkP, _rkD, rc + 0.035).filter(w => w.run.length >= 6 && Math.abs(R.pos[w.first].x - GAP / 2) < CWX && !inCatwalkGap(R.pos[w.first].x));
+  const pr = runs[0];
+  if (pr && Math.abs(pr.turns) >= 0.8) {
+    const t = Math.abs(pr.turns); const under = tucksIn(pr.run, _rkP, _rkD, rc);
+    if (t >= 1.7 && under.length) { found = 'clove'; lockSet = pr.run.slice(); const ax = standingAxis(pr.first); if (ax.ok) { const hh = halfHitchesOn(ax, pr.last + 1); if (hh.n >= 1) { found = 'clove+half'; lockSet = lockSet.concat(hh.w.run); } } }
+    else if (t >= 1.7) status = 'tuck';
+    else status = 'one';
+  }
+  if (found && !railKnot.armed) return;   // an untied knot is not re-read until its shape is gone
+  if (!found) railKnot.armed = true;
+  if (status !== railKnot.status) { railKnot.status = status; if (status === 'tuck') toast('Two turns on the rail — tuck the working end under the crossing'); else if (status === 'one') toast('One turn on the rail. Another, crossing over the first'); }
+  if (!found) return;
+  const idx = lockSet.filter((v, i, a) => a.indexOf(v) === i); railKnot.idx = idx;
+  idx.forEach(i => { if (!R.pins.has(i)) pinSet(i, 'hitch', R.pos[i]); });
+  let best = -1, bd = 1e9; idx.forEach(i => { const pin = R.pins.get(i); if (!pin || pin.kind !== 'hitch') return; const d = Math.abs(R.pos[i].y - (RAIL_Y + 0.03)) + Math.abs(R.pos[i].z - RAIL_Z); if (d < bd) { bd = d; best = i; } });
+  if (best < 0) { idx.forEach(i => { const pin = R.pins.get(i); if (pin && pin.kind === 'hitch') pinClear(i); }); return; }
+  rope.hitchIdx = best; rope.hitchX = R.pos[best].x; rope.knot = found; rope.knotReal = true; rope.turns = 0; rope.acc = 0; railKnot.status = '';
+  toast(found === 'clove' ? 'CLOVE HITCH — it will hold. One more turn round the standing part, tucked, for the half hitch' : 'CLOVE HITCH AND A HALF HITCH — finished'); AudioKit.ack(); hands.forEach(h => haptic(h, 0.7, 120)); hudDirty = true;
 }
 
 /* ───────────────────── the PCD ─────────────────────
@@ -1584,7 +1721,7 @@ function feedPCD(hp, handIndex) {
   const k = Math.max(1, Math.min(i, R.n - 1 - Math.round(2.5 / R.L0))); const P = pcdPoint();
   if (handIndex !== undefined) ropeRelease(hands[handIndex]);
   rope.pcdFed = true; rope.pcdDir = ok ? 'ok' : 'back'; rope.pcdIdx = k; rope.runBackFired = false;
-  if (rope.knot !== 'none') { pinClear(rope.hitchIdx); rope.knot = 'none'; rope.hitchIdx = -1; }
+  if (rope.knot !== 'none') { pinsOfKind('hitch').forEach(k => pinClear(k)); rope.knot = 'none'; rope.knotReal = false; rope.hitchIdx = -1; }
   pinSet(k, 'pcd', P); const ls = pcdLoadSide(); for (let j = k + 1; j < R.n; j++) { R.pos[j].set(P.x - ls.x * 0.1, P.y - R.L0 * (j - k) * 0.9, P.z - ls.z * 0.1); R.prev[j].copy(R.pos[j]); }
   ropeHauledFromPCD(); AudioKit.click(); AudioKit.ack(); toast(ok ? 'Rope through the PCD — cam holds' : 'Rope through the PCD'); hudDirty = true;
 }
@@ -2052,19 +2189,64 @@ function squareTick() {
 }
 function clearTwist() { if (!bridle.twist) return; bridle.twist = false; AudioKit.steel(); toast('Foul cleared — the twist is out'); }
 
-/* ───────────────────── gravity: things that fall ───────────────────── */
+/* ───────────────────── gravity: things that fall ─────────────────────
+   Everything dropped falls for real — 108 feet is 2.6 seconds — and lands on the floor or on
+   whoever is under it. The ground rigger works under the point (he has the end of your rope),
+   so a HEADACHE call is what gets him out from under: he steps clear when he hears it, and he
+   hears it when you have the radio in your hand, or when Rigger B sees it go (Rigger B is on
+   his own beam looking at the point — he sees the steel side, not the catwalk). Nobody calls
+   it and he is under it: he goes down, and the program ends when the thing is on the floor. */
 const falling = [];
-function startFall(mesh, label, from) {
-  arena.attach(mesh); mesh.position.copy(from); falling.push({ mesh, label, vy: 0 }); AudioKit.whoosh();
+const crew = { target: new THREE.Vector3(POINT.x + 1.5, 0, POINT.z + 1.5), hold: new THREE.Vector3(), dodgeT: 0, dodging: false, down: false, downT: 0, hitBy: null };
+function crewGoto(x, z) { crew.target.set(x, 0, z); }
+function crewSpeaks() { return !crew.down; }
+function startFall(mesh, label, from, vel) {
+  arena.attach(mesh); mesh.position.copy(from);
+  const f = { mesh, label, vy: vel ? vel.y : 0, vx: vel ? vel.x * 0.5 : 0, vz: vel ? vel.z * 0.5 : 0, called: false, callAt: -1, t: 0 };
+  falling.push(f); AudioKit.whoosh();
   game.drops++; hudDirty = true; toast('DROPPED — ' + label.toUpperCase(), true);
-  if (holdingRadio()) playerSays('HEADACHE! ' + label + ' coming in!'); else radio('Rigger B', 'HEADACHE! Something coming in off A!', 0.4);
+  if (holdingRadio()) { playerSays('HEADACHE! ' + label + ' coming in!'); f.callAt = 0.35; }   // you saw it, you called it; he needs a third of a second to hear it
+  else if (from.z < -3 && from.y > H - 1) { radio('Rigger B', 'HEADACHE! Something coming in off A!', 0.4); f.callAt = 1.1; }   // B saw it go off the beam; the radio takes a moment
+  else f.callAt = -1;   // off the catwalk with the radio on your belt: nobody saw it, nobody called it
+}
+function crewDodge(fromX, fromZ) {
+  if (crew.down || crew.dodging) return;
+  const p = groundRigger.position; let dx = p.x - fromX, dz = p.z - fromZ; const d = Math.hypot(dx, dz);
+  if (d > 1.6) return;   // not under it
+  if (d < 0.05) { dx = 1; dz = 0.4; } crew.hold.copy(crew.target); crew.dodging = true; crew.dodgeT = 0;
+  crew.target.set(fromX + dx / (d || 1) * 2.6, 0, fromZ + dz / (d || 1) * 2.6);
+}
+function crewStruck(label) {
+  crew.down = true; crew.downT = 0; crew.hitBy = label; game.strikes = (game.strikes || 0) + 1; hudDirty = true;
+  AudioKit.thud(); AudioKit.alarm(); toast('MAN DOWN', true);
+  radio('Rigger B', 'MAN DOWN — MAN DOWN on the floor under A! Somebody get to him!', 0.6);
+}
+function crewTick(dt) {
+  const p = groundRigger.position;
+  if (crew.down) {   // knocked flat: he goes over sideways and stays there
+    crew.downT += dt; const k = Math.min(1, crew.downT / 0.55), e = 1 - (1 - k) * (1 - k);
+    groundRigger.rotation.z = -Math.PI / 2 * e; groundRigger.rotation.y = -0.8; p.y = 0.22 * e;
+    return;
+  }
+  if (crew.dodging) { crew.dodgeT += dt; if (crew.dodgeT > 2.2 && falling.length === 0) { crew.dodging = false; crew.target.copy(crew.hold); } }
+  const speed = crew.dodging ? 4.0 : 1.5;
+  const dx = crew.target.x - p.x, dz = crew.target.z - p.z, d = Math.hypot(dx, dz);
+  if (d > 0.02) { const s = Math.min(d, speed * dt); p.x += dx / d * s; p.z += dz / d * s; groundRigger.rotation.y = Math.atan2(dx, dz); }
 }
 function fallingTick(dt) {
-  for (let i = falling.length - 1; i >= 0; i--) { const f = falling[i]; f.vy -= WORLD.g * dt; f.mesh.position.y += f.vy * dt;
-    if (f.mesh.position.y <= 0.05) { f.mesh.position.y = 0.05; falling.splice(i, 1); AudioKit.thud(); radio('Ground', 'Got a ' + f.label + ' on the floor here. Everybody OK.', 0.3); f.mesh.userData.landed = true; } }
+  crewTick(dt);
+  for (let i = falling.length - 1; i >= 0; i--) { const f = falling[i]; const m = f.mesh.position; f.t += dt;
+    f.vy -= WORLD.g * dt; m.y += f.vy * dt; m.x += f.vx * dt; m.z += f.vz * dt;
+    if (!f.called && f.callAt >= 0 && f.t >= f.callAt) { f.called = true; crewDodge(m.x + f.vx * 2, m.z + f.vz * 2); }
+    const gp = groundRigger.position;
+    if (!crew.down && m.y < 1.85 && m.y > 0.9 && Math.hypot(m.x - gp.x, m.z - gp.z) < 0.38) { crewStruck(f.label); f.struck = true; f.vy *= -0.15; f.vx += (m.x - gp.x) * 3; f.vz += (m.z - gp.z) * 3; }
+    if (m.y <= 0.05) { m.y = 0.05; falling.splice(i, 1); AudioKit.thud(); f.mesh.userData.landed = true;
+      if (f.struck) endProgram(false, 'Struck by a falling ' + f.label, 'A ' + f.label + ' from 108 feet is doing 55 miles an hour when it gets to the floor, and the ground rigger was under it with your rope in his hand. HEADACHE, on the radio, the instant it leaves your hand — that call is what gets him out from under it. Nothing goes up the steel that is not clipped, tied or in your hand.');
+      else if (crew.down) { /* already down: the rest lands around him */ }
+      else radio('Ground', 'Got a ' + f.label + ' on the floor here. Everybody OK.', 0.3); } }
 }
 /* is a point standing on something? */
-function onCatwalk(x, z) { return (z >= -0.02 && z <= WORLD.catwalkDepth && Math.abs(x - GAP / 2) < 22) || inPrep(x, z); }
+function onCatwalk(x, z) { return (z >= -0.02 && z <= WORLD.catwalkDepth && Math.abs(x - GAP / 2) < CWX) || inPrep(x, z); }
 function onBeam(x, z, tol) { return Math.abs(x) <= BW / 2 + (tol === undefined ? SETTINGS.edge : tol) && z <= 0.05 && z >= -BL; }
 function supported(x, z, tol) { return onCatwalk(x, z) || onBeam(x, z, tol); }
 
@@ -2130,7 +2312,7 @@ function grabEnd(h) {
   }
   if (g.kind === 'pocket' && inBucket(p)) { clearPocket(g.id); return; }
   if (supported(p.x, p.z, 0)) { arena.attach(g.mesh); const surfY = onTable(p) ? H + 0.94 : H + 0.06; g.mesh.position.set(p.x, Math.max(surfY, Math.min(p.y, surfY + 0.02)), p.z); if (g.kind === 'pocket') { toast(pocket[g.id].def.label + ' is not in the bucket'); hudDirty = true; } }
-  else startFall(g.mesh, g.kind === 'gear' ? gear[g.id].def.label : g.kind === 'pocket' ? pocket[g.id].def.label : 'burlap', p);
+  else { const v = h.vel.clone().multiplyScalar(60); if (v.length() > 4) v.setLength(4); startFall(g.mesh, g.kind === 'gear' ? gear[g.id].def.label : g.kind === 'pocket' ? pocket[g.id].def.label : 'burlap', p, v); }
 }
 function onTable(p) { return Math.abs(p.x - GEAR_X) < 1.25 && Math.abs(p.z - TABLE_Z) < 0.35 && p.y > H + 0.6; }
 
@@ -2151,7 +2333,7 @@ function makeHook(i) {
 makeHook(0); makeHook(1);
 function nearAnchor(p) {
   if (Math.abs(p.x) < 0.35 && Math.abs(p.y - (H + WORLD.lifelineHeight)) < 0.35 && p.z <= 0.3 && p.z >= -BL) return { kind: 'lifeline', pos: new THREE.Vector3(0, H + WORLD.lifelineHeight, p.z) };
-  if (Math.abs(p.y - RAIL_Y) < 0.3 && Math.abs(p.z - RAIL_Z) < 0.3 && p.x > -22 && p.x < 22 + GAP && !inCatwalkGap(p.x)) return { kind: 'rail', pos: new THREE.Vector3(p.x, RAIL_Y, RAIL_Z) };
+  if (Math.abs(p.y - RAIL_Y) < 0.3 && Math.abs(p.z - RAIL_Z) < 0.3 && p.x > GAP / 2 - CWX && p.x < GAP / 2 + CWX && !inCatwalkGap(p.x)) return { kind: 'rail', pos: new THREE.Vector3(p.x, RAIL_Y, RAIL_Z) };
   return null;
 }
 /* trigger on a hook: open the gate. Clipped → it comes off in your hand; in hand near steel → it clips. */
@@ -2291,9 +2473,11 @@ function contactRuns(P, D, band) {
 function tucksIn(setArr, P, D, rc) {
   // the under strand lies ON the steel (or on the rope it hitches), the over strand a full rope width further out
   const set = new Set(setArr); const under = []; axisBasis(D); const pairs = SELF.pairs; const r = R.r;
+  // the rope arriving at the bar and leaving it passes radially over the turn it lands on: the run's ends are never the OVER strand of a tuck
+  let lo = 1e9, hi = -1; for (const i of setArr) { if (i < lo) lo = i; if (i > hi) hi = i; } const inner = (i) => i > lo + 3 && i < hi - 3;
   for (let k = 0; k < pairs.length; k += 2) { const i = pairs[k], j = pairs[k + 1]; if (!set.has(i) || !set.has(j) || Math.abs(i - j) < 5) continue;
     if (R.pos[i].distanceTo(R.pos[j]) > 2.8 * r) continue; const di = axisDist(P, R.pos[i]), dj = axisDist(P, R.pos[j]);
-    if (di <= rc + 0.7 * r && dj >= di + 1.2 * r) under.push(i); else if (dj <= rc + 0.7 * r && di >= dj + 1.2 * r) under.push(j); }
+    if (di <= rc + 0.7 * r && dj >= di + 1.2 * r && inner(j)) under.push(i); else if (dj <= rc + 0.7 * r && di >= dj + 1.2 * r && inner(i)) under.push(j); }
   return under;
 }
 /* the standing part as it leaves a run toward the red end: a point and a direction */
@@ -2427,7 +2611,7 @@ function railCollide() {
   camera.getWorldPosition(_head);
   const atDeck = Math.abs(_head.y - (H + 1.6)) < 1.2 || game.mode === 'desk';
   if (!atDeck) return;
-  const onDeckX = Math.abs(_head.x - GAP / 2) < 22;
+  const onDeckX = Math.abs(_head.x - GAP / 2) < CWX;
   if (onDeckX && _head.z > -0.35 && _head.z < 0.12 && !inCatwalkGap(_head.x) && _head.y > H - 0.5) { playerRig.position.z += 0.12 - _head.z; camera.getWorldPosition(_head); }
   const prepDoor = _head.x > PREP.x0 + 0.15 && _head.x < PREP.x1 - 0.15;
   if (onDeckX && !prepDoor && _head.z > WORLD.catwalkDepth - 0.15 && _head.z < WORLD.catwalkDepth + 0.6) { playerRig.position.z -= _head.z - (WORLD.catwalkDepth - 0.15); camera.getWorldPosition(_head); }
@@ -2436,7 +2620,7 @@ function railCollide() {
     if (_head.x < PREP.x0 + 0.15) { playerRig.position.x += PREP.x0 + 0.15 - _head.x; camera.getWorldPosition(_head); }
     if (_head.x > PREP.x1 - 0.15) { playerRig.position.x -= _head.x - (PREP.x1 - 0.15); camera.getWorldPosition(_head); }
   }
-  if (_head.z > 0 && _head.z < WORLD.catwalkDepth + 0.05) { const lim = GAP / 2 + 21.8; if (_head.x > lim) playerRig.position.x -= _head.x - lim; if (_head.x < GAP / 2 - 21.8) playerRig.position.x += GAP / 2 - 21.8 - _head.x; }
+  if (_head.z > 0 && _head.z < WORLD.catwalkDepth + 0.05) { const lim = GAP / 2 + CWX - 0.2; if (_head.x > lim) playerRig.position.x -= _head.x - lim; if (_head.x < GAP / 2 - CWX + 0.2) playerRig.position.x += GAP / 2 - CWX + 0.2 - _head.x; }
 }
 function moveRig(dx, dz) {
   const before = playerRig.position.clone(); playerRig.position.x += dx; playerRig.position.z += dz;
@@ -2635,14 +2819,14 @@ function keyRadio() {
   if (game.step === 6 && !bridle.pointChecked) { bridle.pointChecked = true; playerSays('Point check on the ' + (game.prog === 'split15' ? 'split 15' : '10 basket') + '?');
     const off = Math.abs(bridle.zA - WORLD.slingZ) * 3.281;
     radio('Ground', 'Stand by... ' + (off < 1.0 ? 'Point\'s good. Chain\'s coming down.' : 'You\'re about ' + off.toFixed(0) + ' feet off the mark. Both of you slide it ' + (bridle.zA > WORLD.slingZ ? 'upstage' : 'downstage') + '.'), 3.0);
-    setTimeout(() => endProgram(true, 'Point\'s good', 'Bridle up, wrapped, mated, squared and checked — and nothing went in.'), 7000); return; }
+    setTimeout(() => { if (game.over) return; if (game.pointNo < game.series.length - 1) nextPoint(); else endProgram(true, game.series.length > 1 ? 'Both points good' : 'Point\'s good', (game.series.length > 1 ? 'A split 15 and a 10 basket: up, wrapped, mated, squared and checked' : 'Bridle up, wrapped, mated, squared and checked') + ' — and nothing went in.'); }, 7000); return; }
   playerSays('Radio check.'); radio('Ground', 'Loud and clear.', 1.2);
 }
 /* ───────────────────── program start / end ───────────────────── */
 const lobbyEl = document.getElementById('lobby'), hudEl = document.getElementById('hud'), pauseEl = document.getElementById('pause');
 function resetWorld() {
   game.step = 0; game.t = 0; game.drops = 0; game.earlyPulls = 0; game.unclippedOnBeam = 0; game.falls = 0; game.ropeDrops = 0; game.fouls = 0; game.procsMisses = 0; game.bestDrift = 0; game.over = false; game.result = null; game.radioChecked = false;
-  Object.assign(rope, { state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, hitchIdx: -1, pcdFed: false, pcdDir: 'ok', pcdIdx: -1, hauled: 0, bowline: false, looseT: 0, droppedIn: false, deployT: -1, landed: false, groundCarry: false, runBackFired: false, wrapT: 0, coilNext: undefined, coilHand: -1 });
+  Object.assign(rope, { state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, hitchIdx: -1, pcdFed: false, pcdDir: 'ok', pcdIdx: -1, hauled: 0, bowline: false, looseT: 0, droppedIn: false, deployT: -1, landed: false, groundCarry: false, runBackFired: false, wrapT: 0, coilNext: undefined, coilHand: -1, knotReal: false }); railKnot.armed = true; railKnot.idx.length = 0; railKnot.status = '';
   R.alive = false; R.pins.clear(); R.world = null; S.active = false; steelGroup.visible = false; knotBench.visible = false; knots.active = false; knots.lock = null; ropeBuild(SETTINGS.ropePhys, SETTINGS.ropeDetail);
   hands.forEach(h => { h.fatigue = 0; h.load = 0; h.slipping = false; h.taut = false; });
   Object.assign(bridle, { loadA: 0, loadW: 0, shareA: 0.5, chainOut: 0, hauledB: 0, stage: 'idle', togetherCalled: false, continueCalled: false, drift: 0, fouled: false, twist: false, arrived: false, burlapOff: false, wrapStage: 0, mated: false, burlapUnder: false, steelDown: false, squared: false, zB: WORLD.slingZ, zA: WORLD.slingZ, pointChecked: false, calledApexA: false, readyT: 0, readyToast: false, warned: false, earlyToast: false });
@@ -2655,7 +2839,7 @@ function resetWorld() {
   POCKET_DEFS.forEach(d => { const p = pocket[d.id]; p.cleared = false; p.onBody = true; p.mesh.visible = true; body.attach(p.mesh); p.mesh.position.copy(d.p); p.mesh.rotation.set(0, 0, 0); });
   wornHelmet.visible = false; lanyard.hooks.forEach(h => { h.line.visible = false; });
   eyeA.attach(burlap); burlap.position.set(0, -0.02, 0); burlap.scale.set(1, 1, 1); burlap.rotation.set(0, 0, 0); burlap.visible = true;
-  groundRigger.position.set(POINT.x + 1.5, 0, POINT.z + 1.5);
+  groundRigger.position.set(POINT.x + 1.5, 0, POINT.z + 1.5); groundRigger.rotation.set(0, -0.8, 0); Object.assign(crew, { dodgeT: 0, dodging: false, down: false, downT: 0, hitBy: null }); crew.target.set(POINT.x + 1.5, 0, POINT.z + 1.5); game.strikes = 0;
   radioLines.length = 0; radioLogEl.innerHTML = ''; Radio.queue.length = 0; Radio.speaking = null; Radio.busyUntil = 0; Radio.chatterAt = 0; Radio.stepped = 0; Radio.keyed = 0; try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {} document.getElementById('vignette').classList.remove('on');
   playerRig.position.set(0, 0, 0); player.safe.set(0, 0, 0);
 }
@@ -2673,7 +2857,10 @@ function enterHolodeck(mode) {
 let programFade = 0;
 function startProgram(prog) {
   if (prog === 'ground') { toast('GROUND RIGGING comes with the crew build — a ground rigger needs up-riggers to work with. Network mode is next.'); AudioKit.deny(); return; }
-  game.prog = prog; document.querySelectorAll('.prog').forEach(b => b.classList.toggle('is-on', b.dataset.prog === prog));
+  // UP-RIGGING is one section with two points in it: a split 15 first, then a 10 basket on the same beam.
+  // The single-build names still work (the tests use them) and run one point.
+  game.series = prog === 'uprig' ? ['split15', 'basket10'] : [prog]; game.pointNo = 0; game.prog = game.series[0]; game.section = prog;
+  document.querySelectorAll('.prog').forEach(b => b.classList.toggle('is-on', b.dataset.prog === prog));
   programFade = 1; AudioKit.program();
   if (prog === 'knots') { setTimeout(startKnots, 700); return; }
   setTimeout(() => {
@@ -2681,9 +2868,31 @@ function startProgram(prog) {
     scene.background.set(0x0b0a0e); hemi.intensity = 0.55; key.intensity = 1.0;
     playerRig.position.set(GEAR_X + 0.6, H + (game.mode === 'vr' && refTypeUsed === 'local' ? 1.6 : 0), TABLE_Z - 1.8); playerRig.rotation.y = Math.PI; player.safe.copy(playerRig.position);   // in the prep area, facing the table
     if (game.mode === 'desk') { player.yaw = Math.PI; player.pitch = 0; playerRig.rotation.y = 0; }
-    document.getElementById('c-eyebrow').textContent = (prog === 'split15' ? 'Split 15' : '10 Basket') + ' · 108 ft';
-    setStep(1); radio('Ground', 'Morning. Building your ' + (prog === 'split15' ? 'split 15' : '10 basket') + ' down here. Get your gear on.', 2);
+    pointEyebrow();
+    setStep(1); radio('Ground', 'Morning. ' + (game.series.length > 1 ? 'Two points today — a split 15 first, then a 10 basket. Building your split 15 down here.' : 'Building your ' + progName() + ' down here.') + ' Get your gear on.', 2);
   }, 700);
+}
+function progName() { return game.prog === 'split15' ? 'split 15' : '10 basket'; }
+function pointEyebrow() { document.getElementById('c-eyebrow').textContent = (game.prog === 'split15' ? 'Split 15' : '10 Basket') + ' · 108 ft' + (game.series.length > 1 ? ' · point ' + (game.pointNo + 1) + ' of ' + game.series.length : ''); }
+/* the point is good and there is another in the section: the chain comes down, the rope comes back
+   up and gets coiled at the rail, the PCD goes back on the harness — and the ground rigger starts
+   building the next one. Gear stays on; the clock and the tally keep running. */
+function nextPoint() {
+  game.pointNo++; game.prog = game.series[game.pointNo];
+  Object.assign(rope, { state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, hitchIdx: -1, pcdFed: false, pcdDir: 'ok', pcdIdx: -1, hauled: 0, bowline: false, looseT: 0, droppedIn: false, deployT: -1, landed: false, groundCarry: false, runBackFired: false, wrapT: 0, coilNext: undefined, coilHand: -1, knotReal: false }); railKnot.armed = true; railKnot.idx.length = 0; railKnot.status = '';
+  R.alive = false; R.pins.clear(); S.active = false; steelGroup.visible = false; ropeBuild(SETTINGS.ropePhys, SETTINGS.ropeDetail);
+  hands.forEach(h => { h.fatigue = 0; h.load = 0; h.slipping = false; h.taut = false; });
+  Object.assign(bridle, { loadA: 0, loadW: 0, shareA: 0.5, chainOut: 0, hauledB: 0, stage: 'idle', togetherCalled: false, continueCalled: false, drift: 0, fouled: false, twist: false, arrived: false, burlapOff: false, wrapStage: 0, mated: false, burlapUnder: false, steelDown: false, squared: false, zB: WORLD.slingZ, zA: WORLD.slingZ, pointChecked: false, calledApexA: false, readyT: 0, readyToast: false, warned: false, earlyToast: false });
+  wrapPts.length = 0; const set = wrapLine.getObjectByName('Bridle_Wrap_Set'); if (set) wrapLine.remove(set); const tw = wrapLine.getObjectByName('Bridle_Twist'); if (tw) wrapLine.remove(tw);
+  falling.length = 0; grabbables.forEach(g => { if (g.kind !== 'gear' && g.kind !== 'hook') { g.held = null; g.locked = false; } });
+  eyeA.attach(burlap); burlap.position.set(0, -0.02, 0); burlap.scale.set(1, 1, 1); burlap.rotation.set(0, 0, 0); burlap.visible = true;
+  // the PCD comes off the sling and back onto the harness; the rope, pulled up and coiled, waits at the rail by the beam
+  pcd.hung = false; const pg = gear.pcd; pg.grab.locked = false; releaseAll(pg.grab); pg.mesh.visible = true; clipGear('pcd', pg.ring || 'hipR');
+  const rg = gear.rope; rg.worn = false; rg.ring = null; releaseAll(rg.grab); rg.mesh.visible = true; rg.mesh.scale.set(1, 1, 1); arena.attach(rg.mesh); rg.mesh.position.set(-1.4, H + 0.06, 0.5); rg.mesh.rotation.set(0, 0, 0);
+  groundRigger.position.set(POINT.x + 1.5, 0, POINT.z + 1.5); groundRigger.rotation.set(0, -0.8, 0); Object.assign(crew, { dodgeT: 0, dodging: false, down: false, downT: 0, hitBy: null }); crew.target.set(POINT.x + 1.5, 0, POINT.z + 1.5);
+  pointEyebrow(); setStep(2); hudDirty = true;
+  toast('POINT ' + (game.pointNo + 1) + ' — ' + progName().toUpperCase() + '. Your rope is coiled at the rail.');
+  radio('Ground', 'Next one\'s a ' + progName() + ', same beam. Rope\'s coming back up to you — send it down when you\'re tied off.', 1.5);
 }
 function endProgram(ok, title, body) {
   if (game.over) return; game.over = true; game.result = ok; game.paused = true;
@@ -2692,7 +2901,7 @@ function endProgram(ok, title, body) {
   document.getElementById('p-body').textContent = body;
   const st = document.getElementById('p-stats'); st.hidden = false;
   const m = Math.floor(game.t / 60), s = Math.floor(game.t % 60);
-  st.innerHTML = [['Time', m + ':' + (s < 10 ? '0' : '') + s], ['Things dropped', game.drops], ['Rope dropped in', game.ropeDrops], ['Falls arrested', game.falls], ['Over the edge and back', (game.recoveries || 0) + ' of ' + (game.teeters || 0)], ['Seconds on the beam unclipped', game.unclippedOnBeam.toFixed(0)],
+  st.innerHTML = [['Time', m + ':' + (s < 10 ? '0' : '') + s], ['Things dropped', game.drops], ['Rope dropped in', game.ropeDrops], ['Crew struck', game.strikes || 0], ['Falls arrested', game.falls], ['Over the edge and back', (game.recoveries || 0) + ' of ' + (game.teeters || 0)], ['Seconds on the beam unclipped', game.unclippedOnBeam.toFixed(0)],
     ['Worst drift', (game.bestDrift * 3.281).toFixed(1) + ' ft'], ['Apex fouls', game.fouls], ['Pulled before the go', game.earlyPulls], ['Stepped on radio traffic', Radio.stepped], ['PROCS misses', game.procsMisses]].map(([k, v]) => '<dt>' + k + '</dt><dd>' + v + '</dd>').join('');
   document.getElementById('btn-resume').hidden = true; document.getElementById('btn-retry').hidden = false;
   pauseEl.hidden = false; if (ok) AudioKit.program(); else AudioKit.alarm();
@@ -2705,7 +2914,7 @@ function setPause(on) {
 }
 function quitToArch() { game.paused = false; game.over = false; pauseEl.hidden = true; resetWorld(); enterHolodeck(game.mode); }
 document.getElementById('btn-resume').addEventListener('click', () => setPause(false));
-document.getElementById('btn-retry').addEventListener('click', () => { game.paused = false; pauseEl.hidden = true; startProgram(game.prog); });
+document.getElementById('btn-retry').addEventListener('click', () => { game.paused = false; pauseEl.hidden = true; startProgram(game.section || game.prog); });
 document.getElementById('btn-quit').addEventListener('click', quitToArch);
 
 /* pedestal picking: a ray from the hand (or the desktop gaze) */
@@ -2793,12 +3002,48 @@ const panelCanvas = document.createElement('canvas'); panelCanvas.width = 768; p
 const panelTex = new THREE.CanvasTexture(panelCanvas); panelTex.encoding = THREE.sRGBEncoding;
 const vrPanel = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.5), new THREE.MeshBasicMaterial({ map: panelTex, transparent: true, name: 'Mat_VRPanel' }));
 vrPanel.name = 'VR_PauseCard'; vrPanel.visible = false; scene.add(vrPanel);
+/* the pause card has a second page: the rope settings. Thumbstick right opens it; up / down picks a
+   row, left / right nudges it; the last row goes back. Trigger resumes from either page. */
+const panelUI = { page: 0, row: 0 };
+function panelRows() { return ROPE_PARAMS.length + 3; }   // the parameters, rope-on-rope, defaults, back
+function panelNav(axis, dir) {
+  if (game.over) return;
+  if (panelUI.page === 0) { if (axis === 'x' && dir > 0) { panelUI.page = 1; panelUI.row = 0; AudioKit.click(); } return; }
+  const n = panelRows();
+  if (axis === 'y') { panelUI.row = (panelUI.row + (dir > 0 ? 1 : -1) + n) % n; AudioKit.click(); return; }   // stick forward is -y on the gamepad: dir > 0 means down the list
+  const r = panelUI.row;
+  if (r < ROPE_PARAMS.length) { const p = ROPE_PARAMS[r]; SETTINGS[p.key] = Math.round(Math.max(p.min, Math.min(p.max, SETTINGS[p.key] + dir * p.step)) / p.step) * p.step; SETTINGS[p.key] = +SETTINGS[p.key].toFixed(4); saveSettings(); AudioKit.ack(); }
+  else if (r === ROPE_PARAMS.length) { const modes = ['deck', 'hands', 'off']; SETTINGS.selfCollide = modes[(modes.indexOf(SETTINGS.selfCollide) + (dir > 0 ? 1 : 2)) % 3]; saveSettings(); AudioKit.ack(); }
+  else if (r === ROPE_PARAMS.length + 1) { ROPE_PARAMS.forEach(p => { SETTINGS[p.key] = p.def; }); saveSettings(); AudioKit.ack(); }
+  else { panelUI.page = 0; AudioKit.click(); }
+  if (typeof ropeCardsRefresh === 'function') ropeCardsRefresh();
+}
+function drawVRRopePage(x) {
+  x.fillStyle = 'rgba(12,12,19,0.92)'; x.fillRect(0, 0, 768, 512); x.fillStyle = '#cc99cc'; x.fillRect(0, 0, 10, 512);
+  x.fillStyle = '#cc99cc'; x.font = '400 20px Antonio, Arial Narrow, sans-serif'; x.fillText('SETTINGS · ROPE CHARACTER', 30, 36);
+  const n = panelRows(); let y = 72; const rowH = 38;
+  for (let r = 0; r < n; r++) {
+    const sel = r === panelUI.row; if (sel) { x.fillStyle = 'rgba(204,153,204,0.16)'; x.fillRect(20, y - 26, 728, rowH - 4); }
+    x.font = (sel ? '700 ' : '400 ') + '22px Antonio, Arial Narrow, sans-serif'; x.fillStyle = sel ? '#f2c14e' : '#e8e4d8';
+    if (r < ROPE_PARAMS.length) { const p = ROPE_PARAMS[r]; x.fillText(p.label.toUpperCase(), 34, y);
+      const f = (SETTINGS[p.key] - p.min) / (p.max - p.min); x.fillStyle = '#3a3140'; x.fillRect(330, y - 14, 280, 10); x.fillStyle = sel ? '#ff9c00' : '#cc99cc'; x.fillRect(330, y - 14, 280 * Math.max(0, Math.min(1, f)), 10);
+      x.fillStyle = sel ? '#f2c14e' : '#e8e4d8'; x.textAlign = 'right'; x.fillText(p.fmt(SETTINGS[p.key]), 740, y); x.textAlign = 'left'; }
+    else if (r === ROPE_PARAMS.length) { x.fillText('ROPE ON ROPE', 34, y); x.textAlign = 'right'; x.fillText(({ deck: 'UP AT THE STEEL', hands: 'NEAR THE HANDS', off: 'OFF' })[SETTINGS.selfCollide] || 'UP AT THE STEEL', 740, y); x.textAlign = 'left'; }
+    else if (r === ROPE_PARAMS.length + 1) x.fillText('ROPE DEFAULTS  (left or right)', 34, y);
+    else x.fillText('BACK TO THE PAUSE CARD  (left or right)', 34, y);
+    y += rowH;
+  }
+  const hint = panelUI.row < ROPE_PARAMS.length ? ROPE_PARAMS[panelUI.row].hint : panelUI.row === ROPE_PARAMS.length ? 'Where the rope collides with itself. Up at the steel reads knots on the rail; the pile on the arena floor is never simulated against itself.' : '';
+  x.fillStyle = '#b8b4a8'; x.font = '300 19px Titillium Web, Segoe UI, sans-serif'; wrapText(x, hint, 700, 24, 30, y + 6, 2);
+  x.fillStyle = '#99ccff'; x.font = '600 19px Antonio, Arial Narrow, sans-serif'; x.fillText('STICK ↑ ↓ ROW · ← → ADJUST · TRIGGER RESUMES · LIVE', 30, 496);
+}
 function drawVRPanel() {
   const x = panelCanvas.getContext('2d'); x.clearRect(0, 0, 768, 512);
+  if (panelUI.page === 1 && game.paused && !game.over) { drawVRRopePage(x); panelTex.needsUpdate = true; return; }
   x.fillStyle = 'rgba(12,12,19,0.9)'; x.fillRect(0, 0, 768, 512); x.fillStyle = '#ff9c00'; x.fillRect(0, 0, 10, 512);
   x.fillStyle = '#cc99cc'; x.font = '400 20px Antonio, Arial Narrow, sans-serif'; x.fillText(document.getElementById('p-eyebrow').textContent.toUpperCase(), 30, 36);
   x.fillStyle = game.over && !game.result ? '#e5484d' : '#f2c14e'; x.font = '700 40px Antonio, Arial Narrow, sans-serif'; x.fillText(document.getElementById('p-title').textContent.toUpperCase(), 30, 84);
-  x.fillStyle = '#e8e4d8'; x.font = '300 21px Titillium Web, Segoe UI, sans-serif'; let y = wrapText(x, document.getElementById('p-body').textContent || 'Trigger resumes. A / X returns to the arch.', 700, 27, 30, 122, 5);
+  x.fillStyle = '#e8e4d8'; x.font = '300 21px Titillium Web, Segoe UI, sans-serif'; let y = wrapText(x, document.getElementById('p-body').textContent || 'Trigger resumes. A / X returns to the arch. Thumbstick right: the rope settings.', 700, 27, 30, 122, 5);
   if (game.over) { x.fillStyle = '#8d8a7b'; x.font = '400 20px Titillium Web, Segoe UI, sans-serif'; Array.from(document.querySelectorAll('#p-stats dt')).forEach((dt) => { x.fillText(dt.textContent + ': ' + dt.nextElementSibling.textContent, 30, y); y += 26; });
     x.fillStyle = '#99ccff'; x.font = '600 22px Antonio, Arial Narrow, sans-serif'; x.fillText('A / X — RUN IT AGAIN', 30, 480); }
   if (game.phase === 'lobby' && !game.paused) { x.fillStyle = '#e8e4d8'; x.font = '300 21px Titillium Web, Segoe UI, sans-serif'; wrapText(x, cBody.textContent, 700, 27, 30, 122, 4); }
@@ -2807,7 +3052,7 @@ function drawVRPanel() {
 const _pf = new THREE.Vector3(), _pq = new THREE.Quaternion(); let panelWasVisible = false;
 function vrPanelTick(dt) {
   vrPanel.visible = renderer.xr.isPresenting && game.running && (game.paused || game.phase === 'lobby');
-  if (!vrPanel.visible) { panelWasVisible = false; return; }
+  if (!vrPanel.visible) { panelWasVisible = false; panelUI.page = 0; return; }
   if (!panelWasVisible || game.paused) drawVRPanel(); panelWasVisible = true;
   camera.getWorldQuaternion(_pq); const yaw = new THREE.Euler().setFromQuaternion(_pq, 'YXZ').y;
   _pf.set(-Math.sin(yaw), 0, -Math.cos(yaw)).multiplyScalar(1.2).add(_head); _pf.y = _head.y - 0.25;
@@ -2882,10 +3127,14 @@ function vrTick(dt) {
     h.effort = Math.max(gp.buttons[0] ? gp.buttons[0].value || 0 : 0, h.trig ? 1 : 0);   // how hard the trigger is squeezed
     const ax = gp.axes && gp.axes.length > 3 ? gp.axes[2] : 0, ay = gp.axes && gp.axes.length > 3 ? gp.axes[3] : 0;
     if (game.paused) {
-      if (lower && !h.prevLower) { if (game.over) { game.paused = false; pauseEl.hidden = true; startProgram(game.prog); } else quitToArch(); }
+      if (lower && !h.prevLower) { if (game.over) { game.paused = false; pauseEl.hidden = true; startProgram(game.section || game.prog); } else quitToArch(); }
       if (h.trig && !h.prevTrig && !game.over) setPause(false);
+      // the thumbstick works the pause card: right opens the rope settings, up / down picks a row, left / right adjusts
+      const sx = ax > 0.6 ? 1 : ax < -0.6 ? -1 : 0, sy = ay > 0.6 ? 1 : ay < -0.6 ? -1 : 0;
+      if (sx && sx !== h.stickX) panelNav('x', sx); if (sy && sy !== h.stickY) panelNav('y', sy); h.stickX = sx; h.stickY = sy;
       h.lowerFired = true;
     } else {
+      h.stickX = h.stickY = 0;
       if (lower && !h.prevLower) { h.lowerT = perfNow(); h.lowerFired = false; }
       if (lower && !h.lowerFired && perfNow() - h.lowerT > 0.6) { h.lowerFired = true; setPause(true); }
       if (upper && !h.prevUpper) keyRadio();
@@ -2925,27 +3174,38 @@ const hasRealURL = /^https?:/.test(location.href) && !/blob:/.test(location.href
 if (isFramed && hasRealURL) btnPop.href = location.href;
 let lastVRError = '';
 function drawDiag(s) { document.getElementById('diag').textContent = 'xr: ' + s + (lastVRError ? ' · ' + lastVRError : '') + ' · three r' + THREE.REVISION + ' · body-tracking joints seen: ' + bodyJointsSeen; }
-document.querySelectorAll('.prog').forEach(b => b.addEventListener('click', () => { game.prog = b.dataset.prog; document.querySelectorAll('.prog').forEach(x => x.classList.toggle('is-on', x === b));
+document.querySelectorAll('.prog').forEach(b => b.addEventListener('click', () => { game.section = b.dataset.prog; document.querySelectorAll('.prog').forEach(x => x.classList.toggle('is-on', x === b));
   document.getElementById('prog-hint').textContent = b.dataset.prog === 'knots' ? 'The bench: a 25-foot rope, a pipe and a post in the holodeck. Tie a clove hitch, add a half hitch, a bowline round the post, two half hitches on the rope. Tied for real — the rope reads its own shape.'
     : b.dataset.prog === 'ground' ? 'The ground rigger\'s side of the same point — tying in, watching the steel, calling the pulls. It arrives with the crew build (network mode), where the up-riggers are other people.'
-    : b.dataset.prog === 'split15' ? 'A 5 and a 10 shackled together. The 5 wraps the beam; the 10 swings under and its shackle mates to the eye of the 5. The ground rigger\'s bowline is a 12-inch loop in the eye of the 5.'
+    : b.dataset.prog === 'uprig' ? 'Two points on the same beam, 108 feet over the Moda Center floor. First a split 15 — a 5 and a 10 shackled together, the 5 wraps the beam, the 10 swings under and mates to the eye of the 5. Then a 10 basket — one 10 around the beam, both eyes in the bow. Gear up once; the rope comes back up between points.'
     : 'One 10-foot wire rope. One eye is in the shackle with the ground rigger\'s 3-foot bowline; the other swings over the beam, under, and back to mate in the same shackle.'; }));
 document.getElementById('btn-settings').addEventListener('click', e => { const s = document.getElementById('settings'); s.hidden = !s.hidden; e.currentTarget.setAttribute('aria-expanded', String(!s.hidden)); });
 function bindRange(id, key, fmt) { const el = document.getElementById(id), out = document.getElementById('o-' + id.slice(2)); const show = () => { el.value = SETTINGS[key]; out.textContent = fmt(SETTINGS[key]); };
   el.addEventListener('input', () => { SETTINGS[key] = parseFloat(el.value); out.textContent = fmt(SETTINGS[key]); saveSettings(); if (key === 'vol') AudioKit.setVol(SETTINGS.vol); }); show(); return show; }
 const shows = [bindRange('s-edge', 'edge', v => (v * 39.37).toFixed(0) + ' in'), bindRange('s-haul', 'haul', v => v + '×'), bindRange('s-pace', 'pace', v => (v * 3.281).toFixed(1) + ' ft/s'), bindRange('s-turns', 'turns', v => v), bindRange('s-vol', 'vol', v => Math.round(v * 100) + '%'), bindRange('s-load', 'loadScale', v => v + '×'), bindRange('s-fat', 'fatigue', v => v + '×')];
+/* the rope card: one slider per rope parameter, in the lobby settings and in the pause menu. Live. */
+function buildRopeCard(host) {
+  host.innerHTML = '<h3>Rope character</h3>' + ROPE_PARAMS.map(p => '<div class="row"><label for="' + host.id + '-' + p.key + '">' + p.label + '</label><input type="range" id="' + host.id + '-' + p.key + '" min="' + p.min + '" max="' + p.max + '" step="' + p.step + '"><output></output></div><p class="hint">' + p.hint + '</p>').join('') + '<div class="actions"><button type="button" class="lcars alt rope-reset">Rope defaults</button></div>';
+  const shows = ROPE_PARAMS.map(p => { const el = document.getElementById(host.id + '-' + p.key), out = el.nextElementSibling; const show = () => { el.value = SETTINGS[p.key]; out.textContent = p.fmt(SETTINGS[p.key]); };
+    el.addEventListener('input', () => { SETTINGS[p.key] = parseFloat(el.value); saveSettings(); ropeCardsRefresh(); }); show(); return show; });
+  host.querySelector('.rope-reset').addEventListener('click', () => { ROPE_PARAMS.forEach(p => { SETTINGS[p.key] = p.def; }); saveSettings(); ropeCardsRefresh(); });
+  return () => shows.forEach(f => f());
+}
+const ropeCardShows = [buildRopeCard(document.getElementById('rope-card-lobby')), buildRopeCard(document.getElementById('rope-card'))];
+function ropeCardsRefresh() { ropeCardShows.forEach(f => f()); }
+document.getElementById('btn-rope').addEventListener('click', e => { const c = document.getElementById('rope-card'); c.hidden = !c.hidden; e.currentTarget.setAttribute('aria-expanded', String(!c.hidden)); ropeCardsRefresh(); });
 function bindSelect(id, key) { const el = document.getElementById(id); el.value = String(SETTINGS[key]); el.addEventListener('change', () => { SETTINGS[key] = parseFloat(el.value); saveSettings(); }); return () => { el.value = String(SETTINGS[key]); }; }
 const selShows = [bindSelect('s-rphys', 'ropePhys'), bindSelect('s-rdet', 'ropeDetail')];
 const chainChk = document.getElementById('s-chain'); chainChk.checked = SETTINGS.chainDown; chainChk.addEventListener('change', () => { SETTINGS.chainDown = chainChk.checked; saveSettings(); });
 const bodyChk = document.getElementById('s-body'); bodyChk.checked = SETTINGS.body; bodyChk.addEventListener('change', () => { SETTINGS.body = bodyChk.checked; saveSettings(); });
 document.getElementsByName('voice').forEach(r => { r.checked = r.value === (SETTINGS.voice || 'auto'); r.addEventListener('change', () => { SETTINGS.voice = r.value; saveSettings(); }); });
-document.getElementsByName('selfc').forEach(r => { r.checked = r.value === (SETTINGS.selfCollide || 'hands'); r.addEventListener('change', () => { SETTINGS.selfCollide = r.value; saveSettings(); }); });
+document.getElementsByName('selfc').forEach(r => { r.checked = r.value === (SETTINGS.selfCollide || 'deck'); r.addEventListener('change', () => { SETTINGS.selfCollide = r.value; saveSettings(); }); });
 document.getElementsByName('feet').forEach(r => { r.checked = r.value === (SETTINGS.feet || 'planted'); r.addEventListener('change', () => { SETTINGS.feet = r.value; saveSettings(); }); });
 document.getElementsByName('dom').forEach(r => { r.checked = r.value === SETTINGS.dom; r.addEventListener('change', () => { SETTINGS.dom = r.value; saveSettings(); }); });
 const refVal = () => SETTINGS.moveRef === 'head' ? 'headset' : 'controller';
 document.getElementsByName('moveref').forEach(r => { r.checked = r.value === refVal(); r.addEventListener('change', () => { SETTINGS.moveRef = r.value === 'headset' ? 'head' : 'controller'; saveSettings(); }); });
 document.getElementById('btn-reset').addEventListener('click', () => { Object.assign(SETTINGS, DEFAULTS); saveSettings(); shows.forEach(f => f()); selShows.forEach(f => f()); bodyChk.checked = SETTINGS.body; chainChk.checked = SETTINGS.chainDown; document.getElementsByName('voice').forEach(r => { r.checked = r.value === (SETTINGS.voice || 'auto'); r.addEventListener('change', () => { SETTINGS.voice = r.value; saveSettings(); }); });
-document.getElementsByName('selfc').forEach(r => { r.checked = r.value === (SETTINGS.selfCollide || 'hands'); r.addEventListener('change', () => { SETTINGS.selfCollide = r.value; saveSettings(); }); });
+document.getElementsByName('selfc').forEach(r => { r.checked = r.value === (SETTINGS.selfCollide || 'deck'); r.addEventListener('change', () => { SETTINGS.selfCollide = r.value; saveSettings(); }); });
 document.getElementsByName('feet').forEach(r => { r.checked = r.value === (SETTINGS.feet || 'planted'); r.addEventListener('change', () => { SETTINGS.feet = r.value; saveSettings(); }); });
 document.getElementsByName('dom').forEach(r => r.checked = r.value === SETTINGS.dom); document.getElementsByName('moveref').forEach(r => r.checked = r.value === refVal()); });
 
@@ -2994,7 +3254,7 @@ renderer.setAnimationLoop((time, frame) => {
 /* debug / test hooks: drive the flow without a headset */
 
 /* debug / test hooks: drive the flow without a headset */
-window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, balance, SELF, RAIL_Y, RAIL_Z, S, STEEL, steelBuild, steelHookOn, steelFoulCheck, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos };
+window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, balance, SELF, RAIL_Y, RAIL_Z, S, STEEL, steelBuild, steelHookOn, steelFoulCheck, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos, crew, falling, groundRigger, grabEnd, grabStart, quitToArch, startFall, crewDodge, nextPoint, railKnot, railKnotTick, CWX, LL_Y, railPostX };
 </script>
 </body>
 </html>
