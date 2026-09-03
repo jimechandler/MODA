@@ -249,7 +249,7 @@
         <dt>Feet</dt><dd>Where the headset says they are. Stand on the rope to hold it; step off the beam and gravity has you</dd>
         <dt>Desktop</dt><dd>Mouse look · WASD walk · <b>left mouse = grip</b> · right mouse / F = trigger · mouse wheel wraps a knot or hauls · E reach · R radio · P pause</dd>
       </dl>
-      <p class="footnote">M0.9 &mdash; the knot bench: a clove hitch, a bowline, half hitches, tied for real and read off the rope itself. On Quest, open this page in the headset browser.
+      <p class="footnote">M0.10 &mdash; bars you cannot pull rope through, a rope that lies still and does not fling, a bight in the hand. On Quest, open this page in the headset browser.
         If the Enter button stays unavailable inside an embedded viewer, open the page in its own tab.</p>
       <p class="footnote" id="diag" style="font-family:monospace;font-size:11px;color:#6a6a5c;line-height:1.6"></p>
     </div>
@@ -879,7 +879,7 @@ function ropeBuild(inches, renderInches, lenM) {
   R.pos.length = 0; R.prev.length = 0; R.tension.length = 0; R.pins.clear(); R.alive = false;
   for (let i = 0; i < R.n; i++) { R.pos.push(new THREE.Vector3()); R.prev.push(new THREE.Vector3()); R.tension.push(1); }
   // small steps, one sweep each; the coarse chain (ropeCoarse) does the long-range work
-  R.substeps = Math.max(4, Math.min(20, Math.round(3 + 0.3 * Math.sqrt(R.n)))); R.iters = 1;   // the coarse level carries the tension now; substeps only need to keep the fine chain and the collisions honest
+  R.substeps = Math.max(4, Math.min(20, Math.round(3 + 0.22 * Math.sqrt(R.n)))); R.iters = 1;   // the coarse level carries the tension now; substeps only need to keep the fine chain and the collisions honest
   R.renderSub = Math.max(1, Math.round(inches / renderInches));
   if (ropeInst) { ropeGroup.remove(ropeInst); ropeInst.geometry.dispose(); }
   ropeInst = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 6, 1), MAT.rope, (R.n - 1) * R.renderSub); ropeInst.name = 'Rope_Segments'; ropeInst.frustumCulled = false; ropeGroup.add(ropeInst);
@@ -896,7 +896,7 @@ const _rm = new THREE.Matrix4(), _rq = new THREE.Quaternion(), _rd = new THREE.V
 function pinSet(i, kind, target, extra) { R.pins.set(i, Object.assign({ kind, target: target.clone() }, extra || {})); }
 function pinClear(i) { R.pins.delete(i); }
 function pinsOfKind(kind) { const out = []; R.pins.forEach((p, i) => { if (p.kind === kind) out.push(i); }); return out; }
-function handPin(handIndex) { let idx = -1; R.pins.forEach((p, i) => { if (p.kind === 'hand' && p.hand === handIndex) idx = i; }); return idx; }
+function handPin(handIndex) { let idx = -1; R.pins.forEach((p, i) => { if (p.kind === 'hand' && p.hand === handIndex && !p.bight) idx = i; }); return idx; }   // the strand the hand is on (a bight's second strand rides along, see bightGrab)
 function nearestParticle(p, maxD) { let best = -1, bd = maxD; for (let i = 0; i < R.n; i++) { const d = R.pos[i].distanceTo(p); if (d < bd) { bd = d; best = i; } } return best; }
 
 /* deploy: the coil is in your hand. The far end is thrown out over the rail and the rope pays out
@@ -950,8 +950,10 @@ function flakeCoil() {
 /* letting go of the coil before it is paid out: it falls as a coil */
 function coilDropped() { if (rope.coilNext === undefined || rope.coilNext >= R.n) return; for (let i = rope.coilNext; i < R.n; i++) pinClear(i); rope.coilNext = R.n; rope.coilHand = -1; gear.rope.mesh.visible = false; toast('YOU LET GO OF THE COIL', true); }
 /* one PBD step */
+let _pinned = new Uint8Array(0);   // the pin map as a flat array, rebuilt each step: the hot loops ask "is it pinned?" tens of thousands of times a frame
 function ropeStep(dt, frac) {
-  const g = -WORLD.g * dt * dt, damp = 1 - 0.06 * dt;   // a little air and internal friction, per second not per step
+  if (_pinned.length !== R.n) _pinned = new Uint8Array(R.n); else _pinned.fill(0); R.pins.forEach((p, i) => { _pinned[i] = 1; });
+  const g = -WORLD.g * dt * dt, damp = 1 - (window.AIR_OVERRIDE !== undefined ? window.AIR_OVERRIDE : 0.12) * dt;   // air, per second not per step; the ripples are killed by ropeBendDamp, so this can stay light enough for a rope to fall like one
   const v = _rd;
   for (let i = 0; i < R.n; i++) {
     const p = R.pos[i], q = R.prev[i];
@@ -960,14 +962,14 @@ function ropeStep(dt, frac) {
   // the coil: the free rope is not tied to the coil at all — it falls under its own weight and
   // the coil lets rope go at whatever speed the rope is leaving (a whisper of friction against it).
   // Each time the last free particle is a segment's length from the coil, the next particle
-  // leaves the coil at the coil, carrying half the rope's speed (chain off a pile: a ≈ g/3).
+  // leaves the coil at the coil, carrying most of the rope's speed (a loop flipping off a hand-held coil).
   if (rope.coilNext !== undefined && rope.coilNext < R.n - 1) {
     const c = rope.coilNext - 1, at = R.pins.get(rope.coilNext).target;
     _cd.copy(R.pos[c]).sub(at); const d = _cd.length();
     if (d > 1e-6) R.pos[c].addScaledVector(_cd, -Math.min(d, 0.5 * dt * dt) / d);   // coil friction: 0.5 m/s² against the pull
     if (d >= R.L0) {
       const i = rope.coilNext; pinClear(i); R.pos[i].copy(at);
-      _rv.copy(R.pos[c]).sub(R.prev[c]).multiplyScalar(0.5); R.prev[i].copy(at).sub(_rv);
+      _rv.copy(R.pos[c]).sub(R.prev[c]).multiplyScalar(0.95); R.prev[i].copy(at).sub(_rv);
       rope.coilNext++; rope.coilRest = 0; }
   }
   // a moving pin (a hand) walks to its new place across the substeps instead of jumping there on
@@ -977,7 +979,8 @@ function ropeStep(dt, frac) {
   const DBG = window.ROPE_DBG; let _snap = null; if (DBG) { _snap = R.pos.map(p => p.clone()); }
   const dbgPhase = (name) => { if (!DBG) return; let mx = 0, mi = -1; for (let i = 0; i < R.n; i++) { const d = R.pos[i].distanceTo(_snap[i]); if (d > mx) { mx = d; mi = i; } } _snapQ = mi >= 0 ? _snap[mi].clone() : null; for (let i = 0; i < R.n; i++) _snap[i].copy(R.pos[i]); if (mx > 0.02) DBG.push({ phase: name, i: mi, d: +mx.toFixed(4), step: R.stepNo, pin: R.pins.has(mi) ? R.pins.get(mi).kind : '', node: R.cnodes.indexOf(mi), touched: _touched[mi], y: +(R.pos[mi].y - H).toFixed(3), z: +R.pos[mi].z.toFixed(3), x: +R.pos[mi].x.toFixed(3), qy: +(_snapQ ? _snapQ.y - H : 0).toFixed(3), qz: +(_snapQ ? _snapQ.z : 0).toFixed(3) }); };
   let _snapQ = null;
-  ropeCoarse(); dbgPhase('coarse');
+  const PF = window.ROPE_PROF; let _pt = PF ? performance.now() : 0; const prof = (k) => { if (!PF) return; const t = performance.now(); PF[k] = (PF[k] || 0) + t - _pt; _pt = t; };
+  if (!window.NO_COARSE) ropeCoarse(); dbgPhase('coarse'); prof('coarse');
   for (let it = 0; it < R.iters; it++) {
     const fwd = (it + R.stepNo) % 2 === 0;   // one sweep per small step, direction alternating step to step
     for (let s = 0; s < R.n - 1; s++) {
@@ -986,15 +989,17 @@ function ropeStep(dt, frac) {
       if (rope.coilNext !== undefined && j === rope.coilNext - 1 && rope.coilNext < R.n) continue;   // the coil segment is the coil's business (above)
       const rest = R.L0;
       if (d <= rest) continue;   // a rope only pulls: slack is free, it never pushes
-      const diff = (d - rest) / d; const pa = R.pins.has(j), pb = R.pins.has(j + 1);
+      const diff = (d - rest) / d; const pa = _pinned[j], pb = _pinned[j + 1];
       if (pa && pb) continue;
       const wa = pa ? 0 : pb ? 1 : 0.5, wb = pb ? 0 : pa ? 1 : 0.5;
       a.addScaledVector(v, diff * wa); b.addScaledVector(v, -diff * wb);
     }
   }
-  ropeLongDamp();
+  if (!window.NO_LONG) ropeLongDamp(); prof('longdamp');
   dbgPhase('fine');
-  _stickStep = STICK * dt; ropeCollide(); _ci = -1; dbgPhase('collide'); ropeSelfSolve(); dbgPhase('self'); pcdStrands(); dbgPhase('strands');
+  prof('fine'); if ((R.stepNo & 1) && !window.NO_STRAIN) ropeStrainLimit(); prof('strain'); ropeSelfSolve(); dbgPhase('self'); prof('self'); pcdStrands(); dbgPhase('strands');
+  _stickStep = STICK * dt; ropeCollide(); _ci = -1; dbgPhase('collide'); prof('collide');   // the world has the last word: nothing else moves a particle after the bars and the deck have
+  ropeBendDamp(); prof("bend"); if (!window.NO_REST) ropeRest(dt); dbgPhase('limit'); prof('rest');
   for (let s = 0; s < R.n - 1; s++) R.tension[s] = R.pos[s].distanceTo(R.pos[s + 1]) / R.L0;
 }
 /* the coarse rope: every 12 inches of rope is one node, plus every anchor. Solving that short
@@ -1062,14 +1067,14 @@ function ropeCoarse() {
   for (let s = 0; s < N - 1; s++) {
     const ia = nodes[s], ib = nodes[s + 1]; _da.copy(R.pos[ia]).sub(old[s]); _db.copy(R.pos[ib]).sub(old[s + 1]);
     if (_da.lengthSq() < 1e-14 && _db.lengthSq() < 1e-14) continue;
-    const span = ib - ia; for (let i = ia + 1; i < ib; i++) { if (R.pins.has(i)) continue; const t = (i - ia) / span; R.pos[i].addScaledVector(_da, 1 - t).addScaledVector(_db, t); }
+    const span = ib - ia; for (let i = ia + 1; i < ib; i++) { if (_pinned[i]) continue; const t = (i - ia) / span; R.pos[i].addScaledVector(_da, 1 - t).addScaledVector(_db, t); }
   }
 }
 /* rope on rope. Near the hands (where wraps and knots happen) particles are kept a rope's width
    apart, with friction between the strands — what lets a wrap stack on itself and a knot bite.
    Candidate pairs come from a spatial hash built once a frame (the rope moves millimetres per
    substep); the substeps only resolve the pairs. Settings → Rope on rope: near the hands / off. */
-const SELF = { pairs: [], zoneR: 1.6, count: 0 };
+const SELF = { pairs: [], zoneR: 0.9, count: 0 };   // rope on rope within arm's reach of a hand; the pile at your feet is left to itself
 const _sh = new Map();
 function ropeSelfBuild(all) {
   SELF.pairs.length = 0; SELF.count = 0; if (SETTINGS.selfCollide === 'off' || !R.alive) return;
@@ -1088,15 +1093,52 @@ const _sp = new THREE.Vector3(), _sq = new THREE.Vector3();
 function ropeSelfSolve() {
   const P = SELF.pairs; if (!P.length) return; const minD = 2 * R.r * 0.98, MU = 0.5;
   for (let k = 0; k < P.length; k += 2) {
-    const i = P[k], j = P[k + 1]; const a = R.pos[i], b = R.pos[j]; _sp.copy(b).sub(a); let d = _sp.length(); if (d >= minD) continue;
-    const pa = R.pins.has(i), pb = R.pins.has(j); if (pa && pb) continue; const wa = pa ? 0 : pb ? 1 : 0.5, wb = pb ? 0 : pa ? 1 : 0.5;
+    const i = P[k], j = P[k + 1]; if (_asleep.length === R.n && _asleep[i] && _asleep[j]) continue;   // a settled pile is left alone
+    const a = R.pos[i], b = R.pos[j]; _sp.copy(b).sub(a); let d = _sp.length(); if (d >= minD) continue;
+    const pa = _pinned[i], pb = _pinned[j]; if (pa && pb) continue; const wa = pa ? 0 : pb ? 1 : 0.5, wb = pb ? 0 : pa ? 1 : 0.5;
     if (d < 1e-6) { _sp.set(1, 0, 0); d = 1e-6; } else _sp.multiplyScalar(1 / d); const push = minD - d;   // dead on top of each other: pick a side
     a.addScaledVector(_sp, -push * wa); b.addScaledVector(_sp, push * wb);
+    R.prev[i].addScaledVector(_sp, -push * wa * 0.8); R.prev[j].addScaledVector(_sp, push * wb * 0.8);   // mostly inelastic: strands settle against each other instead of trembling
     // friction between the strands: the sliding of one over the other this step is cut by μ·push
     _sq.copy(b).sub(R.prev[j]).sub(a).add(R.prev[i]); const vn = _sq.dot(_sp); _sq.addScaledVector(_sp, -vn); const t = _sq.length(); if (t < 1e-9) continue;
     const f = t < _stickStep ? 1 : Math.min(1, MU * push / t);
     R.prev[i].addScaledVector(_sq, -f * wa); R.prev[j].addScaledVector(_sq, f * wb);   // slower relative slide, as if each grabbed the other
   }
+}
+/* a hard pull can leave a segment stretched to twice its length for a step or two — energy that
+   comes back as a spring when the hand lets go. No segment is allowed past 1.35× its length; the
+   free end is brought back, inelastically. */
+const _sl = new THREE.Vector3();
+function ropeStrainLimit() {
+  const lim = R.L0 * 1.35; const coilSeg = rope.coilNext !== undefined && rope.coilNext < R.n ? rope.coilNext - 1 : -1;
+  for (let j = 0; j < R.n - 1; j++) {
+    if (coilSeg >= 0 && j >= coilSeg - 3) continue;   // the coil feeds freely; the last segments before it carry the pay-out and are not clamped
+    const a = R.pos[j], b = R.pos[j + 1]; _sl.copy(b).sub(a); const d = _sl.length(); if (d <= lim) continue;
+    const pa = _pinned[j], pb = _pinned[j + 1]; if (pa && pb) continue; const wa = pa ? 0 : pb ? 1 : 0.5, wb = pb ? 0 : pa ? 1 : 0.5;
+    const diff = (d - lim) / d; a.addScaledVector(_sl, diff * wa); R.prev[j].addScaledVector(_sl, diff * wa); b.addScaledVector(_sl, -diff * wb); R.prev[j + 1].addScaledVector(_sl, -diff * wb);
+  }
+}
+/* the shakes: a fine chain carries transverse ripples that reflect off every end and never die.
+   Each particle's velocity is pulled toward the mean of its neighbours' — the ripple goes, the
+   swing (where neighbours move together) does not. A rope's own internal friction, in effect. */
+const BEND_DAMP = window.BEND_OVERRIDE !== undefined ? window.BEND_OVERRIDE : 0.25; const _bv = [];
+function ropeBendDamp() {
+  const n = R.n; if (_bv.length < n) for (let i = _bv.length; i < n; i++) _bv.push(new THREE.Vector3());
+  for (let i = 0; i < n; i++) _bv[i].copy(R.pos[i]).sub(R.prev[i]);
+  const end = rope.coilNext !== undefined && rope.coilNext < n ? rope.coilNext : n;   // rope still in the coil is not in the world; it must not brake the rope that is
+  for (let i = 1; i < end - 1; i++) { if (_pinned[i]) continue;
+    const v = _bv[i], a = _bv[i - 1], b = _bv[i + 1];
+    const dx = (a.x + b.x) * 0.5 - v.x, dy = (a.y + b.y) * 0.5 - v.y, dz = (a.z + b.z) * 0.5 - v.z;
+    R.prev[i].x -= dx * BEND_DAMP; R.prev[i].y -= dy * BEND_DAMP; R.prev[i].z -= dz * BEND_DAMP; }
+}
+/* rest: rope lying on something and barely moving stops moving — the twitch of a pile settling
+   against itself and the floor, step after step, is not a thing a rope does */
+let _asleep = new Uint8Array(0);
+function ropeRest(dt) {
+  const v2 = (0.03 * dt) * (0.03 * dt); if (_asleep.length !== R.n) _asleep = new Uint8Array(R.n);
+  for (let i = 0; i < R.n; i++) { _asleep[i] = 0; if (!_touched[i] || _pinned[i]) continue;
+    if ((i > 0 && R.tension[i - 1] > 1.004) || (i < R.n - 1 && R.tension[i] > 1.004)) continue;   // something is pulling on it: a slow start is a start, not a twitch
+    const p = R.pos[i], q = R.prev[i]; const dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z; if (dx * dx + dy * dy + dz * dz < v2) { q.copy(p); _asleep[i] = 1; } }
 }
 /* stretch waves die here: on every taut segment the speed of the two ends toward or away from
    each other along the rope is cut. Bulk motion (a falling rope, a swing) has no relative speed
@@ -1108,7 +1150,7 @@ function ropeLongDamp() {
   for (let j = 0; j < R.n - 1; j++) {
     const a = R.pos[j], b = R.pos[j + 1]; _cd.copy(b).sub(a); const d = _cd.length(); if (d < 0.98 * L0 || d < 1e-6) continue;
     _cd.multiplyScalar(1 / d);
-    const pa = R.pins.has(j), pb = R.pins.has(j + 1); if (pa && pb) continue;
+    const pa = _pinned[j], pb = _pinned[j + 1]; if (pa && pb) continue;
     _sv.copy(b).sub(R.prev[j + 1]).sub(a).add(R.prev[j]);   // vb - va
     const vr = _sv.dot(_cd) * LONG_DAMP; if (Math.abs(vr) < 1e-9) continue;
     const wa = pa ? 0 : pb ? 1 : 0.5, wb = pb ? 0 : pa ? 1 : 0.5;
@@ -1132,20 +1174,62 @@ function inCatwalkGap(x) { return Math.abs(x) < 0.5 || Math.abs(x - GAP) < 0.5; 
    when something pulls it, and a rope lying still stays still. */
 const MU_DECK = 0.45, MU_STEEL = 0.3;
 /* the same against any surface: the motion this step across the contact normal is cut by up to μ·push */
+/* a round bar: a particle inside is pushed out radially — on the side it came from, so a hard pull
+   never drags rope through the bar (a particle that crossed the axis this step goes back to its own
+   side). Axis through (ax,ay,az) along the unit (dx,dy,dz). */
+const _cyl = new THREE.Vector3(), _cylq = new THREE.Vector3();
+function cylCollide(p, q, ax, ay, az, dx, dy, dz, rc, mu) {
+  // cheap first: nothing within a step of the bar means nothing to do (most particles, most steps)
+  if (dx === 1) { if (Math.abs(p.y - ay) > rc + 0.06 || Math.abs(p.z - az) > rc + 0.06) return false; }
+  else if (dy === 1) { if (Math.abs(p.x - ax) > rc + 0.06 || Math.abs(p.z - az) > rc + 0.06) return false; }
+  _cyl.set(p.x - ax, p.y - ay, p.z - az); let t = _cyl.x * dx + _cyl.y * dy + _cyl.z * dz; _cyl.x -= t * dx; _cyl.y -= t * dy; _cyl.z -= t * dz;
+  const d = _cyl.length(); if (d >= rc + 0.06) return false;
+  _cylq.set(q.x - ax, q.y - ay, q.z - az); t = _cylq.x * dx + _cylq.y * dy + _cylq.z * dz; _cylq.x -= t * dx; _cylq.y -= t * dy; _cylq.z -= t * dz;
+  const dq = _cylq.length();
+  // swept: did the step q→p pass through the bar? (a hard yank moves a particle clean across it in one step)
+  if (dq > 1e-6 && dq < rc * 6 && _cyl.dot(_cylq) < 0) {
+    const ex = _cyl.x - _cylq.x, ey = _cyl.y - _cylq.y, ez = _cyl.z - _cylq.z; const L2 = ex * ex + ey * ey + ez * ez;
+    const u = L2 > 1e-12 ? Math.max(0, Math.min(1, -(_cylq.x * ex + _cylq.y * ey + _cylq.z * ez) / L2)) : 0;
+    const cx = _cylq.x + ex * u, cy = _cylq.y + ey * u, cz = _cylq.z + ez * u;
+    if (cx * cx + cy * cy + cz * cz < rc * rc) { _cylq.multiplyScalar(1 / dq); p.x += _cylq.x * rc - _cyl.x; p.y += _cylq.y * rc - _cyl.y; p.z += _cylq.z * rc - _cyl.z; q.x += _cylq.x * rc - _cylq.x * dq; q.y += _cylq.y * rc - _cylq.y * dq; q.z += _cylq.z * rc - _cylq.z * dq; return true; }   // back to its own side, and no speed through the bar
+  }
+  if (d >= rc) return false;
+  if (d < 1e-6) { if (dq > 1e-6) _cyl.copy(_cylq).multiplyScalar(1 / dq); else _cyl.set(0, 1, 0); } else _cyl.multiplyScalar(1 / d);
+  const push = rc - d; p.x += _cyl.x * push; p.y += _cyl.y * push; p.z += _cyl.z * push; frictionN(p, q, push, mu, _cyl.x, _cyl.y, _cyl.z); return true;
+}
+/* the segments too: a taut rope pulled hard can have both particles outside a bar and the rope
+   between them through it. The closest point of each segment to the axis is pushed out. */
+const _sa = new THREE.Vector3(), _sb = new THREE.Vector3();
+function cylSegments(ax, ay, az, dx, dy, dz, rc, i0, i1) {
+  const near = rc * 1.5;   // both ends farther than this from the axis (in any perpendicular coordinate) cannot cut it — the usual case, and cheap
+  for (let j = Math.max(0, i0); j < Math.min(R.n - 1, i1); j++) {
+    const a = R.pos[j], b = R.pos[j + 1];
+    if (dx === 1) { if ((Math.abs(a.y - ay) > near && Math.abs(b.y - ay) > near) || (Math.abs(a.z - az) > near && Math.abs(b.z - az) > near)) continue; }
+    else if (dy === 1) { if ((Math.abs(a.x - ax) > near && Math.abs(b.x - ax) > near) || (Math.abs(a.z - az) > near && Math.abs(b.z - az) > near)) continue; }
+    _sa.set(a.x - ax, a.y - ay, a.z - az); let t = _sa.x * dx + _sa.y * dy + _sa.z * dz; _sa.x -= t * dx; _sa.y -= t * dy; _sa.z -= t * dz;
+    _sb.set(b.x - ax, b.y - ay, b.z - az); t = _sb.x * dx + _sb.y * dy + _sb.z * dz; _sb.x -= t * dx; _sb.y -= t * dy; _sb.z -= t * dz;
+    _cyl.copy(_sb).sub(_sa); const L2 = _cyl.lengthSq(); if (L2 < 1e-10) continue; const u = -_sa.dot(_cyl) / L2; if (u <= 0 || u >= 1) continue;
+    _cylq.copy(_sa).addScaledVector(_cyl, u); const d = _cylq.length(); if (d >= rc * 0.92 || d < 1e-6) continue;
+    _cylq.multiplyScalar(1 / d); const push = rc - d; const pa = _pinned[j], pb = _pinned[j + 1]; if (pa && pb) continue;
+    const wa = pa ? 0 : pb ? 1 : 0.5, wb = pb ? 0 : pa ? 1 : 0.5;
+    a.addScaledVector(_cylq, push * wa); R.prev[j].addScaledVector(_cylq, push * wa); b.addScaledVector(_cylq, push * wb); R.prev[j + 1].addScaledVector(_cylq, push * wb);
+  }
+}
 /* …and below a creep (STICK m/s) a contact simply holds: static friction. That is what lets a
    wrap on a bar hold a hanging rope (the capstan) and a pile on the deck stay put, while a real
    pull still slides the rope over the steel. */
 const STICK = window.STICK_OVERRIDE !== undefined ? window.STICK_OVERRIDE : 0.03; let _stickStep = STICK / 60 / 16, _ci = -1;
+function underPull() { const i = _ci; return i >= 0 && ((i > 0 && R.tension[i - 1] > 1.01) || (i < R.n - 1 && R.tension[i] > 1.01)); }   // a particle whose rope is taut is being pulled: creep is real motion, not a twitch
 let _touched = new Uint8Array(0);   // which particles a collider held this substep — the coarse chain hangs rope from them
 function frictionN(p, q, push, mu, nx, ny, nz) { if (_ci >= 0) _touched[_ci] = 2; let tx = p.x - q.x, ty = p.y - q.y, tz = p.z - q.z; const vn = tx * nx + ty * ny + tz * nz; tx -= vn * nx; ty -= vn * ny; tz -= vn * nz; const t = Math.hypot(tx, ty, tz);
-  if (t < 1e-9) return; const f = t < _stickStep ? 1 : Math.min(1, mu * push / t); p.x -= tx * f; p.y -= ty * f; p.z -= tz * f; }
-function frictionXZ(p, q, push, mu) { if (_ci >= 0) _touched[_ci] = 1; const tx = p.x - q.x, tz = p.z - q.z, t = Math.hypot(tx, tz); if (t < 1e-9) return; const f = t < _stickStep ? 1 : Math.min(1, mu * push / t); p.x -= tx * f; p.z -= tz * f; }
+  if (t < 1e-9) return; const f = (t < _stickStep && !underPull()) ? 1 : Math.min(1, mu * push / t); p.x -= tx * f; p.y -= ty * f; p.z -= tz * f; }
+function frictionXZ(p, q, push, mu) { if (_ci >= 0) _touched[_ci] = 1; const tx = p.x - q.x, tz = p.z - q.z, t = Math.hypot(tx, tz); if (t < 1e-9) return; const f = (t < _stickStep && !underPull()) ? 1 : Math.min(1, mu * push / t); p.x -= tx * f; p.z -= tz * f; }
 function ropeCollide() {
   const r = R.r, deckX = 22;
   if (_touched.length !== R.n) _touched = new Uint8Array(R.n); else _touched.fill(0);
   if (R.world === 'knots') { knotsCollide(); return; }
   for (let i = 0; i < R.n; i++) {
-    if (R.pins.has(i)) continue;
+    if (_pinned[i]) continue;
     const p = R.pos[i], q = R.prev[i]; _ci = i;
     // arena floor
     if (p.y < r) { const push = r - p.y; p.y = r; frictionXZ(p, q, push, 0.6); }
@@ -1177,12 +1261,10 @@ function ropeCollide() {
     }
     if (!inCatwalkGap(p.x) && Math.abs(p.x - GAP / 2) < deckX) {
       // the top rail and the mid rail: bars the rope bends over
-      let dy = p.y - RAIL_Y, dz = p.z - RAIL_Z, d = Math.hypot(dy, dz);
-      if (d < 0.03 + r) { if (d < 1e-6) { dy = 1; d = 1; } const push = 0.03 + r - d; p.y = RAIL_Y + dy / d * (0.03 + r); p.z = RAIL_Z + dz / d * (0.03 + r); frictionN(p, q, push, MU_STEEL, 0, dy / d, dz / d); }   // rope grips the bar: a wrap holds (capstan)
-      dy = p.y - (H + WORLD.railHeight / 2); dz = p.z - RAIL_Z; d = Math.hypot(dy, dz);
-      if (d < 0.025 + r) { if (d < 1e-6) { dy = 1; d = 1; } const push = 0.025 + r - d; p.y = H + WORLD.railHeight / 2 + dy / d * (0.025 + r); p.z = RAIL_Z + dz / d * (0.025 + r); frictionN(p, q, push, MU_STEEL, 0, dy / d, dz / d); }
+      cylCollide(p, q, 0, RAIL_Y, RAIL_Z, 1, 0, 0, 0.03 + r, MU_STEEL);   // the top rail: rope grips the bar, never passes through it
+      cylCollide(p, q, 0, H + WORLD.railHeight / 2, RAIL_Z, 1, 0, 0, 0.025 + r, MU_STEEL);
       // the kick plate: a thin wall with a rounded top edge
-      dy = p.y - (H + 0.15); dz = p.z - 0.015; d = Math.hypot(dy, dz);
+      let dy = p.y - (H + 0.15), dz = p.z - 0.015, d = Math.hypot(dy, dz);
       if (d < 0.02 + r) { if (d < 1e-6) { dy = 1; d = 1; }
         // a rope that came from one side of the plate stays on that side of its top edge, too
         if ((q.z < 0.015) !== (dz > 0) && dy < 0.02 + r) { p.z = q.z < 0.015 ? 0.015 - 0.02 - r : 0.015 + 0.02 + r; }
@@ -1190,6 +1272,7 @@ function ropeCollide() {
       else if (p.y > H - 0.02 && p.y < H + 0.15 && Math.abs(p.z - 0.015) < 0.015 + r) p.z = q.z < 0.015 ? 0.015 - 0.015 - r : 0.015 + 0.015 + r;   // it stays on the side it came from — a thin wall never zips a rope back and forth through itself
     }
   }
+  cylSegments(0, RAIL_Y, RAIL_Z, 1, 0, 0, 0.03 + r, 0, R.n); cylSegments(0, H + WORLD.railHeight / 2, RAIL_Z, 1, 0, 0, 0.025 + r, 0, R.n);
   // a segment cutting through the kick plate (one particle each side, both below its top) rides up
   // over the edge instead — a rope pulled against a plate climbs it, it never saws through
   const top = H + 0.15 + 0.02 + r, band = H + 0.15 - r;   // only a crossing clearly below the rounded top is a cut-through
@@ -1272,6 +1355,7 @@ function ropeTick(dt) {
   for (const h of hands) {
     const i = handPin(h.index); if (i < 0) continue;
     R.pins.get(i).target.copy(h.pos);
+    R.pins.forEach(p => { if (p.kind === 'hand' && p.hand === h.index && p.bight) p.target.copy(h.pos).add(p.off); });
     let slipTo = -1, worst = 0;
     R.pins.forEach((pin, j) => {
       if (j === i || pin.kind === 'coil' && j !== rope.coilNext) return;
@@ -1279,7 +1363,7 @@ function ropeTick(dt) {
       if (dist > ropeLen * 1.03 + 0.05) { const over = dist - ropeLen; if (over > worst) { worst = over; const n = Math.min(Math.abs(j - i) - 1, Math.ceil(over / R.L0)); slipTo = i + Math.sign(j - i) * n; } }
     });
     if (slipTo >= 0 && slipTo !== i && !R.pins.has(slipTo)) {
-      pinClear(i); pinSet(slipTo, 'hand', h.pos, { hand: h.index }); haptic(h, 1.0, 60); if (Math.random() < 0.4) AudioKit.rope();
+      pinClear(i); R.prev[i].copy(R.pos[i]); pinSet(slipTo, 'hand', h.pos, { hand: h.index }); R.prev[slipTo].copy(h.pos); haptic(h, 1.0, 60); if (Math.random() < 0.4) AudioKit.rope();
       if (!h.slipToast || game.t - h.slipToast > 2.5) { h.slipToast = game.t; toast('The rope slipped through your hand'); }
     } else if (slipTo >= 0 && slipTo !== i) { // it would slip onto another anchor: that is the end of what you can take
       haptic(h, 0.8, 30);
@@ -1391,9 +1475,22 @@ function ropeGrab(h) {
   const pin = R.pins.get(i);
   if (pin && pin.kind !== 'foot' && pin.kind !== 'hitch') return false;   // the PCD, the eye and the ground rigger keep theirs
   if (pin && pin.kind === 'hitch') return false;                            // grab beside the knot, not the knot itself
-  pinSet(i, 'hand', h.pos, { hand: h.index }); h.ropeLost = false; AudioKit.grab(); haptic(h, 0.5, 40); hudDirty = true; return true;
+  pinSet(i, 'hand', h.pos, { hand: h.index }); h.ropeLost = false; AudioKit.grab(); haptic(h, 0.5, 40); hudDirty = true;
+  if (bightGrab(h, i)) { toast('Bight — both strands in hand'); haptic(h, 0.8, 60); }
+  return true;
 }
-function ropeRelease(h) { const i = handPin(h.index); if (i >= 0) pinClear(i); hudDirty = true; }
+function ropeRelease(h) { const mine = []; R.pins.forEach((p, i) => { if (p.kind === 'hand' && p.hand === h.index) mine.push(i); }); mine.forEach(i => { pinClear(i); if (R.prev[i] && R.pos[i]) R.prev[i].copy(R.pos[i]); }); hudDirty = true; }   // let go (both strands of a bight): the rope keeps what its neighbours give it, not a throw
+/* a bight: the rope doubled over. Closing the hand on two strands that lie together takes both —
+   the way you hold a bight to push it under a wrap for a slipped hitch, or to tie in the middle of
+   a rope. The second strand rides with the hand at the offset it was taken at. */
+function bightGrab(h, i) {
+  const near = game.mode === 'desk' ? 0.12 : 0.07; let best = -1, bd = near;
+  if (rope.pcdFed && Math.abs(i - rope.pcdIdx) < 60) return false;   // not at the device: the two strands there are the load and the pull, not a bight
+  for (let j = 0; j < R.n; j++) { if (Math.abs(j - i) < 8 || R.pins.has(j)) continue; if (rope.pcdFed && (j - rope.pcdIdx) * (i - rope.pcdIdx) < 0) continue;
+    const d = R.pos[j].distanceTo(R.pos[i]); if (d < bd && R.pos[j].distanceTo(h.pos) < near + 0.05) { bd = d; best = j; } }
+  if (best < 0) return false;
+  pinSet(best, 'hand', h.pos, { hand: h.index, bight: true, off: R.pos[best].clone().sub(h.pos) }); R.prev[best].copy(R.pos[best]); return true;
+}
 function handHoldsRope(h) { return handPin(h.index) >= 0; }
 
 /* ───────────────────── knots: turns around the rail ─────────────────────
@@ -1914,13 +2011,12 @@ function knotsCollide() {
   for (let i = 0; i < R.n; i++) {
     if (R.pins.has(i)) continue; const p = R.pos[i], q = R.prev[i]; _ci = i;
     if (p.y < r) { const push = r - p.y; p.y = r; frictionXZ(p, q, push, 0.6); }
-    if (p.x > KB.pipeX0 - r && p.x < KB.pipeX1 + r) { let dy = p.y - KB.pipeY, dz = p.z - KB.pipeZ, d = Math.hypot(dy, dz); const rc = KB.pipeR + r;
-      if (d < rc) { if (d < 1e-6) { dy = 1; d = 1; } const push = rc - d; p.y = KB.pipeY + dy / d * rc; p.z = KB.pipeZ + dz / d * rc; frictionN(p, q, push, MU, 0, dy / d, dz / d); } }
-    if (p.y < KB.postH + r) { let dx = p.x - KB.postX, dz = p.z - KB.postZ, d = Math.hypot(dx, dz); const rc = KB.postR + r;
-      if (d < rc) { if (d < 1e-6) { dx = 1; d = 1; } const push = rc - d; p.x = KB.postX + dx / d * rc; p.z = KB.postZ + dz / d * rc; frictionN(p, q, push, MU, dx / d, 0, dz / d); } }
+    if (p.x > KB.pipeX0 - r && p.x < KB.pipeX1 + r) cylCollide(p, q, 0, KB.pipeY, KB.pipeZ, 1, 0, 0, KB.pipeR + r, MU);
+    if (p.y < KB.postH + r) cylCollide(p, q, KB.postX, 0, KB.postZ, 0, 1, 0, KB.postR + r, MU);
     if (Math.abs(p.x) > 3.9) p.x = Math.sign(p.x) * 3.9; if (Math.abs(p.z) > 3.9) p.z = Math.sign(p.z) * 3.9;
   }
   _ci = -1;
+  cylSegments(0, KB.pipeY, KB.pipeZ, 1, 0, 0, KB.pipeR + r, 0, R.n); cylSegments(KB.postX, 0, KB.postZ, 0, 1, 0, KB.postR + r, 0, R.n);
 }
 
 /* ── reading the rope ──
@@ -1997,7 +2093,7 @@ function benchTick(dt) {
   // the pipe: a clove hitch (with or without a half hitch)
   const pr = contactRuns(pipeP, pipeD, KB.pipeR + R.r + 0.035)[0];
   if (pr && Math.abs(pr.turns) >= 0.8) {
-    const t = Math.abs(pr.turns); const under = tucksIn(pr.run, pipeP, pipeD, KB.pipeR + R.r); const endTuck = under.some(i => i < pr.first + pr.run.length * 0.3 || i > pr.last - pr.run.length * 0.3);
+    const t = Math.abs(pr.turns); const under = tucksIn(pr.run, pipeP, pipeD, KB.pipeR + R.r); const endTuck = under.length > 0;   // an end, or a bight for a slipped hitch, under a wrap
     if (t >= 1.7 && endTuck) { found = 'clove'; lockSet = pr.run.slice(); const ax = standingAxis(pr.first); if (ax.ok) { const hh = halfHitchesOn(ax, pr.last + 1); if (hh.n >= 1) { found = 'cloveHalf'; lockSet = lockSet.concat(hh.w.run); } else if (hh.turns >= 0.7) hint = 'A turn round the standing part — now under itself for the half hitch.'; } }
     else if (t >= 1.7) status = 'Two turns on the pipe — tuck the working end under the crossing.';
     else if (t >= 0.8) status = 'One turn on the pipe. Another, crossing over the first.';
@@ -2037,7 +2133,7 @@ function drawKnotBoard() {
   const b = boardKnots, c = b.userData.c, x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height);
   x.fillStyle = 'rgba(12,12,19,0.92)'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#cc99cc'; x.fillRect(0, 0, 12, c.height);
   x.fillStyle = '#f2c14e'; x.font = '700 44px Antonio, Arial Narrow, sans-serif'; x.fillText('KNOTS · THE BENCH', 34, 60);
-  x.fillStyle = '#e8e4d8'; x.font = '300 20px Titillium Web, Segoe UI, sans-serif'; wrapText(x, 'Red end is the standing part. White end is the working end. Tie it for real; when the shape is a knot it locks and takes load. Trigger beside a tied knot to untie it.', 700, 25, 34, 92, 3);
+  x.fillStyle = '#e8e4d8'; x.font = '300 20px Titillium Web, Segoe UI, sans-serif'; wrapText(x, 'Red end is the standing part. White end is the working end. Tie it for real; when the shape is a knot it locks and takes load. Trigger beside a tied knot to untie it. Close your hand on two strands lying together to take a bight.', 700, 25, 34, 92, 3);
   let y = 178;
   KNOT_EXERCISES.forEach(e => { const ok = knots.done[e.id]; x.fillStyle = ok ? '#7CFC9A' : '#99ccff'; x.font = '700 24px Antonio, Arial Narrow, sans-serif'; x.fillText((ok ? '✓  ' : '○  ') + e.title.toUpperCase(), 34, y); y += 26;
     x.fillStyle = '#b8b4a8'; x.font = '300 19px Titillium Web, Segoe UI, sans-serif'; y = wrapText(x, e.how, 700, 22, 58, y, 2) + 10; });
