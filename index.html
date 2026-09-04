@@ -295,7 +295,7 @@
         <dt>Feet</dt><dd>Where the headset says they are. Stand on the rope to hold it; step off the beam and gravity has you</dd>
         <dt>Desktop</dt><dd>Mouse look · WASD walk · <b>left mouse = grip</b> · right mouse / F = trigger · mouse wheel wraps a knot or hauls · E reach · R radio · P pause</dd>
       </dl>
-      <p class="footnote">M0.14 &mdash; house themes (Moda Center, Portland Fire, Trail Blazers, IATSE) under Settings &rarr; Look, a held rope that cannot be dragged through the steel, and a rope you can send down whenever you like &mdash; tying it off is optional. On Quest, open this page in the headset browser.
+      <p class="footnote">M0.18 &mdash; the rope carries turns. Roll your wrist and the turn goes in, travels along it, comes back out of a free end, and piles up against a knot or your other fist; too many in slack rope and it hockles. The board and the HUD count them. On Quest, open this page in the headset browser.
         If the Enter button stays unavailable inside an embedded viewer, open the page in its own tab.</p>
       <p class="footnote" id="diag" style="font-family:monospace;font-size:11px;color:#6a6a5c;line-height:1.6"></p>
     </div>
@@ -530,6 +530,7 @@ const MAT = {
   burlap: new THREE.MeshStandardMaterial({ color: 0xa8895a, roughness: 1, name: 'Mat_Burlap' }),
   floor: new THREE.MeshStandardMaterial({ color: 0x2a2620, roughness: 0.95, name: 'Mat_ArenaFloor' }),
   eventFloor: new THREE.MeshStandardMaterial({ color: 0x4a4744, roughness: 0.9, name: 'Mat_EventFloor_Concrete' }),
+  stageDeck: new THREE.MeshStandardMaterial({ color: 0x1a1a1c, roughness: 0.85, name: 'Mat_StageDeck' }),
   court: new THREE.MeshStandardMaterial({ color: 0x7a5a36, roughness: 0.6, name: 'Mat_CourtHardwood' }),
   seats: new THREE.MeshStandardMaterial({ color: 0x5a1e22, roughness: 0.9, name: 'Mat_Seating_Red' }),
   seatsDark: new THREE.MeshStandardMaterial({ color: 0x24161a, roughness: 0.9, name: 'Mat_Seating_Dark' }),
@@ -662,11 +663,19 @@ const PREP = { x0: GEAR_X - 3.0, x1: GEAR_X + 3.0, z0: WORLD.catwalkDepth, z1: W
 function inPrep(x, z) { return x > PREP.x0 && x < PREP.x1 && z > PREP.z0 - 0.05 && z < PREP.z1; }
 const POINT = { x: GAP / 2, z: WORLD.slingZ };        // where the bridle apex should land
 const RAIL_SEGS = [[-CWX + GAP / 2, -0.5], [0.5, GAP - 0.5], [GAP + 0.5, CWX + GAP / 2]];   // the top rail, with a gap where each beam meets the catwalk
+/* Where the building sits around the rig. The two beams and the prep area are UPSTAGE — over the
+   stage end — and the house, with its centre-hung scoreboard, is out over the floor from there, so
+   nothing hangs between you and your point or between you and the other rigger. (M0.15: the board
+   used to be dead centre over the working area.) */
+const HX = GAP / 2 + 20;
 function buildArena() {
   const FL = WORLD.floorLen, FW = WORLD.floorWid, FZ = -FW / 2;   // the event floor: its near edge under the catwalk, the far edge 120' out
-  const floor = box(FL + 70, 0.2, FW + 60, MAT.floor, 'Arena_Floor'); floor.position.set(GAP / 2, -0.1, FZ); arena.add(floor);
-  const event = box(FL, 0.02, FW, MAT.eventFloor, 'Arena_EventFloor'); event.position.set(GAP / 2, 0.005, FZ); arena.add(event);
-  const court = box(94 * FT, 0.02, 50 * FT, MAT.court, 'Arena_Court'); court.position.set(GAP / 2, 0.02, FZ); arena.add(court);   // 94' × 50' — the Blazers' floor, centre of the building
+  const floor = box(FL + 70, 0.2, FW + 60, MAT.floor, 'Arena_Floor'); floor.position.set(HX, -0.1, FZ); arena.add(floor);
+  const event = box(FL, 0.02, FW, MAT.eventFloor, 'Arena_EventFloor'); event.position.set(HX, 0.005, FZ); arena.add(event);
+  const court = box(94 * FT, 0.02, 50 * FT, MAT.court, 'Arena_Court'); court.position.set(HX, 0.02, FZ); arena.add(court);   // 94' × 50' — the Blazers' floor, centre of the building
+  // the stage, upstage under the point: the 60' × 40' permanent stage the tech pack lists, marked on the deck
+  const stage = box(60 * FT, 0.03, 40 * FT, MAT.stageDeck, 'Stage_Deck'); stage.position.set(POINT.x, 0.03, POINT.z); arena.add(stage);
+  const dsEdge = box(60 * FT, 0.04, 0.12, MAT.railYellow, 'Stage_DownstageEdge'); dsEdge.position.set(POINT.x, 0.045, POINT.z + 20 * FT); arena.add(dsEdge);
   const target = torus(1.2, 0.05, MAT.target, 'Point_Target'); target.rotation.x = Math.PI / 2; target.position.set(POINT.x, 0.05, POINT.z); arena.add(target);
   const tx = box(2.6, 0.01, 0.1, MAT.target, 'Point_Target_X1'); tx.position.set(POINT.x, 0.04, POINT.z); arena.add(tx);
   const tz = box(0.1, 0.01, 2.6, MAT.target, 'Point_Target_X2'); tz.position.set(POINT.x, 0.04, POINT.z); arena.add(tz);
@@ -674,17 +683,17 @@ function buildArena() {
   const tiers = [[0, 10, 0.0], [12, 8, 4.0], [22, 10, 6.0]];   // [start row, rows, extra setback]
   tiers.forEach(([r0, rows, back]) => { for (let t = r0; t < r0 + rows; t++) {
     const y = 0.6 + t * 0.82, dz = FW / 2 + 1.0 + back + t * 0.95, dx = FL / 2 + 1.0 + back + t * 0.95, mat = t % 2 ? MAT.seats : MAT.seatsDark;
-    const side = (sign) => { const s = box(2 * dx, 0.82, 0.95, mat, 'Seating_Tier'); s.position.set(GAP / 2, y - 0.41, FZ + sign * dz); arena.add(s); };
+    const side = (sign) => { const s = box(2 * dx, 0.82, 0.95, mat, 'Seating_Tier'); s.position.set(HX, y - 0.41, FZ + sign * dz); arena.add(s); };
     side(1); side(-1);
-    const endW = box(0.95, 0.82, 2 * dz, mat, 'Seating_Tier_End'); endW.position.set(GAP / 2 - dx, y - 0.41, FZ); arena.add(endW);
-    const endE = endW.clone(); endE.position.x = GAP / 2 + dx; arena.add(endE);
+    const endW = box(0.95, 0.82, 2 * dz, mat, 'Seating_Tier_End'); endW.position.set(HX - dx, y - 0.41, FZ); arena.add(endW);
+    const endE = endW.clone(); endE.position.x = HX + dx; arena.add(endE);
   } });
   // the roof: a saddle peaking at 140', on trusses just above the steel; the spot perches ring the room at 95'
-  const lid = box(FL + 90, 0.5, FW + 80, MAT.steelDark, 'Arena_Roof'); lid.position.set(GAP / 2, WORLD.roofPeak, FZ); arena.add(lid);
-  for (let i = -5; i <= 6; i++) { const tr = box(0.5, 1.2, FW + 40, MAT.steel, 'Roof_Truss'); tr.position.set(GAP / 2 + i * 8, H + 4, FZ); arena.add(tr); }
-  const trX = box(FL + 20, 1.2, 0.5, MAT.steel, 'Roof_Truss_X'); trX.position.set(GAP / 2, H + 4, WORLD.slingZ); arena.add(trX);
+  const lid = box(FL + 90, 0.5, FW + 80, MAT.steelDark, 'Arena_Roof'); lid.position.set(HX, WORLD.roofPeak, FZ); arena.add(lid);
+  for (let i = -5; i <= 11; i++) { const tr = box(0.5, 1.2, FW + 40, MAT.steel, 'Roof_Truss'); tr.position.set(GAP / 2 + i * 8, H + 4, FZ); arena.add(tr); }
+  const trX = box(FL + 40, 1.2, 0.5, MAT.steel, 'Roof_Truss_X'); trX.position.set(HX - 8, H + 4, WORLD.slingZ); arena.add(trX);
   const trX2 = trX.clone(); trX2.name = 'Roof_Truss_X2'; trX2.position.z = -FW + 3; arena.add(trX2);
-  [FZ + FW / 2 + 16, FZ - FW / 2 - 16].forEach((z, i) => { const perch = box(FL, 0.06, 1.2, MAT.grating, 'Spot_Perch_' + (i ? 'S' : 'N')); perch.position.set(GAP / 2, WORLD.spotHeight, z); arena.add(perch); });
+  [FZ + FW / 2 + 16, FZ - FW / 2 - 16].forEach((z, i) => { const perch = box(FL, 0.06, 1.2, MAT.grating, 'Spot_Perch_' + (i ? 'S' : 'N')); perch.position.set(HX, WORLD.spotHeight, z); arena.add(perch); });
   // catwalk: grating, back wall, kick plate, posts and a yellow top rail — with a gap where each beam meets it
   const cw = box(2 * CWX, 0.06, WORLD.catwalkDepth, MAT.grating, 'Catwalk_Grating'); cw.position.set(GAP / 2, H - 0.03, WORLD.catwalkDepth / 2); arena.add(cw);
   // the back wall, with an opening onto the prep platform
@@ -725,7 +734,9 @@ function buildArena() {
   const s2 = slingA.clone(); s2.position.x = GAP - SLING_X; arena.add(s2); const s2e = slingEye.clone(); s2e.position.x = GAP - SLING_X; arena.add(s2e);
   const pcdB = box(0.08, 0.18, 0.05, MAT.pcd, 'PCD_OtherRigger'); pcdB.position.set(GAP - SLING_X, slingBot - 0.14, WORLD.slingZ); arena.add(pcdB);
   for (let i = 0; i < 10; i++) { const l = cyl(0.18, 0.5, MAT.steelDark, 'Lighting_Fixture'); l.position.set(GAP / 2 - 18 + i * 4, H + 3.2, -WORLD.floorWid + 3); arena.add(l); }
-  const board = box(31 * FT, 31 * FT * 0.55, 31 * FT, MAT.steelDark, 'Scoreboard'); board.position.set(GAP / 2, 70 * FT + 2.6, -WORLD.floorWid / 2); arena.add(board);   // 31' × 31', motor hook height 70' (tech pack)
+  // the scoreboard hangs over the middle of the house — well downstage of the beams now
+  const board = box(31 * FT, 31 * FT * 0.55, 31 * FT, MAT.steelDark, 'Scoreboard'); board.position.set(HX, 70 * FT + 2.6, FZ); arena.add(board);   // 31' × 31', motor hook height 70' (tech pack)
+  for (let i = 0; i < 4; i++) { const hang = cyl(0.02, WORLD.roofPeak - (70 * FT + 2.6) - 4, MAT.chain, 'Scoreboard_Hanger'); hang.position.set(HX + (i < 2 ? -4 : 4), (WORLD.roofPeak + 70 * FT + 2.6) / 2 - 2, FZ + (i % 2 ? -4 : 4)); arena.add(hang); }
 }
 buildArena();
 const SLING_POINT = new THREE.Vector3(SLING_X, H + WORLD.slingBottom, WORLD.slingZ);
@@ -979,9 +990,9 @@ function holdingRadio() { return hands.some(h => { const g = heldOf(h.index); re
    foot, the PCD, the ground rigger — is a pin on one particle; the rest of it hangs, swings,
    drags and, if nothing holds it, goes over the edge on its own.
    Index 0 is the end that went down; index n-1 is the tail that stays with you. */
-const rope = { state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, hitchIdx: -1, pcdFed: false, pcdDir: 'ok', pcdIdx: -1, hauled: 0,
+const rope = { pinch: null, state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, hitchIdx: -1, pcdFed: false, pcdDir: 'ok', pcdIdx: -1, hauled: 0,
   bowline: false, looseT: 0, droppedIn: false, deployT: -1, landed: false, groundCarry: false, runBackFired: false, tail: new THREE.Vector3(), groundEnd: new THREE.Vector3() };
-const R = { n: 0, L0: 0, pos: [], prev: [], pins: new Map(), alive: false, r: 0.012, mesh: null, tension: [], substeps: 8, iters: 2, inches: 0, renderInches: 0, renderSub: 1 };
+const R = { n: 0, L0: 0, pos: [], prev: [], pins: new Map(), alive: false, r: 0.012, mesh: null, tension: [], tw: null, substeps: 8, iters: 2, inches: 0, renderInches: 0, renderSub: 1 };
 const ropeGroup = new THREE.Group(); ropeGroup.name = 'Rope'; scene.add(ropeGroup);   // in the scene, not the arena: the knot bench in the holodeck uses the same rope
 let ropeInst = null;
 /* (re)build the chain at a particle spacing in inches, and the instanced tube at a render spacing */
@@ -993,6 +1004,7 @@ function ropeBuild(inches, renderInches, lenM) {
   R.pos.length = 0; R.prev.length = 0; R.tension.length = 0; R.pins.clear(); R.alive = false;
   for (let i = 0; i < R.n; i++) { R.pos.push(new THREE.Vector3()); R.prev.push(new THREE.Vector3()); R.tension.push(1); }
   // small steps, one sweep each; the coarse chain (ropeCoarse) does the long-range work
+  R.tw = new Float32Array(R.n);   // twist carried by the rope at each particle, radians (M0.18)
   R.substeps = Math.max(4, Math.min(20, Math.round(3 + 0.22 * Math.sqrt(R.n)))); R.iters = 1;   // the coarse level carries the tension now; substeps only need to keep the fine chain and the collisions honest
   R.renderSub = Math.max(1, Math.round(inches / renderInches));
   if (ropeInst) { ropeGroup.remove(ropeInst); ropeInst.geometry.dispose(); }
@@ -1000,6 +1012,10 @@ function ropeBuild(inches, renderInches, lenM) {
 }
 ropeBuild(SETTINGS.ropePhys, SETTINGS.ropeDetail);
 const knotMesh = torus(0.05, 0.022, MAT.rope, 'Rope_Hitch'); knotMesh.visible = false; arena.add(knotMesh);
+/* the pinch: the two strands your fingers have closed on, marked, because holding a crossing is the
+   thing that actually holds a loop open and until M0.17 there was no way to tell you had it */
+const pinchMark = torus(0.045, 0.006, new THREE.MeshBasicMaterial({ color: 0xf2c14e, transparent: true, opacity: 0.8, name: 'Mat_Pinch' }), 'Rope_Pinch');
+pinchMark.visible = false; scene.add(pinchMark);
 // whipped ends: red is the standing part (the end that takes the load), white is the working end you tie with
 const ropeTipA = new THREE.Mesh(new THREE.SphereGeometry(0.016, 10, 8), new THREE.MeshStandardMaterial({ color: 0xd8302a, roughness: 0.6, name: 'Mat_RopeEnd_Standing' })); ropeTipA.name = 'Rope_StandingEnd'; ropeTipA.visible = false; ropeGroup.add(ropeTipA);
 const ropeTipB = new THREE.Mesh(new THREE.SphereGeometry(0.016, 10, 8), new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.6, name: 'Mat_RopeEnd_Working' })); ropeTipB.name = 'Rope_WorkingEnd'; ropeTipB.visible = false; ropeGroup.add(ropeTipB);
@@ -1073,6 +1089,9 @@ const ROPE_PARAMS = [
   { key: 'ropeBend', label: 'Kink limit', hint: 'The tightest bend the rope will take, in rope diameters. Zero is a chain that folds flat; three is a stiff laid rope. It is only felt in a bend tighter than this — a wrap on a rail is looser.', min: 0, max: 3, step: 0.25, def: 1.5, fmt: v => v.toFixed(2) + ' dia' },
   { key: 'ropeVisc', label: 'Internal friction', hint: 'The rope\'s own damping of ripples along it. Low and it wiggles; high and it goes dead.', min: 0, max: 0.6, step: 0.05, def: 0.25, fmt: v => v.toFixed(2) },
   { key: 'ropeAir', label: 'Air drag', hint: 'Per second. Low falls like a rope; high falls like a feather.', min: 0, max: 1.0, step: 0.04, def: 0.12, fmt: v => v.toFixed(2) },
+  { key: 'ropeBody', label: 'Body', hint: 'How much the whole rope resists being bent — the difference between a rope and a chain. It does NOT hold a loop open (a bending spring pulls toward straight, which flattens a loop rather than keeping it round); what it gives you is a rope that lies and hangs like rope. Costs a little on a headset.', min: 0, max: 1, step: 0.05, def: 0.15, fmt: v => Math.round(v * 100) + '%' },
+  { key: 'ropeTip', label: 'Held end', hint: 'How much the last foot of a whipped end wants to stay straight while you have hold of it. Stiff enough and the end pushes through a loop instead of folding over — which is most of what makes a bowline tieable. Zero is a limp end.', min: 0, max: 1, step: 0.05, def: 0.6, fmt: v => Math.round(v * 100) + '%' },
+  { key: 'ropeTwist', label: 'Twist', hint: 'Whether the rope carries turns. Roll your wrist with the rope in your hand and the turn goes into it, travels along it, and comes back out of a free end. Keep putting turns into slack rope and it hockles — throws a loop of its own — which is what a rope does and what makes a coil fight you. Zero is a rope with no memory of being turned.', min: 0, max: 1, step: 0.05, def: 0.6, fmt: v => Math.round(v * 100) + '%' },
   { key: 'ropeMu', label: 'Friction on steel', hint: 'How much the rope grips a bar or the deck. A wrap on a rail holds by this.', min: 0.5, max: 2.0, step: 0.1, def: 1.0, fmt: v => '×' + v.toFixed(1) },
   { key: 'ropeStick', label: 'Static stick', hint: 'Below this creep (m/s) a contact simply holds. That is what keeps a pile put and a wrap from sliding.', min: 0, max: 0.1, step: 0.01, def: 0.03, fmt: v => v.toFixed(2) + ' m/s' },
 ];
@@ -1083,13 +1102,56 @@ function ropeParam(key) { const v = SETTINGS[key]; return v === undefined ? ROPE
    wrap on a rail, a coil on the deck — all looser than that — cost nothing; a hairpin is pushed open.
    Only ever pushes apart, a fraction per step, and leaves a settled pile alone. */
 const _bs = new THREE.Vector3();
-function ropeBendStiff(dia) {
+function ropeBendStiff(dia, i0, i1, kk) {
   if (dia <= 0) return; const Rmin = dia * 2 * R.r, th = R.L0 / Rmin; if (th > 2.4) return;   // coarse rope: the limit is below a segment's own angle
-  const rest = 2 * R.L0 * Math.cos(th / 2), k = 0.35, end = rope.coilNext !== undefined && rope.coilNext < R.n ? rope.coilNext - 1 : R.n, sl = _asleep.length === R.n;
-  for (let i = 1; i < end - 1; i++) {
+  const ct = Math.cos(th / 2), k = kk || 0.35, end = Math.min(i1 === undefined ? R.n : i1, rope.coilNext !== undefined && rope.coilNext < R.n ? rope.coilNext - 1 : R.n), sl = _asleep.length === R.n;
+  for (let i = Math.max(1, i0 || 1); i < end - 1; i++) {
+    // measured against the rope that is actually there, not its rest length — a strand under tension is
+    // longer than L0, and comparing a chord to 2·L0 quietly turned this off wherever the rope was taut
+    const rest = (R.pos[i].distanceTo(R.pos[i - 1]) + R.pos[i + 1].distanceTo(R.pos[i])) * ct;
     const a = R.pos[i - 1], c = R.pos[i + 1]; _bs.copy(c).sub(a); const d = _bs.length(); if (d >= rest || d < 1e-6) continue;
     const pa = _pinned[i - 1] || (sl && _asleep[i - 1]), pc = _pinned[i + 1] || (sl && _asleep[i + 1]); if (pa && pc) continue; const wa = pa ? 0 : pc ? 1 : 0.5, wc = pc ? 0 : pa ? 1 : 0.5;
     const push = (rest - d) / d * k; a.addScaledVector(_bs, -push * wa); c.addScaledVector(_bs, push * wc);
+  }
+}
+/* the end in your hand (M0.15): a whipped end, held, does not fold over — the last foot of it is
+   stiff enough to be pushed through a loop, which is the whole difficulty of tying a bowline in VR.
+   Only the end you are actually holding, and only while you hold it. Settings → Rope → Held end. */
+/* the bending projection: the middle particle is drawn toward the chord of its neighbours, and they
+   give a little the other way, so the rope straightens without the length between them changing.
+   (Pushing the neighbours apart — the obvious version — just feeds slack in and sags MORE.) */
+function ropeBendSpan(i0, i1, k) {
+  const sl = _asleep.length === R.n;
+  for (let i = Math.max(1, i0); i < Math.min(R.n - 1, i1); i++) {
+    const a = R.pos[i - 1], b = R.pos[i], c = R.pos[i + 1];
+    const wi = _pinned[i] ? 0 : 1, wa = _pinned[i - 1] ? 0 : 1, wc = _pinned[i + 1] ? 0 : 1;
+    const den = wi + 0.25 * wa + 0.25 * wc; if (den < 1e-6) continue;
+    if (sl && _asleep[i] && _asleep[i - 1] && _asleep[i + 1]) continue;   // a settled pile is left where it lies
+    _bs.set(b.x - (a.x + c.x) * 0.5, b.y - (a.y + c.y) * 0.5, b.z - (a.z + c.z) * 0.5);
+    if (_bs.lengthSq() < 1e-12) continue;
+    b.addScaledVector(_bs, -k * wi / den); a.addScaledVector(_bs, 0.5 * k * wa / den); c.addScaledVector(_bs, 0.5 * k * wc / den);
+  }
+}
+/* ── the rope's body (M0.16) ──
+   A real half-inch rope holds the shape you put it in for as long as it takes to tie something in it:
+   a loop laid on a bench stays a loop, which is the only reason a bowline can be tied at all. Ours had
+   no bending stiffness anywhere except the end in your hand, so every loop collapsed the moment the
+   hand left it. Settings → Rope → Body. The coil is left alone (it is a pile of coincident pins) and
+   so is anything asleep. */
+function ropeBody() {
+  const s = ropeParam('ropeBody'); if (s <= 0) return;
+  if (R.world !== 'knots' && rope.pcdFed) return;   // hauling is transport along the rope: stiffness has no business in it
+  const end = rope.coilNext !== undefined && rope.coilNext < R.n ? rope.coilNext - 1 : R.n;
+  const iters = 1 + Math.round(2 * s);
+  for (let it = 0; it < iters; it++) ropeBendSpan(1, end, 0.22 * s);
+}
+/* the end in your hand is stiffer still: a whipped end pushes through a loop instead of folding */
+function ropeStiffEnd() {
+  const s = ropeParam('ropeTip'); if (s <= 0) return;
+  if (R.world !== 'knots' && rope.pcdFed) return;   // not once the rope is through the device: hauling is the one thing a stiff tail has no business in, and it fought the transport
+  const seg = Math.max(2, Math.round(0.35 / R.L0)), iters = 1 + Math.round(5 * s);
+  for (const h of hands) { const i = handPin(h.index); if (i < 0) continue;
+    for (let it = 0; it < iters; it++) { if (i <= seg) ropeBendSpan(1, i + seg, 0.25); else if (i >= R.n - 1 - seg) ropeBendSpan(i - seg, R.n - 1, 0.25); }   // only the end you actually have hold of
   }
 }
 function ropeStep(dt, frac) {
@@ -1136,7 +1198,7 @@ function ropeStep(dt, frac) {
       a.addScaledVector(v, diff * wa); b.addScaledVector(v, -diff * wb);
     }
   }
-  ropeBendStiff(ropeParam('ropeBend')); prof('bendstiff');
+  ropeBendStiff(ropeParam('ropeBend')); ropeBody(); ropeStiffEnd(); prof('bendstiff');
   if (!window.NO_LONG) ropeLongDamp(); prof('longdamp');
   dbgPhase('fine');
   prof('fine'); if ((R.stepNo & 1) && !window.NO_STRAIN) ropeStrainLimit(); prof('strain'); if (_touched.length !== R.n) _touched = new Uint8Array(R.n); else _touched.fill(0); ropeSelfSolve(); dbgPhase('self'); prof('self'); pcdStrands(); dbgPhase('strands');
@@ -1359,6 +1421,23 @@ function cylSegments(ax, ay, az, dx, dy, dz, rc, i0, i1) {
     const wa = pa ? 0 : pb ? 1 : 0.5, wb = pb ? 0 : pa ? 1 : 0.5;
     a.addScaledVector(_cylq, push * wa); R.prev[j].addScaledVector(_cylq, push * wa); b.addScaledVector(_cylq, push * wb); R.prev[j + 1].addScaledVector(_cylq, push * wb);
   }
+  // and the swept case: a taut strand pulled hard can move a whole segment from one side of a thin bar
+  // to the other inside a single step, with no instant in between where anything was inside it. The
+  // midpoint's radial direction flipping is what gives it away; it goes back to the side it came from.
+  for (let j = Math.max(0, i0); j < Math.min(R.n - 1, i1); j++) {
+    const a = R.pos[j], b = R.pos[j + 1], qa = R.prev[j], qb = R.prev[j + 1];
+    _sa.set((a.x + b.x) * 0.5 - ax, (a.y + b.y) * 0.5 - ay, (a.z + b.z) * 0.5 - az);
+    let t = _sa.x * dx + _sa.y * dy + _sa.z * dz; _sa.x -= t * dx; _sa.y -= t * dy; _sa.z -= t * dz;
+    if (_sa.lengthSq() > 9 * rc * rc) continue;
+    _sb.set((qa.x + qb.x) * 0.5 - ax, (qa.y + qb.y) * 0.5 - ay, (qa.z + qb.z) * 0.5 - az);
+    t = _sb.x * dx + _sb.y * dy + _sb.z * dz; _sb.x -= t * dx; _sb.y -= t * dy; _sb.z -= t * dz;
+    const dq = _sb.length(); if (dq < 1e-6 || _sa.dot(_sb) >= 0) continue;   // same side: nothing crossed
+    const pa = _pinned[j], pb = _pinned[j + 1]; if (pa && pb) continue;
+    _sb.multiplyScalar(rc / dq); const cx = _sb.x - _sa.x, cy = _sb.y - _sa.y, cz = _sb.z - _sa.z;
+    const wa = pa ? 0 : pb ? 1 : 0.5, wb = pb ? 0 : pa ? 1 : 0.5;
+    a.x += cx * wa; a.y += cy * wa; a.z += cz * wa; qa.copy(a);
+    b.x += cx * wb; b.y += cy * wb; b.z += cz * wb; qb.copy(b);
+  }
 }
 /* …and below a creep (STICK m/s) a contact simply holds: static friction. That is what lets a
    wrap on a bar hold a hanging rope (the capstan) and a pile on the deck stay put, while a real
@@ -1440,13 +1519,19 @@ function ropeCollide() {
    passes rope through (k walks toward 0, the load side shortens and the eye rises). With the cam
    the right way round that is all it ever does; backwards, the load runs it the other way. */
 function pcdSlideTick() {
-  if (!rope.pcdFed || rope.pcdIdx < 1 || rope.pcdIdx >= R.n - 2) return;
+  if (!rope.pcdFed || rope.pcdIdx < 1 || rope.pcdIdx >= R.n - 2 || !R.pins.has(rope.pcdIdx)) return;
   const k = rope.pcdIdx, P = R.pins.get(k).target;
   // a pull: a hand on the pull strand, below the device, moving down, with the rope between it and
   // the device taut. Each segment of hand travel (over the assist) passes a segment through.
   for (const h of hands) {
     const i = handPin(h.index); if (i <= k) continue;
     if (h.pos.y > P.y - 0.05 || h.vel.y > -0.001) continue;
+    // a boot standing on the strand you are hauling holds it dead. The rope will pull out from under it
+    // in a moment (the strain rule above), but say so — "I pull and nothing happens" is the worst
+    // thing this program can do to somebody.
+    const boot = pinsOfKind('foot').find(j => j > k && j < i);
+    if (boot !== undefined) { R.pins.get(boot).forced = true;
+      if (!rope.bootToast || game.t - rope.bootToast > 2.5) { rope.bootToast = game.t; toast('YOUR BOOT IS ON THE ROPE YOU ARE PULLING', true); AudioKit.deny(); haptic(h, 0.5, 90); } }
     let guard = 0, moved = false;
     while (guard++ < 200 && rope.pcdIdx > 1) {
       const between = (handPin(h.index) - rope.pcdIdx) * R.L0 / Math.max(1, SETTINGS.haul);
@@ -1515,50 +1600,108 @@ function ropeRender() {
   ropeInst.instanceMatrix.needsUpdate = true;
   ropeInst.material = rope.looseT > 0.2 ? MAT.ropeHot : MAT.rope;
   ropeTipA.visible = ropeTipB.visible = R.world === 'knots'; if (ropeTipA.visible) { ropeTipA.position.copy(R.pos[0]); ropeTipB.position.copy(R.pos[R.n - 1]); }
+  // the pinch marker sits on the two strands in the fist
+  pinchMark.visible = !!(rope.pinch && R.pins.has(rope.pinch.a) && R.pins.has(rope.pinch.b));
+  if (pinchMark.visible) { const a = R.pos[rope.pinch.a], b = R.pos[rope.pinch.b];
+    pinchMark.position.copy(a).add(b).multiplyScalar(0.5); _rd.copy(b).sub(a); if (_rd.lengthSq() > 1e-8) { _rd.normalize(); _rq.setFromUnitVectors(_up, _rd); pinchMark.quaternion.copy(_rq); }
+    pinchMark.material.color.set(TH.gold); }
   knotMesh.visible = rope.knot !== 'none' && !rope.knotReal; if (knotMesh.visible) { knotMesh.position.copy(R.pins.get(rope.hitchIdx).target); knotMesh.rotation.y = Math.PI / 2; }
 }
+/* ───────────────────── twist (M0.18) ─────────────────────
+   A rope carries turns. Roll your wrist with it in your hand and the turn goes in; it travels along the
+   rope, it comes back out of a free end, and it is stored if both ends are held. Put enough of it into
+   slack rope and the rope gets rid of it the only way it can — it throws a loop, a hockle, trading twist
+   for writhe. That is why a badly coiled rope fights you and why a tail that has been rolled one way all
+   day will not lie flat. This is a scalar twist field on the centreline, not a full Cosserat rod: there
+   is no bending-twist coupling, so it will not model a rope that is stiff about one axis. What it does
+   model is where the turns are, where they go, and what happens when there are too many in one place.
+   Settings → Rope → Twist. One pass a frame, not a substep. */
+const _tT = new THREE.Vector3(), _tU = new THREE.Vector3(), _tV = new THREE.Vector3(), _tW = new THREE.Vector3();
+let _twScratch = null;
+function ropeTangent(i, out) {
+  const a = R.pos[Math.max(0, i - 1)], b = R.pos[Math.min(R.n - 1, i + 1)];
+  out.copy(b).sub(a); const d = out.length(); if (d < 1e-9) out.set(0, 1, 0); else out.multiplyScalar(1 / d); return out;
+}
+/* how far a hand has rolled about the rope it is holding, since last frame */
+function handRoll(h, i) {
+  ropeTangent(i, _tT);
+  _tU.set(0, 1, 0).applyQuaternion(h.quat); _tU.addScaledVector(_tT, -_tU.dot(_tT));   // the back of the hand, across the rope
+  if (_tU.lengthSq() < 1e-6) return 0; _tU.normalize();
+  if (!h.rollRef) { h.rollRef = _tU.clone(); return 0; }
+  _tV.copy(h.rollRef).addScaledVector(_tT, -h.rollRef.dot(_tT));
+  if (_tV.lengthSq() < 1e-6) { h.rollRef.copy(_tU); return 0; } _tV.normalize();
+  _tW.crossVectors(_tV, _tU); const a = Math.atan2(_tW.dot(_tT), _tV.dot(_tU));
+  h.rollRef.copy(_tU);
+  return Math.abs(a) > 1.2 ? 0 : a;   // half a turn between two frames is a tracking glitch, not a wrist
+}
+function twistTick(dt) {
+  const s = ropeParam('ropeTwist'); const tw = R.tw;
+  if (!tw || tw.length !== R.n) { R.tw = new Float32Array(R.n); rope.turnsIn = 0; return; }
+  if (s <= 0) { if (rope.turnsIn) { tw.fill(0); rope.turnsIn = 0; } for (const h of hands) h.rollRef = null; return; }
+  const end = rope.coilNext !== undefined && rope.coilNext < R.n ? rope.coilNext : R.n;
+  // 1. what the hands put in: the roll of the wrist about the rope it holds
+  for (const h of hands) { const i = handPin(h.index); if (i < 0 || i >= end) { h.rollRef = null; continue; }
+    const a = handRoll(h, i); if (a) tw[i] += a; }
+  // 2. it travels. Torsional waves run along a rope far faster than anything else here, so within a
+  //    span the turns even out at once; what stops them is a CLAMP — a fist, a knot, a hitch — which
+  //    holds the rope's frame at that point and will not let a turn cross it. That is why the turns
+  //    you put in with one hand pile up against the other, and why a knot traps them.
+  const clamp = [0];
+  R.pins.forEach((p, i) => { if (i > 0 && i < end - 1 && ((p.kind === 'hand' && !p.grip && !p.bight) || p.kind === 'knot' || p.kind === 'hitch')) clamp.push(i); });   // the fist is one clamp, not three: its grip pins are part of the same hand
+  clamp.push(end - 1); clamp.sort((a, b) => a - b);
+  const mix = Math.min(1, 10 * dt), decay = 1 - Math.min(0.5, 0.25 * dt);
+  let total = 0, worst = 0, worstAt = -1;
+  for (let c = 0; c + 1 < clamp.length; c++) {
+    const a = clamp[c], b = clamp[c + 1]; if (b - a < 2) continue;
+    let sum = 0; for (let i = a; i <= b; i++) sum += tw[i];
+    let mean = sum / (b - a + 1);
+    // a span with a free end lets its turns out of it — a rope unwinds itself if you let go of it
+    const freeA = a === 0 && !R.pins.has(0), freeB = b === end - 1 && !R.pins.has(R.n - 1);
+    if (freeA || freeB) mean *= 1 - Math.min(0.6, 1.1 * dt);
+    for (let i = a; i <= b; i++) { tw[i] += (mean - tw[i]) * mix; tw[i] *= decay; }
+  }
+  for (let i = 0; i < end; i++) { total += tw[i]; const m = Math.abs(tw[i]); if (m > worst) { worst = m; worstAt = i; } }
+  rope.turnsIn = total / (2 * Math.PI);
+  // 3. the hockle: more turns than slack rope will carry and it gets rid of them the only way it can —
+  //    it throws a loop, trading twist for writhe. Taut rope cannot: it has nowhere to go.
+  const crit = 8 * R.L0;   // ≈ 8 rad/m — about a turn every thirty inches
+  if (worstAt > 2 && worst > crit && s > 0.2) {
+    let at = -1, mx = 0;   // the worst SLACK place, not just the worst place
+    for (let i = 3; i < end - 3; i++) { const m = Math.abs(tw[i]); if (m <= crit || m <= mx || R.pins.has(i)) continue;
+      const t = Math.max(R.tension[i - 1] || 1, R.tension[i] || 1); if (t > 1.02) continue; mx = m; at = i; }
+    if (at > 0) {
+      ropeTangent(at, _tT);
+      _tU.set(0, 1, 0); if (Math.abs(_tT.y) > 0.9) _tU.set(1, 0, 0);
+      _tV.crossVectors(_tT, _tU).normalize(); _tU.crossVectors(_tV, _tT).normalize();
+      const phi = tw[at] * 6, amp = Math.min(1, (mx - crit) / crit) * 0.11 * s;
+      for (let i = Math.max(1, at - 7); i <= Math.min(R.n - 2, at + 7); i++) {
+        if (R.pins.has(i)) continue;
+        const w = 1 - Math.abs(i - at) / 8, a2 = phi + (i - at) * 0.55;
+        R.prev[i].addScaledVector(_tU, -amp * w * Math.cos(a2)); R.prev[i].addScaledVector(_tV, -amp * w * Math.sin(a2));
+      }
+      for (let i = Math.max(0, at - 7); i <= Math.min(end - 1, at + 7); i++) tw[i] *= 0.88;   // the loop swallowed some of the turn
+      if (!rope.hockleAt || game.t - rope.hockleAt > 4) { rope.hockleAt = game.t; toast('The rope hockled — a turn threw a loop'); AudioKit.rope(); }
+    }
+  }
+}
+function _pinnedAt(i) { return R.pins.has(i); }
 function ropeTick(dt) {
   if (!R.alive) { ropeGroup.visible = false; return; }
   // hands: hard pins that follow the hand. A hand cannot be farther from any other anchor than the
   // rope between them is long — pull past that and the rope slides through your grip instead.
-  for (const h of hands) {
-    const i = handPin(h.index); if (i < 0) { h.clamped = 0; continue; }
-    // the reach clamp (M0.13): the rope is what decides how far this hand can get from anything else
-    // holding it. Past the rope's length the avatar's hand stops at the rope's end of travel — the
-    // controller keeps going, the hand does not — until the controller is a long way past it, and
-    // then the rope slides through the grip.
-    let slipTo = -1, worst = 0; h.clamped = 0;
-    R.pins.forEach((pin, j) => {
-      if (j === i || pin.kind === 'coil' && j !== rope.coilNext || (pin.kind === 'hand' && pin.hand === h.index)) return;
-      if (pin.kind === 'pcd' && i > j) return;   // on the pull side of the device the pull passes rope through it (pcdSlideTick): neither a clamp nor a slip
-      const ropeLen = Math.abs(j - i) * R.L0, dist = h.pos.distanceTo(pin.target);
-      if (dist > ropeLen * 1.01) { const over = dist - ropeLen;
-        if (over < 0.3 && ropeLen > 0.02) { _rv.copy(pin.target).sub(h.pos).multiplyScalar(over / dist); h.pos.add(_rv); h.clamped = Math.max(h.clamped, over); }   // the hand stops where the rope stops
-        else if (dist > ropeLen * 1.03 + 0.05 && over > worst) { worst = over; slipTo = i + Math.sign(i - j) * Math.ceil(over / R.L0); } }   // more rope has to be between them: the grip slides AWAY from the anchor along the rope
-    });
-    const pin0 = R.pins.get(i);
-    const blocked = heldRopeBlocked(h, pin0.from || pin0.target);   // steel the held rope cannot be pulled through
-    if (blocked > 0.0005) { h.clamped = Math.max(h.clamped, blocked); if (!h.barToast || game.t - h.barToast > 3) { h.barToast = game.t; toast('The rope is against the steel — take it over or under'); } }
-    if (h.clamped > 0) { h.mesh.position.copy(h.pos); haptic(h, Math.min(1, 0.3 + h.clamped * 2), 20); }
-    pin0.target.copy(h.pos);
-    R.pins.forEach(p => { if (p.kind === 'hand' && p.hand === h.index && p.loc) p.target.copy(p.loc).applyQuaternion(h.quat).add(h.pos); });   // the grip's neighbours and a bight's second strand turn with the wrist
-    if (worst > 0 && (slipTo < 0 || slipTo >= R.n || (rope.coilNext !== undefined && slipTo >= rope.coilNext))) {   // the end ran through the hand (or the rope is still in the coil past it): nothing left to hold
-      ropeRelease(h); h.ropeLost = true; haptic(h, 1.0, 120); AudioKit.rope(); toast('THE END RAN THROUGH YOUR HAND', true); continue; }
-    if (slipTo >= 0 && slipTo !== i && !R.pins.has(slipTo)) {
-      ropeRelease(h); pinSet(slipTo, 'hand', h.pos, { hand: h.index }); R.prev[slipTo].copy(h.pos); handGripSet(h, slipTo); haptic(h, 1.0, 60); if (Math.random() < 0.4) AudioKit.rope();
-      if (!h.slipToast || game.t - h.slipToast > 2.5) { h.slipToast = game.t; toast('The rope slipped through your hand'); }
-    } else if (slipTo >= 0 && slipTo !== i) { // it would slip onto another anchor: that is the end of what you can take
-      haptic(h, 0.8, 30);
-    }
-    const t = Math.max(R.tension[Math.max(0, i - 1)], R.tension[Math.min(R.n - 2, i)]); if (t > 1.08) haptic(h, Math.min(1, (t - 1) * 4), 16);
-  }
-  handLoadTick(dt);
+  // the feet first: a boot that has moved is not holding the rope any more, and until M0.15 the hand's
+  // reach clamp was asked about foot pins that had already been left behind — walk away from a rope you
+  // were standing on and the clamp slipped the whole tail out of your hand
   // feet: standing on the rope pins it under the sole
   const footPins = pinsOfKind('foot');
   footPins.forEach(i => { const pin = R.pins.get(i); const f = feetPos[pin.foot];
     if (Math.hypot(f.x - pin.target.x, f.z - pin.target.z) > 0.12 || Math.abs(f.y - pin.target.y) > 0.25) { pinClear(i); return; }
-    // friction under a boot only goes so far: a rope being dragged hard pulls out from under it
-    const t = Math.max(R.tension[Math.max(0, i - 1)], R.tension[Math.min(R.n - 2, i)]);
+    // friction under a boot only goes so far: a rope being dragged hard pulls out from under it.
+    // Read the strain over a hand's length of rope either side, not just the two segments touching the
+    // sole: a hard pull puts nearly all of the stretch into one segment somewhere along the strand, and
+    // asking only about the boot's own two segments let a boot on the pull side hold a haul dead — the
+    // rope stretched 38× between the device and the foot and nothing yielded (M0.17).
+    let t = 0; for (let j = Math.max(0, i - 8); j < Math.min(R.n - 1, i + 8); j++) if (R.tension[j] > t) t = R.tension[j];
     pin.forcedNow = !!pin.forced; pin.strain = (t > 1.2 || pin.forced) ? (pin.strain || 0) + dt : 0; pin.forced = false;
     if (pin.strain > (pin.forcedNow ? 0.12 : 0.35)) { pinClear(i); feetCool[pin.foot] = game.t + 1.2; toast('THE ROPE PULLED OUT FROM UNDER YOUR FOOT', true); AudioKit.rope(); } });
   // a boot holds the rope only when it is planted on it: still for a quarter second, on the deck,
@@ -1575,6 +1718,48 @@ function ropeTick(dt) {
     let best = -1, bd = reach; for (let i = 0; i < R.n; i++) { const p = R.pos[i]; if (R.pins.has(i)) continue; if (p.distanceTo(R.prev[i]) > 0.01) continue; const d = Math.hypot(p.x - f.x, p.z - f.z); if (d < bd && Math.abs(p.y - f.y) < (quick ? 0.12 : 0.06)) { bd = d; best = i; } }
     if (best >= 0) { pinSet(best, 'foot', new THREE.Vector3(f.x, R.pos[best].y, f.z), { foot: fi }); haptic(hands[fi], 0.4, 40); if (!rope.footToast || game.t - rope.footToast > 4) { rope.footToast = game.t; toast('Standing on the rope'); } }
   });
+  for (const h of hands) {
+    const i = handPin(h.index); if (i < 0) { h.clamped = 0; continue; }
+    const _p0 = R.pins.get(i);
+    // a hand that jumped (teleport locomotion, a tracking glitch, a test moving the player) is not a
+    // pull: the rope goes with it. Sweeping or slipping on a chord like that threw the rope out of the
+    // hand — 14 metres of "motion" reads as the end running through your fingers.
+    if (_p0.from && _p0.from.distanceTo(h.pos) > 0.5) { h.clamped = 0; _p0.target.copy(h.pos); R.pins.forEach(p => { if (p.kind === 'hand' && p.hand === h.index && p.loc) p.target.copy(p.loc).applyQuaternion(h.quat).add(h.pos); }); continue; }
+    // the reach clamp (M0.13): the rope is what decides how far this hand can get from anything else
+    // holding it. Past the rope's length the avatar's hand stops at the rope's end of travel — the
+    // controller keeps going, the hand does not — until the controller is a long way past it, and
+    // then the rope slides through the grip.
+    let slipTo = -1, worst = 0, _wj = -1, _wk = '', _wd = 0, _wl = 0; h.clamped = 0;
+    R.pins.forEach((pin, j) => {
+      if (j === i || pin.kind === 'coil' || (pin.kind === 'hand' && pin.hand === h.index)) return;   // rope still in the coil is not an anchor: it feeds freely, and treating the coil as one slipped the whole tail out of the hand when the player walked away from a coil that had not finished paying out
+      if (pin.kind === 'pcd' && i > j) return;   // on the pull side of the device the pull passes rope through it (pcdSlideTick): neither a clamp nor a slip
+      const ropeLen = Math.abs(j - i) * R.L0, dist = h.pos.distanceTo(pin.target);
+      if (dist > ropeLen * 1.01) { const over = dist - ropeLen;
+        if (over < 0.3 && ropeLen > 0.02) { _rv.copy(pin.target).sub(h.pos).multiplyScalar(over / dist); h.pos.add(_rv); h.clamped = Math.max(h.clamped, over); }   // the hand stops where the rope stops
+        else if (dist > ropeLen * 1.03 + 0.05 && over > worst) { worst = over; _wj = j; _wk = pin.kind; _wd = dist; _wl = ropeLen; slipTo = i + Math.sign(i - j) * Math.ceil(over / R.L0); } }   // more rope has to be between them: the grip slides AWAY from the anchor along the rope
+    });
+    const pin0 = R.pins.get(i);
+    const blocked = h.barBlocked = heldRopeBlocked(h, pin0.from || pin0.target);   // steel the held rope cannot be pulled through
+    if (blocked > 0.0005) { h.clamped = Math.max(h.clamped, blocked); if (!h.barToast || game.t - h.barToast > 3) { h.barToast = game.t; toast('The rope is against the steel — take it over or under'); } }
+    if (h.clamped > 0) { h.mesh.position.copy(h.pos); haptic(h, Math.min(1, 0.3 + h.clamped * 2), 20); }
+    pin0.target.copy(h.pos);
+    R.pins.forEach(p => { if (p.kind === 'hand' && p.hand === h.index && p.loc) p.target.copy(p.loc).applyQuaternion(h.quat).add(h.pos); });   // the grip's neighbours and a bight's second strand turn with the wrist
+    if (window.SLIPDBG) window.SLIPDBG.push({ t: +game.t.toFixed(2), slip: i, to: slipTo, over: +worst.toFixed(2), j: _wj, kind: _wk, dist: +_wd.toFixed(2), ropeLen: +_wl.toFixed(2) });   // window.SLIPDBG = [] to see why a hand lost the rope
+    if (worst > 0 && (slipTo < 0 || slipTo >= R.n || (rope.coilNext !== undefined && slipTo >= rope.coilNext))) {   // the end ran through the hand (or the rope is still in the coil past it): nothing left to hold
+      ropeRelease(h); h.ropeLost = true; haptic(h, 1.0, 120); AudioKit.rope(); toast('THE END RAN THROUGH YOUR HAND', true); continue; }
+    if (slipTo >= 0 && slipTo !== i && !R.pins.has(slipTo)) {
+      ropeRelease(h); pinSet(slipTo, 'hand', h.pos, { hand: h.index }); R.prev[slipTo].copy(h.pos); handGripSet(h, slipTo); haptic(h, 1.0, 60); if (Math.random() < 0.4) AudioKit.rope();
+      if (!h.slipToast || game.t - h.slipToast > 2.5) { h.slipToast = game.t; toast('The rope slipped through your hand'); }
+    } else if (slipTo >= 0 && slipTo !== i) { // it would slip onto another anchor: that is the end of what you can take
+      haptic(h, 0.8, 30);
+    }
+    const t = Math.max(R.tension[Math.max(0, i - 1)], R.tension[Math.min(R.n - 2, i)]); if (t > 1.08) haptic(h, Math.min(1, (t - 1) * 4), 16);
+  }
+  // the device's pin is the one thing several systems dereference without asking: if anything ever
+  // clears it (a rebuild, a stray release) put it back rather than take the program down
+  if (rope.pcdFed && rope.pcdIdx >= 0 && rope.pcdIdx < R.n && !R.pins.has(rope.pcdIdx)) { pinSet(rope.pcdIdx, 'pcd', pcd.hung ? pcdPoint() : R.pos[rope.pcdIdx]); }
+  twistTick(dt);
+  handLoadTick(dt);
   // the ground rigger carrying the far end to the point
   if (rope.groundCarry && !rope.bowline) { const pin = R.pins.get(0); const to = new THREE.Vector3(SLING_X + 0.1, 0.4, WORLD.slingZ); if (pin && pin.kind === 'ground') {
     // the ground rigger walks the end to the point and drags the pile on the floor along with it (150 feet is 108 down and 42 of slack: the slack has to come too)
@@ -1683,14 +1868,14 @@ function barBlock(from, to, ax, ay, az, dx, dy, dz, rc) {
   const bx = _bkq.x - _bkp.x, by = _bkq.y - _bkp.y, bz = _bkq.z - _bkp.z;
   to.x += bx; to.y += by; to.z += bz; return Math.hypot(bx, by, bz);
 }
-/* every bar within reach of this hand, cheapest first */
-function heldRopeBlocked(h, from) {
-  if (R.world === 'knots') { let b = 0; const to = h.pos;
+/* every bar within reach of this point, cheapest first */
+function barsAt(from, to) {
+  if (R.world === 'knots') { let b = 0;
     if (to.x > KB.pipeX0 - 0.3 && to.x < KB.pipeX1 + 0.3) b = Math.max(b, barBlock(from, to, 0, KB.pipeY, KB.pipeZ, 1, 0, 0, KB.pipeR + R.r));
     if (to.y < KB.postH + 0.2) b = Math.max(b, barBlock(from, to, KB.postX, 0, KB.postZ, 0, 1, 0, KB.postR + R.r));
     return b; }
   if (game.phase !== 'arena') return 0;
-  const to = h.pos; let b = 0; const r = R.r;
+  let b = 0; const r = R.r;
   if (!inCatwalkGap(to.x) && Math.abs(to.x - GAP / 2) < CWX && Math.abs(to.z - RAIL_Z) < 0.6) {
     b = Math.max(b, barBlock(from, to, 0, RAIL_Y, RAIL_Z, 1, 0, 0, 0.03 + r));                       // the top rail
     b = Math.max(b, barBlock(from, to, 0, H + WORLD.railHeight / 2, RAIL_Z, 1, 0, 0, 0.025 + r));    // the mid rail
@@ -1700,6 +1885,20 @@ function heldRopeBlocked(h, from) {
     if (Math.abs(to.x) < 0.4) b = Math.max(b, barBlock(from, to, 0, LL_Y, 0, 0, 0, 1, 0.008 + r));
     else if (Math.abs(to.x - GAP) < 0.4) b = Math.max(b, barBlock(from, to, GAP, LL_Y, 0, 0, 0, 1, 0.008 + r));
   }
+  return b;
+}
+/* the whole fist, not just the palm: the grip holds a hand's width of rope, and a bar thinner than a
+   fist can pass between the palm and the ends of it. Whatever any of them needs, the hand moves. */
+const _gp = new THREE.Vector3(), _gp0 = new THREE.Vector3();
+function heldRopeBlocked(h, from) {
+  if (from.distanceTo(h.pos) > 0.5) return 0;   // a jump, not a hand: a teleport, a tracking glitch or a test moving the player — sweeping that chord would clamp the hand onto whatever it flew past
+  let b = barsAt(from, h.pos);
+  R.pins.forEach(p => {
+    if (p.kind !== 'hand' || p.hand !== h.index || !p.loc) return;
+    _gp.copy(p.loc).applyQuaternion(h.quat).add(h.pos); _gp0.copy(_gp);
+    const d = barsAt(p.from || p.target, _gp);
+    if (d > 0) { h.pos.add(_gp.sub(_gp0)); b = Math.max(b, d); }
+  });
   return b;
 }
 /* grabbing the rope: the nearest particle to the hand becomes a soft pin */
@@ -1717,7 +1916,7 @@ function ropeGrab(h) {
   if (pin && pin.kind !== 'foot' && pin.kind !== 'hitch') return false;   // the PCD, the eye and the ground rigger keep theirs
   if (pin && pin.kind === 'hitch') return false;                            // grab beside the knot, not the knot itself
   pinSet(i, 'hand', h.pos, { hand: h.index }); h.ropeLost = false; AudioKit.grab(); haptic(h, 0.5, 40); hudDirty = true;
-  if (bightGrab(h, i)) { toast('Bight — both strands in hand'); haptic(h, 0.8, 60); }
+  if (bightGrab(h, i)) { toast(rope.pinch && knots.loop && (rope.pinch.a === knots.loop.a || rope.pinch.b === knots.loop.b) ? 'PINCHED — you have the crossing. The loop is yours.' : 'Pinched — both strands in hand'); }
   else handGripSet(h, i);
   return true;
 }
@@ -1734,16 +1933,23 @@ function handGripSet(h, i) {
     const loc = R.pos[j].clone().sub(h.pos).applyQuaternion(_gq); if (loc.length() > 0.12) return;
     pinSet(j, 'hand', R.pos[j], { hand: h.index, grip: true, loc }); R.prev[j].copy(R.pos[j]); });
 }
-function ropeRelease(h) { const mine = []; R.pins.forEach((p, i) => { if (p.kind === 'hand' && p.hand === h.index) mine.push(i); }); mine.forEach(i => { pinClear(i); if (R.prev[i] && R.pos[i]) R.prev[i].copy(R.pos[i]); }); h.clamped = 0; hudDirty = true; }   // let go (both strands of a bight, the whole grip): the rope keeps what its neighbours give it, not a throw
+function ropeRelease(h) { if (rope.pinch && rope.pinch.hand === h.index) rope.pinch = null; const mine = []; R.pins.forEach((p, i) => { if (p.kind === 'hand' && p.hand === h.index) mine.push(i); }); mine.forEach(i => { pinClear(i); if (R.prev[i] && R.pos[i]) R.prev[i].copy(R.pos[i]); }); h.clamped = 0; hudDirty = true; }   // let go (both strands of a bight, the whole grip): the rope keeps what its neighbours give it, not a throw
 /* a bight: the rope doubled over. Closing the hand on two strands that lie together takes both —
    the way you hold a bight to push it under a wrap for a slipped hitch, or to tie in the middle of
    a rope. The second strand rides with the hand at the offset it was taken at. */
 function bightGrab(h, i) {
-  const near = game.mode === 'desk' ? 0.12 : 0.07; let best = -1, bd = near;
+  const near = game.mode === 'desk' ? 0.12 : 0.09; let best = -1, bd = near;
   if (rope.pcdFed && Math.abs(i - rope.pcdIdx) < 60) return false;   // not at the device: the two strands there are the load and the pull, not a bight
-  for (let j = 0; j < R.n; j++) { if (Math.abs(j - i) < 8 || R.pins.has(j)) continue; if (rope.pcdFed && (j - rope.pcdIdx) * (i - rope.pcdIdx) < 0) continue;
+  // the crossing of a loop the rope has already made wins: that is the pinch a bowline is tied with,
+  // and it is worth catching even when another strand happens to lie a little nearer the palm
+  const L = knots.loop;
+  if (L) { const at = Math.abs(i - L.a) < 12 ? L.b : Math.abs(i - L.b) < 12 ? L.a : -1;
+    if (at >= 0 && !R.pins.has(at) && R.pos[at].distanceTo(h.pos) < near + 0.08) best = at; }
+  if (best < 0) for (let j = 0; j < R.n; j++) { if (Math.abs(j - i) < 8 || R.pins.has(j)) continue; if (rope.pcdFed && (j - rope.pcdIdx) * (i - rope.pcdIdx) < 0) continue;
     const d = R.pos[j].distanceTo(R.pos[i]); if (d < bd && R.pos[j].distanceTo(h.pos) < near + 0.05) { bd = d; best = j; } }
   if (best < 0) return false;
+  rope.pinch = { a: Math.min(i, best), b: Math.max(i, best), hand: h.index };
+  haptic(h, 1.0, 60); setTimeout(() => haptic(h, 1.0, 60), 90);   // two pulses: you have two strands
   pinSet(best, 'hand', h.pos, { hand: h.index, bight: true, loc: R.pos[best].clone().sub(h.pos).applyQuaternion(_gq.copy(h.quat).invert()) }); R.prev[best].copy(R.pos[best]); return true;
 }
 function handHoldsRope(h) { return handPin(h.index) >= 0; }
@@ -1794,7 +2000,15 @@ function untieKnot(handIndex) {
   pinsOfKind('hitch').forEach(k => pinClear(k)); rope.hitchIdx = -1; railKnot.armed = false; railKnot.idx.length = 0;
   if (handIndex !== undefined && handPin(handIndex) < 0) { if (real) ropeGrab(hands[handIndex]); if (handPin(handIndex) < 0) pinSet(i, 'hand', hands[handIndex].pos, { hand: handIndex }); }
   AudioKit.rope(); toast(real ? 'Untied — pull it apart. Keep hold of the rope.' : 'Untied — you are holding the rope now'); hudDirty = true;
-  if (!rope.groundCarry) { rope.groundCarry = true; radio('Ground', 'Walking your end over to the point.', 1.5); }
+  startGroundCarry();
+}
+/* The ground rigger takes your end to the point. Until M0.14 this only started when you untied a
+   hitch — and with the tie-off optional that left him standing there holding an end that never
+   moved, with the radio giving nothing but a check. Now anything that means "I am on my way out
+   with the rope" starts him: untying, hanging the device, or simply reaching step 3. */
+function startGroundCarry() {
+  if (rope.groundCarry || rope.bowline || !rope.landed) return;
+  rope.groundCarry = true; radio('Ground', 'I\'ve got your end — walking it over to the point.', 1.2);
 }
 /* ── the hitch, read off the rope (M0.13) ──
    The bench's recogniser, on the top rail: turns on the rail with the working end tucked under
@@ -1843,7 +2057,7 @@ function railKnotTick(dt) {
 const pcd = { hung: false, yaw: 0 };
 function pcdPoint() { const p = gear.pcd.mesh.position.clone(); p.y -= 0.12; return p; }
 function hangPCD() {
-  pcd.hung = true; pcd.yaw = Math.random() < 0.5 ? 0 : Math.PI;
+  pcd.hung = true; pcd.yaw = Math.random() < 0.5 ? 0 : Math.PI; startGroundCarry();
   const m = gear.pcd.mesh; releaseAll(gear.pcd.grab); unclipGear('pcd'); arena.attach(m);
   m.position.set(SLING_X, SLING_POINT.y - 0.16, WORLD.slingZ); m.rotation.set(0, pcd.yaw, 0); m.visible = true;
   gear.pcd.grab.locked = true; gear.pcd.worn = true; AudioKit.chain(); toast('PCD on the sling — now feed the rope. Mind the arrow.'); hudDirty = true;
@@ -2067,7 +2281,7 @@ function haulAllowed() {
   if (bridle.fouled) { toast(bridle.foulKind === 'spin' ? 'STOP — it is spun up. Key the radio.' : 'STOP — it is fouled. Shake your rope, let it fall clear.', true); return false; }
   // the steel has to come with the rope: if the strand from the device to the eye is already stretched
   // well past its length, the other side is holding the load and pulling harder does nothing
-  if (S.active && !bridle.arrived && rope.pcdFed) { const P = R.pins.get(rope.pcdIdx).target; const D = S.pos[S.legA[0]].distanceTo(P); const strand = rope.pcdIdx * R.L0;
+  if (S.active && !bridle.arrived && rope.pcdFed && R.pins.has(rope.pcdIdx)) { const P = R.pins.get(rope.pcdIdx).target; const D = S.pos[S.legA[0]].distanceTo(P); const strand = rope.pcdIdx * R.L0;
     if (D > strand + 0.45) { if (!bridle.holdToast || game.t - bridle.holdToast > 2.5) { bridle.holdToast = game.t; toast('It won\'t come — their leg is holding it. Wait for them.', true); } return false; } }
   let cap = H - 0.1;
   if (bridle.stage === 'apex') cap = L;
@@ -2542,7 +2756,65 @@ const KNOT_EXERCISES = [
   { id: 'bowline', title: 'Bowline round the post', how: 'A small loop in the standing part. Working end round the post, up through the loop, round behind the standing part, back down through the loop.' },
   { id: 'twoHalf', title: 'Round the post, two half hitches on the rope', how: 'Round the post (a round turn is better), then two half hitches around the standing part — a clove hitch tied on the rope.' },
 ];
-const knots = { active: false, lock: null, armed: true, done: {}, status: 'Pick the rope up.', hint: '', lastCheck: 0, boardDirty: true, holdT: 0, tied: 0 };
+const knots = { active: false, lock: null, armed: true, done: {}, status: 'Pick the rope up.', hint: '', lastCheck: 0, boardDirty: true, holdT: 0, tied: 0, loop: null, stage: '' };
+/* ── seeing the loop (M0.16) ──
+   Half of why a bowline is hard in a headset is that you cannot see the geometry: the loop you have
+   made is a thin line crossing another thin line, and the hole you are meant to push the end through
+   is edge-on to you as often as not. This finds the loop the rope has made with itself and puts a
+   translucent disc in it — the hole, drawn — with the stage you are at written on the board. It reads
+   the rope; it does not hold it, move it, or tie anything. */
+const loopDisc = new THREE.Mesh(new THREE.RingGeometry(0.02, 0.03, 40), new THREE.MeshBasicMaterial({ color: 0x99ccff, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, name: 'Mat_LoopDisc' }));
+loopDisc.name = 'Knot_LoopHint'; loopDisc.visible = false; scene.add(loopDisc);
+const _lc = new THREE.Vector3(), _ln = new THREE.Vector3(), _lq = new THREE.Quaternion(), _lz = new THREE.Vector3(0, 0, 1);
+/* the loop the rope has closed on itself: the earliest self-contact a loop's length apart, its centre,
+   its plane and the radius of the hole. Null when there is no loop worth pointing at. */
+function loopGeom(a, b) {
+  if (a < 0 || b <= a || b >= R.n) return null;
+  _lc.set(0, 0, 0); for (let i = a; i <= b; i++) _lc.add(R.pos[i]); _lc.multiplyScalar(1 / (b - a + 1));
+  _ln.set(0, 0, 0);
+  for (let i = a; i <= b; i++) { const p = R.pos[i], q = R.pos[i < b ? i + 1 : a];
+    _ln.x += (p.y - q.y) * (p.z + q.z); _ln.y += (p.z - q.z) * (p.x + q.x); _ln.z += (p.x - q.x) * (p.y + q.y); }
+  const area = _ln.length() / 2; if (area < 0.0015) return null; _ln.normalize();
+  let across = 1e9; const h = Math.floor((b - a) / 2);
+  for (let i = a; i + h <= b; i++) across = Math.min(across, R.pos[i].distanceTo(R.pos[i + h]));
+  return { a, b, centre: _lc.clone(), normal: _ln.clone(), radius: Math.max(0.03, across / 2 - R.r), area };
+}
+function findLoop() {
+  // a loop you are holding by its crossing has both strands pinned, and the self-collision list skips
+  // pinned pairs — so ask about the pinch first, or the disc would go out the moment you took hold of it
+  if (rope.pinch) { const L = loopGeom(rope.pinch.a, rope.pinch.b); if (L) return L; }
+  const minL = Math.round(0.12 / R.L0), maxL = Math.round(1.2 / R.L0), pairs = SELF.pairs; let best = null;
+  for (let k = 0; k < pairs.length; k += 2) { let a = pairs[k], b = pairs[k + 1]; if (a > b) { const t = a; a = b; b = t; }
+    const len = b - a; if (len < minL || len > maxL) continue;
+    if (R.pos[a].distanceTo(R.pos[b]) > 3 * R.r) continue;
+    if (!best || a < best.a) best = { a, b }; }
+  if (!best) return null;
+  return loopGeom(best.a, best.b);
+}
+/* which part of a bowline you are at, read off the rope */
+function bowlineStage() {
+  const bw = findBowline(true);
+  if (!bw) return { text: knots.loop ? 'Loop made. Bring the end UP through it — the disc is the hole.' : '', bw: null };
+  if (bw.threaded && bw.roundPost) return { text: 'That is a bowline — let go and it locks.', bw };
+  if (bw.threaded && !bw.roundPost) return { text: 'Bowline made, but it has to go round the post first.', bw };
+  if (bw.cross >= 1) return { text: 'End is through the loop. Now round behind the standing part, and back down through the loop.', bw };
+  return { text: 'Loop made. Bring the end UP through it — the disc is the hole.', bw };
+}
+function loopHintTick() {
+  if (!knots.active || knots.lock) { loopDisc.visible = false; knots.loop = null; return; }
+  const L = findLoop(); knots.loop = L;
+  loopDisc.visible = !!L;
+  if (!L) { if (knots.stage) { knots.stage = ''; knots.boardDirty = true; } return; }
+  loopDisc.position.copy(L.centre); _lq.setFromUnitVectors(_lz, L.normal); loopDisc.quaternion.copy(_lq);
+  const inner = Math.max(0.02, L.radius - 0.012); loopDisc.scale.setScalar(L.radius / 0.03);
+  loopDisc.material.opacity = 0.18 + 0.12 * Math.sin(game.t * 3);
+  // the crossing held in a fist is the thing that actually holds a loop open: say so, and turn the disc
+  const held = !!(rope.pinch && (Math.abs(rope.pinch.a - L.a) < 12 || Math.abs(rope.pinch.b - L.b) < 12));
+  loopDisc.material.color.set(held ? TH.gold : TH.pale);
+  const st = bowlineStage();
+  const text = held && !/through the loop|bowline/i.test(st.text) ? 'You have the crossing — the loop will hold while you thread it. End UP through the disc.' : st.text;
+  if (text !== knots.stage) { knots.stage = text; knots.boardDirty = true; }
+}
 
 function startKnots() {
   resetWorld(); game.prog = 'knots'; game.phase = 'knots'; holodeck.visible = true; arena.visible = false; knotBench.visible = true; knots.active = true; knots.lock = null; knots.armed = true; knots.tied = 0; knots.status = 'Pick the rope up — red is your standing part, white the working end.'; knots.hint = '';
@@ -2607,14 +2879,15 @@ function contactRuns(P, D, band) {
 }
 /* tucks: a particle of the set lying UNDER another particle of the set (closer to the axis),
    read from the rope-on-rope contact pairs. Returns the under particles. */
-function tucksIn(setArr, P, D, rc) {
+function tucksIn(setArr, P, D, rc, soft) {
   // the under strand lies ON the steel (or on the rope it hitches), the over strand a full rope width further out
   const set = new Set(setArr); const under = []; axisBasis(D); const pairs = SELF.pairs; const r = R.r;
+  const maxD = (soft ? 3.2 : 2.8) * r, sep = (soft ? 0.9 : 1.2) * r, band = (soft ? 0.95 : 0.7) * r;   // soft: a hitch tucked around another ROPE, which squashes and never sits as cleanly as one on a bar
   // the rope arriving at the bar and leaving it passes radially over the turn it lands on: the run's ends are never the OVER strand of a tuck
   let lo = 1e9, hi = -1; for (const i of setArr) { if (i < lo) lo = i; if (i > hi) hi = i; } const inner = (i) => i > lo + 3 && i < hi - 3;
   for (let k = 0; k < pairs.length; k += 2) { const i = pairs[k], j = pairs[k + 1]; if (!set.has(i) || !set.has(j) || Math.abs(i - j) < 5) continue;
-    if (R.pos[i].distanceTo(R.pos[j]) > 2.8 * r) continue; const di = axisDist(P, R.pos[i]), dj = axisDist(P, R.pos[j]);
-    if (di <= rc + 0.7 * r && dj >= di + 1.2 * r && inner(j)) under.push(i); else if (dj <= rc + 0.7 * r && di >= dj + 1.2 * r && inner(i)) under.push(j); }
+    if (R.pos[i].distanceTo(R.pos[j]) > maxD) continue; const di = axisDist(P, R.pos[i]), dj = axisDist(P, R.pos[j]);
+    if (di <= rc + band && dj >= di + sep && inner(j)) under.push(i); else if (dj <= rc + band && di >= dj + sep && inner(i)) under.push(j); }
   return under;
 }
 /* the standing part as it leaves a run toward the red end: a point and a direction */
@@ -2625,17 +2898,17 @@ function halfHitchesOn(axis, fromIdx) {
   const band = 5.5 * R.r; let w = null, i = fromIdx;   // wide enough to take in the strand lying over the tucked one
   while (i < R.n - 1) { const c = windingAround(axis.P, axis.D, i, R.n - 1, band, 6); if (c.first < 0) break; if (!w || Math.abs(c.turns) > Math.abs(w.turns)) w = c; i = Math.max(c.last + 1, i + 1); }
   if (!w || w.run.length < 4) return { n: 0, turns: 0, w: w || { run: [] } };
-  const under = tucksIn(w.run, axis.P, axis.D, 2 * R.r); const t = Math.abs(w.turns);
-  return { n: t >= 1.55 && under.length ? 2 : t >= 0.7 && under.length ? 1 : 0, turns: t, tucked: under.length > 0, w };
+  const under = tucksIn(w.run, axis.P, axis.D, 2 * R.r, true); const t = Math.abs(w.turns);
+  return { n: t >= 1.45 && under.length ? 2 : t >= 0.6 && under.length ? 1 : 0, turns: t, tucked: under.length > 0, w };
 }
 /* the bowline: a bight in the standing part, the working end through it, round the standing part, back through */
 function findBowline(post) {
-  const minL = Math.round(0.14 / R.L0), maxL = Math.round(0.8 / R.L0); const pairs = SELF.pairs; let best = null;
+  const minL = Math.round(0.10 / R.L0), maxL = Math.round(1.6 / R.L0); const pairs = SELF.pairs; let best = null;   // a 3-foot bowline has a six-foot loop; 0.9 m was a twelve-inch one and nothing bigger
   for (let k = 0; k < pairs.length; k += 2) { let a = pairs[k], b = pairs[k + 1]; if (a > b) { const t = a; a = b; b = t; } const len = b - a; if (len < minL || len > maxL) continue; if (R.pos[a].distanceTo(R.pos[b]) > 3 * R.r) continue; if (!best || a < best.a) best = { a, b }; }
   if (!best) return null;
   const { a, b } = best; const c = new THREE.Vector3(); for (let i = a; i <= b; i++) c.add(R.pos[i]); c.multiplyScalar(1 / (b - a + 1));
   const n = new THREE.Vector3(); for (let i = a; i <= b; i++) { const p = R.pos[i], q = R.pos[i < b ? i + 1 : a]; n.x += (p.y - q.y) * (p.z + q.z); n.y += (p.z - q.z) * (p.x + q.x); n.z += (p.x - q.x) * (p.y + q.y); }
-  const area = n.length() / 2; if (area < 0.0015) return null; n.normalize();
+  const area = n.length() / 2; if (area < 0.0010) return null; n.normalize();
   const u = new THREE.Vector3(), v = new THREE.Vector3(); const t = Math.abs(n.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0); u.crossVectors(t, n).normalize(); v.crossVectors(n, u);
   const poly = []; for (let i = a; i <= b; i++) { const r = R.pos[i].clone().sub(c); poly.push([r.dot(u), r.dot(v)]); }
   const inside = (x, y) => { let s = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) s = !s; } return s; };
@@ -2643,8 +2916,8 @@ function findBowline(post) {
   for (let k = b + 3; k < R.n - 1; k++) { const s0 = R.pos[k].clone().sub(c).dot(n), s1 = R.pos[k + 1].clone().sub(c).dot(n); if ((s0 > 0) === (s1 > 0)) continue; const f = s0 / (s0 - s1); X.copy(R.pos[k]).lerp(R.pos[k + 1], f).sub(c); if (inside(X.dot(u), X.dot(v))) cross.push({ k, dir: s1 > s0 ? 1 : -1 }); }
   let threaded = false, roundStanding = false, roundPost = false, k1 = -1, k2 = -1;
   for (let i = 0; i + 1 < cross.length && !threaded; i++) { if (cross[i].dir === cross[i + 1].dir) continue; k1 = cross[i].k; k2 = cross[i + 1].k;
-    const ax = standingAxis(a); const w = windingAround(ax.P, ax.D, k1, k2 + 1, 5 * R.r, 40); roundStanding = Math.abs(w.turns) >= 0.3; threaded = roundStanding; }
-  if (post) { const w = windingAround(new THREE.Vector3(KB.postX, 0, KB.postZ), new THREE.Vector3(0, 1, 0), b, k1 > 0 ? k1 : R.n - 1, KB.postR + R.r + 0.05, 12); roundPost = Math.abs(w.turns) >= 0.45; }
+    const ax = standingAxis(a); const w = windingAround(ax.P, ax.D, k1, k2 + 1, 5 * R.r, 40); roundStanding = Math.abs(w.turns) >= 0.25; threaded = roundStanding; }
+  if (post) { const w = windingAround(new THREE.Vector3(KB.postX, 0, KB.postZ), new THREE.Vector3(0, 1, 0), b, k1 > 0 ? k1 : R.n - 1, KB.postR + R.r + 0.05, 12); roundPost = Math.abs(w.turns) >= 0.40; }
   return { a, b, cross: cross.length, threaded, roundStanding, roundPost, k1, k2 };
 }
 
@@ -2703,6 +2976,10 @@ function drawKnotBoard() {
   KNOT_EXERCISES.forEach(e => { const ok = knots.done[e.id]; x.fillStyle = ok ? TH.ok : TH.pale; x.font = '700 24px Antonio, Arial Narrow, sans-serif'; x.fillText((ok ? '✓  ' : '○  ') + e.title.toUpperCase(), 34, y); y += 26;
     x.fillStyle = TH.dim2; x.font = '300 19px Titillium Web, Segoe UI, sans-serif'; y = wrapText(x, e.how, 700, 22, 58, y, 2) + 10; });
   x.fillStyle = knots.lock ? TH.ok : TH.gold; x.font = '600 24px Antonio, Arial Narrow, sans-serif'; wrapText(x, (knots.status || '').toUpperCase(), 700, 28, 34, c.height - 70, 2);
+  const t = rope.turnsIn || 0;
+  if (Math.abs(t) >= 0.15) { x.fillStyle = Math.abs(t) > 2.5 ? TH.alert : TH.dim; x.font = '600 20px Antonio, Arial Narrow, sans-serif';
+    x.textAlign = 'right'; x.fillText((t > 0 ? '+' : '') + t.toFixed(1) + ' TURNS IN THE ROPE' + (Math.abs(t) > 2.5 ? ' — IT WILL HOCKLE' : ''), c.width - 34, 60); x.textAlign = 'left'; }
+  if (knots.stage && !knots.lock) { x.fillStyle = TH.gold; x.font = '600 21px Titillium Web, Segoe UI, sans-serif'; wrapText(x, knots.stage, 700, 24, 34, c.height - 58, 2); }
   if (knots.hint) { x.fillStyle = TH.pale; x.font = '400 19px Titillium Web, Segoe UI, sans-serif'; wrapText(x, knots.hint, 700, 22, 34, c.height - 24, 1); }
   b.userData.tex.needsUpdate = true;
 }
@@ -2745,6 +3022,7 @@ const player = { falling: false, vy: 0, arrested: false, arrestT: 0, safe: new T
 const _head = new THREE.Vector3();
 /* the catwalk's rail, back wall and ends are solid; the only way off the deck is the beam gap */
 function railCollide() {
+  if (game.phase !== 'arena') return;
   camera.getWorldPosition(_head);
   const atDeck = Math.abs(_head.y - (H + 1.6)) < 1.2 || game.mode === 'desk';
   if (!atDeck) return;
@@ -2907,6 +3185,7 @@ function setStep(n) { game.step = n; hudDirty = true; AudioKit.chirp(); const s 
 function stepTick(dt) {
   if (game.phase !== 'arena') return; const s = STEPS[game.step]; if (!s) return;
   if (game.step === 2 && !rope.landed && rope.state === 'coil' && ropeInHand()) { /* waiting on the throw */ }
+  if (game.step >= 3 && rope.landed) startGroundCarry();
   if (game.step >= 3 && rope.pcdFed && !rope.bowline) { const g = R.pins.get(0); if (g && g.target.distanceTo(new THREE.Vector3(SLING_X + 0.1, 0.4, WORLD.slingZ)) < 0.6) groundTiesIn(); }   // once the end (and the slack) is at the point
   if (game.step === 4 && bridle.readyT && game.t > bridle.readyT && !bridle.readyToast) { bridle.readyToast = true; toast('Ground is ready — key the radio (B / Y or R)'); }
   if (game.step === 5) {
@@ -2958,14 +3237,31 @@ function keyRadio() {
     const off = Math.abs(bridle.zA - WORLD.slingZ) * 3.281;
     radio('Ground', 'Stand by... ' + (off < 1.0 ? 'Point\'s good. Chain\'s coming down.' : 'You\'re about ' + off.toFixed(0) + ' feet off the mark. Both of you slide it ' + (bridle.zA > WORLD.slingZ ? 'upstage' : 'downstage') + '.'), 3.0);
     setTimeout(() => { if (game.over) return; if (game.pointNo < game.series.length - 1) nextPoint(); else endProgram(true, game.series.length > 1 ? 'Both points good' : 'Point\'s good', (game.series.length > 1 ? 'A split 15 and a 10 basket: up, wrapped, mated, squared and checked' : 'Bridle up, wrapped, mated, squared and checked') + ' — and nothing went in.'); }, 7000); return; }
+  groundStatus();
+}
+/* What the ground rigger says when you key him and there is nothing scripted to say: where the job
+   is, from his side. Standing on the channel repeating "loud and clear" while he waits on you is
+   what made him look like he was doing nothing. */
+function groundStatus() {
+  const at = R.pins.get(0), point = new THREE.Vector3(SLING_X + 0.1, 0.4, WORLD.slingZ);
+  const endAtPoint = at && at.target.distanceTo(point) < 0.8;
+  if (game.step <= 2) { playerSays('Radio check.'); radio('Ground', rope.landed ? 'Loud and clear. I\'ve got your end down here — come out when you\'re clipped.' : 'Loud and clear. Send your rope down when you\'re ready.', 1.2); return; }
+  if (!pcd.hung) { playerSays('How are we doing?'); radio('Ground', 'Waiting on you. Hang your device on the sling and feed me the rope.', 1.4); return; }
+  if (!rope.pcdFed) { playerSays('How are we doing?'); radio('Ground', 'Device is up. Feed the rope through it — load side, mind the arrow.', 1.6); return; }
+  if (rope.knot !== 'none') { playerSays('You got my end?'); radio('Ground', 'You\'ve still got it tied off to the rail. Untie it and give me some rope.', 1.8); return; }
+  if (!rope.bowline && !endAtPoint) { playerSays('You got my end?'); radio('Ground', 'Walking it over now. Stand by.', 1.2); return; }
+  if (!rope.bowline) { playerSays('You got my end?'); radio('Ground', 'I\'m at the point with it. Tying in.', 1.2); return; }
+  if (bridle.stage === 'idle') { playerSays('Ready on the ' + (game.prog === 'split15' ? 'split 15' : '10 basket') + '?'); radio('Ground', 'Go ahead and pull. I\'m watching the steel.', 1.6); bridle.stage = 'apex'; return; }
+  if (bridle.stage === 'apex') { playerSays('How\'s it look?'); radio('Ground', 'Leg\'s coming. Keep pace with the other side.', 1.4); return; }
+  if (!bridle.arrived) { playerSays('How\'s it look?'); radio('Ground', 'Load\'s off the deck. Steady.', 1.2); return; }
   playerSays('Radio check.'); radio('Ground', 'Loud and clear.', 1.2);
 }
 /* ───────────────────── program start / end ───────────────────── */
 const lobbyEl = document.getElementById('lobby'), hudEl = document.getElementById('hud'), pauseEl = document.getElementById('pause');
 function resetWorld() {
   game.step = 0; game.t = 0; game.drops = 0; game.earlyPulls = 0; game.unclippedOnBeam = 0; game.falls = 0; game.ropeDrops = 0; game.fouls = 0; game.procsMisses = 0; game.bestDrift = 0; game.over = false; game.result = null; game.radioChecked = false;
-  Object.assign(rope, { state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, hitchIdx: -1, pcdFed: false, pcdDir: 'ok', pcdIdx: -1, hauled: 0, bowline: false, looseT: 0, droppedIn: false, deployT: -1, landed: false, groundCarry: false, runBackFired: false, wrapT: 0, coilNext: undefined, coilHand: -1, knotReal: false }); railKnot.armed = true; railKnot.idx.length = 0; railKnot.status = '';
-  R.alive = false; R.pins.clear(); R.world = null; S.active = false; steelGroup.visible = false; knotBench.visible = false; knots.active = false; knots.lock = null; ropeBuild(SETTINGS.ropePhys, SETTINGS.ropeDetail);
+  Object.assign(rope, { state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, hitchIdx: -1, pcdFed: false, pcdDir: 'ok', pcdIdx: -1, hauled: 0, bowline: false, looseT: 0, droppedIn: false, deployT: -1, landed: false, groundCarry: false, runBackFired: false, wrapT: 0, coilNext: undefined, coilHand: -1, knotReal: false, pinch: null, turnsIn: 0, hockleAt: 0 }); railKnot.armed = true; railKnot.idx.length = 0; railKnot.status = '';
+  R.alive = false; R.pins.clear(); R.world = null; if (R.tw) R.tw.fill(0); hands.forEach(h => { h.rollRef = null; }); S.active = false; steelGroup.visible = false; knotBench.visible = false; knots.active = false; knots.lock = null; ropeBuild(SETTINGS.ropePhys, SETTINGS.ropeDetail);
   hands.forEach(h => { h.fatigue = 0; h.load = 0; h.slipping = false; h.taut = false; });
   Object.assign(bridle, { loadA: 0, loadW: 0, shareA: 0.5, chainOut: 0, hauledB: 0, stage: 'idle', togetherCalled: false, continueCalled: false, drift: 0, fouled: false, twist: false, arrived: false, burlapOff: false, wrapStage: 0, mated: false, burlapUnder: false, steelDown: false, squared: false, zB: WORLD.slingZ, zA: WORLD.slingZ, pointChecked: false, calledApexA: false, readyT: 0, readyToast: false, warned: false, earlyToast: false });
   wrapPts.length = 0; const set = wrapLine.getObjectByName('Bridle_Wrap_Set'); if (set) wrapLine.remove(set); const tw = wrapLine.getObjectByName('Bridle_Twist'); if (tw) wrapLine.remove(tw);
@@ -2993,14 +3289,38 @@ function enterHolodeck(mode) {
   toast('Point at a build and pull the trigger');
 }
 let programFade = 0;
+/* Ground rigging, first pass (M0.15): no procedure and no clock — the floor of the room, at floor
+   level, to walk and look at. The point is marked on the stage, the hoist is under it, the beams and
+   the catwalk are 108 feet up where you left them. Everything that can kill you up there is off. */
+function startGroundFloor() {
+  resetWorld(); game.prog = 'ground'; game.section = 'ground'; game.phase = 'ground';
+  holodeck.visible = false; arena.visible = true; scene.background.set(0x0b0a0e); hemi.intensity = 0.75; key.intensity = 1.0;
+  const up = game.mode === 'vr' && refTypeUsed === 'local' ? 1.6 : 0;
+  playerRig.position.set(POINT.x, up, POINT.z + 8); playerRig.rotation.y = 0; player.safe.copy(playerRig.position);
+  if (game.mode === 'desk') { player.yaw = Math.PI; player.pitch = 0.15; playerRig.rotation.y = 0; }
+  document.getElementById('c-eyebrow').textContent = 'Ground rigging · the floor';
+  game.step = 0; hudDirty = true;
+  toast('GROUND RIGGING — walk the floor. Nothing is on the clock.');
+  radio('Ground', 'Have a look around. Your point\'s the mark on the stage; the steel\'s a hundred and eight feet over it.', 1.5);
+}
+/* the floor is walkable everywhere inside the building, and nowhere outside it */
+function groundTick(dt) {
+  const p = playerRig.position, FL = WORLD.floorLen, FW = WORLD.floorWid, FZ = -FW / 2;
+  p.x = Math.max(HX - FL / 2 - 2, Math.min(HX + FL / 2 + 2, p.x));   // the event floor and a couple of metres of runway; the seating is not walkable
+  p.z = Math.max(FZ - FW / 2 - 2, Math.min(2, p.z));
+  const up = game.mode === 'vr' && refTypeUsed === 'local' ? 1.6 : 0;
+  const onStage = Math.abs(p.x - POINT.x) < 30 * FT && Math.abs(p.z - POINT.z) < 20 * FT;   // the stage is a marking, not a step up
+  p.y += ((onStage ? 0 : 0) + up - p.y) * Math.min(1, dt * 8);
+}
 function startProgram(prog) {
-  if (prog === 'ground') { toast('GROUND RIGGING comes with the crew build — a ground rigger needs up-riggers to work with. Network mode is next.'); AudioKit.deny(); return; }
+  if (prog === 'ground') { programFade = 1; AudioKit.program(); setTimeout(startGroundFloor, 700); return; }
   // UP-RIGGING is one section with two points in it: a split 15 first, then a 10 basket on the same beam.
   // The single-build names still work (the tests use them) and run one point.
   game.series = prog === 'uprig' ? ['split15', 'basket10'] : [prog]; game.pointNo = 0; game.prog = game.series[0]; game.section = prog;
   document.querySelectorAll('.prog').forEach(b => b.classList.toggle('is-on', b.dataset.prog === prog));
   programFade = 1; AudioKit.program();
   if (prog === 'knots') { setTimeout(startKnots, 700); return; }
+  if (prog === 'ground') return;
   setTimeout(() => {
     resetWorld(); game.phase = 'arena'; holodeck.visible = false; arena.visible = true;
     scene.background.set(0x0b0a0e); hemi.intensity = 0.55; key.intensity = 1.0;
@@ -3017,7 +3337,7 @@ function pointEyebrow() { document.getElementById('c-eyebrow').textContent = (ga
    building the next one. Gear stays on; the clock and the tally keep running. */
 function nextPoint() {
   game.pointNo++; game.prog = game.series[game.pointNo];
-  Object.assign(rope, { state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, hitchIdx: -1, pcdFed: false, pcdDir: 'ok', pcdIdx: -1, hauled: 0, bowline: false, looseT: 0, droppedIn: false, deployT: -1, landed: false, groundCarry: false, runBackFired: false, wrapT: 0, coilNext: undefined, coilHand: -1, knotReal: false }); railKnot.armed = true; railKnot.idx.length = 0; railKnot.status = '';
+  Object.assign(rope, { state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, hitchIdx: -1, pcdFed: false, pcdDir: 'ok', pcdIdx: -1, hauled: 0, bowline: false, looseT: 0, droppedIn: false, deployT: -1, landed: false, groundCarry: false, runBackFired: false, wrapT: 0, coilNext: undefined, coilHand: -1, knotReal: false, pinch: null, turnsIn: 0, hockleAt: 0 }); railKnot.armed = true; railKnot.idx.length = 0; railKnot.status = '';
   R.alive = false; R.pins.clear(); S.active = false; steelGroup.visible = false; ropeBuild(SETTINGS.ropePhys, SETTINGS.ropeDetail);
   hands.forEach(h => { h.fatigue = 0; h.load = 0; h.slipping = false; h.taut = false; });
   Object.assign(bridle, { loadA: 0, loadW: 0, shareA: 0.5, chainOut: 0, hauledB: 0, stage: 'idle', togetherCalled: false, continueCalled: false, drift: 0, fouled: false, twist: false, arrived: false, burlapOff: false, wrapStage: 0, mated: false, burlapUnder: false, steelDown: false, squared: false, zB: WORLD.slingZ, zA: WORLD.slingZ, pointChecked: false, calledApexA: false, readyT: 0, readyToast: false, warned: false, earlyToast: false });
@@ -3085,13 +3405,17 @@ function hudTick() {
   hAlt.textContent = Math.round(_head.y * 3.281) + ' ft';
   hClip.textContent = lanyard.clipped ? (lanyard.anchor === 'lifeline' ? 'LIFELINE' : 'RAIL') : 'OPEN'; hClip.className = 'val ' + (lanyard.clipped ? 'good' : 'bad');
   const ra = rope.state === 'coil' ? 'COIL' : rope.state === 'gone' ? 'GONE' : rope.anchor === 'hitch' ? (rope.knot === 'wrap' ? 'WRAP!' : rope.knot === 'clove' ? 'CLOVE' : 'HITCHED') : rope.anchor === 'pcd' ? 'PCD' : rope.anchor === 'hand' ? 'IN HAND' : rope.anchor === 'foot' ? 'UNDERFOOT' : rope.landed ? 'LOOSE!' : 'FALLING';
-  hRope.textContent = ra; hRope.className = 'val ' + (ra === 'LOOSE!' || ra === 'WRAP!' || ra === 'GONE' ? 'bad' : 'good');
+  const tn = rope.turnsIn || 0;
+  hRope.textContent = ra + (Math.abs(tn) >= 1 ? ' ' + (tn > 0 ? '+' : '−') + Math.abs(tn).toFixed(0) + 'T' : '');
+  hRope.className = 'val ' + (ra === 'LOOSE!' || ra === 'WRAP!' || ra === 'GONE' ? 'bad' : Math.abs(tn) > 2.5 ? 'bad' : 'good');
   hDrops.textContent = game.drops; hDrops.className = 'val ' + (game.drops ? 'bad' : '');
   const inHand = Math.max(...hands.map(h => h.load)), shown = inHand > 0.5 ? inHand : bridle.loadA;
   hLoad.textContent = Math.round(shown * 2.205) + ' lb'; hLoad.className = 'val ' + (inHand > 8 ? (inHand > MAX_LOAD * 0.7 ? 'bad' : '') : 'good');
   const arm = Math.round((1 - Math.max(...hands.map(h => h.fatigue))) * 100); hArm.textContent = arm + '%'; hArm.className = 'val ' + (arm < 35 ? 'bad' : arm < 65 ? '' : 'good');
   const st = STEPS[game.step];
-  if (game.phase === 'lobby') { cTitle.textContent = 'Choose a build'; cBody.textContent = 'Two pedestals in front of the arch: a split 15 or a 10 basket. Point and pull the trigger (desktop: look at one and click).'; cList.innerHTML = ''; }
+  if (game.phase === 'ground') { cTitle.textContent = 'Ground rigging · the floor';
+    cBody.textContent = 'No procedure and no clock. Walk the room: the mark on the stage is the point, the hoist stands on it, the two beams and the catwalk are 108 feet over your head, and the scoreboard is downstage where it belongs. Pause to go back to the arch.'; cList.innerHTML = ''; }
+  else if (game.phase === 'lobby') { cTitle.textContent = 'Choose a build'; cBody.textContent = 'Two pedestals in front of the arch: a split 15 or a 10 basket. Point and pull the trigger (desktop: look at one and click).'; cList.innerHTML = ''; }
   else if (st) { cTitle.textContent = game.step + ' · ' + st.title; cBody.textContent = st.body; cList.innerHTML = st.list().map(i => '<li class="' + (i.ok ? 'done' : i.bad ? 'bad' : '') + '">' + i.t + '</li>').join(''); }
 }
 function wrapText(x, text, maxW, lineH, px, py, maxLines) { const words = text.split(' '); let line = '', n = 0; for (const w of words) { const t = line ? line + ' ' + w : w; if (x.measureText(t).width > maxW && line) { x.fillText(line, px, py); py += lineH; line = w; if (++n >= maxLines) return py; } else line = t; } if (line) x.fillText(line, px, py); return py + lineH; }
@@ -3103,7 +3427,9 @@ function makeBoard(name, w, h) {
   return m;
 }
 const boardTable = makeBoard('Board_GearTable', 1.05, 0.875); boardTable.position.set(GEAR_X, H + 1.7, PREP.z1 - 0.06); boardTable.rotation.y = Math.PI; arena.add(boardTable);   // on the prep area's back wall, above the table
-const boardSling = makeBoard('Board_Sling', 0.84, 0.7); boardSling.position.set(SLING_X + 0.55, H + 1.45, WORLD.slingZ + 0.15); boardSling.rotation.y = -0.55; arena.add(boardSling);
+// on the catwalk side of beam A and below eye level: the other rigger is across the gap at +X and
+// this card used to sit right in that sight line
+const boardSling = makeBoard('Board_Sling', 0.84, 0.7); boardSling.position.set(-SLING_X - 0.5, H + 1.15, WORLD.slingZ + 0.7); boardSling.rotation.set(-0.35, 0.6, 0); arena.add(boardSling);
 const boardHanger = cyl(0.006, 1.0, MAT.wireRope, 'Board_Sling_Hanger'); boardHanger.position.set(SLING_X + 0.55, H + 2.3, WORLD.slingZ + 0.15); arena.add(boardHanger);
 function drawBoard(b) {
   const c = b.userData.c, x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height);
@@ -3384,10 +3710,11 @@ renderer.setAnimationLoop((time, frame) => {
     desktopTick(dt); vrTick(dt); bodyTick(); handsTick(dt);
     if (!game.paused) {
       if (game.phase === 'lobby') lobbyTick();
+      else if (game.phase === 'ground') { groundTick(dt); radioTick(dt); }
       else { playerTick(dt); lanyardTick(); const _t0 = performance.now(); ropeTick(dt); const _t1 = performance.now(); ropeRender(); const _t2 = performance.now(); game.perfSim = game.perfSim * 0.95 + (_t1 - _t0) * 0.05; game.perfDraw = game.perfDraw * 0.95 + (_t2 - _t1) * 0.05; steelTick(dt); bridleTick(dt); steelRender(); fallingTick(dt); stepTick(dt); radioTick(dt); }
     }
     if (renderer.xr.isPresenting) feetTick(frame || (renderer.xr.getFrame && renderer.xr.getFrame()), dt); else feetTick(null, dt);
-    hudTick(); boardsTick(); knotBoardTick(); radioDisplayTick(); vrPanelTick(dt);
+    hudTick(); boardsTick(); if (game.phase === 'knots' && !game.paused) loopHintTick(); knotBoardTick(); radioDisplayTick(); vrPanelTick(dt);
     if (programFade > 0) { programFade = Math.max(0, programFade - dt * 1.4); if (gridFlash && gridFlash.material) gridFlash.material.opacity = 0.85 + programFade * 0.15; }
   }
   renderer.render(scene, camera);
@@ -3396,7 +3723,7 @@ renderer.setAnimationLoop((time, frame) => {
 /* debug / test hooks: drive the flow without a headset */
 
 /* debug / test hooks: drive the flow without a headset */
-window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, balance, SELF, RAIL_Y, RAIL_Z, S, STEEL, steelBuild, steelHookOn, steelFoulCheck, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos, crew, falling, groundRigger, grabEnd, grabStart, quitToArch, startFall, crewDodge, nextPoint, railKnot, railKnotTick, CWX, LL_Y, railPostX, THEMES, THEME_IDS, TH, applyTheme, pedestals, setPause, barBlock, heldRopeBlocked };
+window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, balance, SELF, RAIL_Y, RAIL_Z, S, STEEL, steelBuild, steelHookOn, steelFoulCheck, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, findLoop, bowlineStage, loopHintTick, loopGeom, loopDisc, twistTick, handRoll, pinchMark, bightGrab, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos, crew, falling, groundRigger, grabEnd, grabStart, quitToArch, startFall, crewDodge, nextPoint, railKnot, railKnotTick, CWX, LL_Y, railPostX, startGroundFloor, groundTick, startGroundCarry, groundStatus, HX, THEMES, THEME_IDS, TH, applyTheme, pedestals, setPause, barBlock, heldRopeBlocked };
 </script>
 </body>
 </html>
