@@ -295,7 +295,7 @@
         <dt>Feet</dt><dd>Where the headset says they are. Stand on the rope to hold it; step off the beam and gravity has you</dd>
         <dt>Desktop</dt><dd>Mouse look · WASD walk · <b>left mouse = grip</b> · right mouse / F = trigger · mouse wheel wraps a knot or hauls · E reach · R radio · P pause</dd>
       </dl>
-      <p class="footnote">M0.19 &mdash; the mate between two bones of the rope has an angular limit that scales with the spacing: 15&deg; a joint at 1&nbsp;inch, 165&deg; at a foot &mdash; the same rope, a four-inch minimum bend radius, however finely it is chopped. Steel and knots override it; free rope obeys it. On Quest, open this page in the headset browser.
+      <p class="footnote">M0.21 &mdash; the rope has volume along the bone, not just at the joint: two strands are held apart at a rope&rsquo;s width wherever they come closest, and each contact remembers which side of the other it is on, so a hard pull no longer drags the rope through itself. The separate stiffness on the last few feet is gone &mdash; the joint limit does that job now. On Quest, open this page in the headset browser.
         If the Enter button stays unavailable inside an embedded viewer, open the page in its own tab.</p>
       <p class="footnote" id="diag" style="font-family:monospace;font-size:11px;color:#6a6a5c;line-height:1.6"></p>
     </div>
@@ -1005,9 +1005,14 @@ const rope = { pinch: null, state: 'coil', anchor: null, knot: 'none', acc: 0, t
    its own. */
 function jointLimit(L0) {
   const inch = L0 / 0.0254;
-  const deg = 15 + (inch - 1) * (150 / 11);
-  return Math.max(4, Math.min(170, deg)) * Math.PI / 180;
+  const at1 = SETTINGS.jointAt1 === undefined ? 7.5 : SETTINGS.jointAt1;
+  const at12 = SETTINGS.jointAt12 === undefined ? 165 : SETTINGS.jointAt12;
+  const deg = at1 + (inch - 1) * (at12 - at1) / 11;
+  return Math.max(1, Math.min(175, deg)) * Math.PI / 180;
 }
+/* what a joint limit means as a bend radius, for the settings readout: the two ends of the curve are
+   the same rope only when these agree */
+function jointRadiusIn(L0) { return L0 / jointLimit(L0) * 39.37; }
 const R = { n: 0, L0: 0, jointMax: 0.26, pos: [], prev: [], pins: new Map(), alive: false, r: 0.012, mesh: null, tension: [], tw: null, substeps: 8, iters: 2, inches: 0, renderInches: 0, renderSub: 1 };
 const ropeGroup = new THREE.Group(); ropeGroup.name = 'Rope'; scene.add(ropeGroup);   // in the scene, not the arena: the knot bench in the holodeck uses the same rope
 let ropeInst = null;
@@ -1103,11 +1108,13 @@ let _pinned = new Uint8Array(0);   // the pin map as a flat array, rebuilt each 
    the program resumes. The resolution (particles per foot) applies when a program starts. */
 const ROPE_PARAMS = [
   { key: 'ropeStretch', label: 'Stretch', hint: 'How far a segment may be pulled past its length before it is hauled back, inelastically. Low is a stiff rope; high is a bungee.', min: 1.05, max: 1.5, step: 0.05, def: 1.2, fmt: v => Math.round((v - 1) * 100) + '%' },
+  { key: 'jointAt1', label: 'Joint at 1 in', hint: 'How far the mate between two bones may close when the rope is cut into 1-inch bones. The whole curve runs from this to the foot figure below, straight line between. The bend radius it implies is shown beside it — when the two ends of the curve agree on that radius, every resolution is the same rope.', min: 2, max: 40, step: 0.5, def: 7.5, fmt: v => v + '° · ' + (0.0254 / (v * Math.PI / 180) * 39.37).toFixed(1) + ' in radius' },
+  { key: 'jointAt12', label: 'Joint at 1 ft', hint: 'The same, for a rope cut into 1-foot bones. A foot of rope can fold nearly flat on its own, so this is normally large; the radius beside it is what it implies.', min: 20, max: 175, step: 5, def: 165, fmt: v => v + '° · ' + (0.3048 / (v * Math.PI / 180) * 39.37).toFixed(1) + ' in radius' },
+  { key: 'ropeFrame', label: 'Bone frames', hint: 'Free: each bone is oriented on its own, so its facets roll about the rope as it moves — the rope appears to spin in place. Carried: each bone keeps its orientation relative to its neighbour and the frame is carried along the rope, so the rope bends without spinning, and a turn put into it (Twist) is visible as the rope turning.', min: 0, max: 1, step: 1, def: 1, fmt: v => v ? 'carried — bends, does not spin' : 'free — minimal per bone' },
   { key: 'ropeJoint', label: 'Joint limit', hint: 'How far the mate between two bones of the rope may close, as a fraction of the standard curve — 15° per joint at 1 inch, 165° at a foot, which is a four-inch minimum bend radius at any resolution. Contact overrides it: rope forced round a bar or through a knot bends as tight as the steel makes it.', min: 0, max: 1.6, step: 0.05, def: 1, fmt: v => v <= 0 ? 'off' : Math.round(v * 100) + '% · ' + Math.round(jointLimit(R.L0 || 0.0254) * v * 57.2958) + '°/joint' },
   { key: 'ropeVisc', label: 'Internal friction', hint: 'The rope\'s own damping of ripples along it. Low and it wiggles; high and it goes dead.', min: 0, max: 0.6, step: 0.05, def: 0.25, fmt: v => v.toFixed(2) },
   { key: 'ropeAir', label: 'Air drag', hint: 'Per second. Low falls like a rope; high falls like a feather.', min: 0, max: 1.0, step: 0.04, def: 0.12, fmt: v => v.toFixed(2) },
   { key: 'ropeBody', label: 'Body', hint: 'How much the whole rope resists being bent — the difference between a rope and a chain. It does NOT hold a loop open (a bending spring pulls toward straight, which flattens a loop rather than keeping it round); what it gives you is a rope that lies and hangs like rope. Costs a little on a headset.', min: 0, max: 1, step: 0.05, def: 0.15, fmt: v => Math.round(v * 100) + '%' },
-  { key: 'ropeTip', label: 'Held end', hint: 'How much the last foot of a whipped end wants to stay straight while you have hold of it. Stiff enough and the end pushes through a loop instead of folding over — which is most of what makes a bowline tieable. Zero is a limp end.', min: 0, max: 1, step: 0.05, def: 0.6, fmt: v => Math.round(v * 100) + '%' },
   { key: 'ropeTwist', label: 'Twist', hint: 'Whether the rope carries turns. Roll your wrist with the rope in your hand and the turn goes into it, travels along it, and comes back out of a free end. Keep putting turns into slack rope and it hockles — throws a loop of its own — which is what a rope does and what makes a coil fight you. Zero is a rope with no memory of being turned.', min: 0, max: 1, step: 0.05, def: 0.6, fmt: v => Math.round(v * 100) + '%' },
   { key: 'ropeMu', label: 'Friction on steel', hint: 'How much the rope grips a bar or the deck. A wrap on a rail holds by this.', min: 0.5, max: 2.0, step: 0.1, def: 1.0, fmt: v => '×' + v.toFixed(1) },
   { key: 'ropeStick', label: 'Static stick', hint: 'Below this creep (m/s) a contact simply holds. That is what keeps a pile put and a wrap from sliding.', min: 0, max: 0.1, step: 0.01, def: 0.03, fmt: v => v.toFixed(2) + ' m/s' },
@@ -1216,15 +1223,6 @@ function ropeBody() {
   const iters = 1 + Math.round(2 * s);
   for (let it = 0; it < iters; it++) ropeBendSpan(1, end, 0.22 * s);
 }
-/* the end in your hand is stiffer still: a whipped end pushes through a loop instead of folding */
-function ropeStiffEnd() {
-  const s = ropeParam('ropeTip'); if (s <= 0) return;
-  if (R.world !== 'knots' && rope.pcdFed) return;   // not once the rope is through the device: hauling is the one thing a stiff tail has no business in, and it fought the transport
-  const seg = Math.max(2, Math.round(0.35 / R.L0)), iters = 1 + Math.round(5 * s);
-  for (const h of hands) { const i = handPin(h.index); if (i < 0) continue;
-    for (let it = 0; it < iters; it++) { if (i <= seg) ropeBendSpan(1, i + seg, 0.25); else if (i >= R.n - 1 - seg) ropeBendSpan(i - seg, R.n - 1, 0.25); }   // only the end you actually have hold of
-  }
-}
 function ropeStep(dt, frac) {
   if (_pinned.length !== R.n) _pinned = new Uint8Array(R.n); else _pinned.fill(0); R.pins.forEach((p, i) => { _pinned[i] = 1; });
   const g = -WORLD.g * dt * dt, damp = 1 - (window.AIR_OVERRIDE !== undefined ? window.AIR_OVERRIDE : ropeParam('ropeAir')) * dt;   // air, per second not per step; the ripples are killed by ropeBendDamp, so this can stay light enough for a rope to fall like one
@@ -1270,7 +1268,7 @@ function ropeStep(dt, frac) {
       a.addScaledVector(v, diff * wa); b.addScaledVector(v, -diff * wb);
     }
   }
-  ropeBody(); ropeStiffEnd(); prof('bendstiff');
+  ropeBody(); prof('bendstiff');
   if (!window.NO_LONG) ropeLongDamp(); prof('longdamp');
   dbgPhase('fine');
   prof('fine'); if ((R.stepNo & 1) && !window.NO_STRAIN) ropeStrainLimit(); prof('strain'); if (_touched.length !== R.n) _touched = new Uint8Array(R.n); else _touched.fill(0); ropeSelfSolve(); dbgPhase('self'); prof('self'); pcdStrands(); dbgPhase('strands');
@@ -1350,36 +1348,112 @@ function ropeCoarse() {
    apart, with friction between the strands — what lets a wrap stack on itself and a knot bite.
    Candidate pairs come from a spatial hash built once a frame (the rope moves millimetres per
    substep); the substeps only resolve the pairs. Settings → Rope on rope: near the hands / off. */
-const SELF = { pairs: [], zoneR: 0.9, count: 0 };   // rope on rope within arm's reach of a hand, and (Settings → Rope on rope: deck) everything up at the steel; the pile on the arena floor is left to itself
-const _sh = new Map();
+const SELF = { pairs: [], nrm: new Float32Array(0), lim: 0.05, zoneR: 0.9, count: 0 };   // rope on rope within arm's reach of a hand, and (Settings → Rope on rope: deck) everything up at the steel; the pile on the arena floor is left to itself
+const _sh = new Map(), _nkey = new Map();
 function ropeSelfBuild(all) {
+  // carry each pair's contact normal over from last frame before the list is thrown away: which side
+  // of each other the two strands were on is the memory that stops the rope pulling through itself
+  _nkey.clear(); { const P = SELF.pairs, N = SELF.nrm;
+    for (let k = 0; k < P.length; k += 2) { const o = (k >> 1) * 3; if (N[o] || N[o + 1] || N[o + 2]) _nkey.set(P[k] * 65536 + P[k + 1], o); }
+    if (_nkey.size) { const keep = new Float32Array(N); _nkey.forEach((o, key) => _nkey.set(key, [keep[o], keep[o + 1], keep[o + 2]])); } }
   SELF.pairs.length = 0; SELF.count = 0; if (SETTINGS.selfCollide === 'off' || !R.alive) return;
-  const r2 = R.world === 'knots' ? 1e9 : SELF.zoneR * SELF.zoneR, cell = R.r * 4, inv = 1 / cell; _sh.clear();
+  const r2 = R.world === 'knots' ? 1e9 : SELF.zoneR * SELF.zoneR, cell = Math.max(R.r * 4, 2 * R.r + R.L0 * 1.05), inv = 1 / cell; _sh.clear();   // the cell has to be as wide as the reach, or the search misses pairs it should find
   const near = []; const deck = R.world !== 'knots' && SETTINGS.selfCollide === 'deck', deckY = H - 1.0;   // the deck zone: the rope up at the steel, where the knots are tied; the hang and the pile below are left alone
   for (let i = 0; i < R.n; i++) { const p = R.pos[i]; let ok = deck && p.y > deckY; if (!ok) for (const h of hands) { const dx = p.x - h.pos.x, dy = p.y - h.pos.y, dz = p.z - h.pos.z; if (dx * dx + dy * dy + dz * dz < r2) { ok = true; break; } } if (!ok) continue;
     const pin = R.pins.get(i); if (pin && pin.kind === 'coil') continue;   // the coil is a pile of coincident pins: not rope in the world yet
     near.push(i); const k = (Math.floor(p.x * inv) * 73856093) ^ (Math.floor(p.y * inv) * 19349663) ^ (Math.floor(p.z * inv) * 83492791); let b = _sh.get(k); if (!b) { b = []; _sh.set(k, b); } b.push(i); }
-  SELF.count = near.length; const lim = 4 * R.r, lim2 = lim * lim; const skip = Math.max(3, Math.round(0.08 / R.L0));   // neighbours along the rope are not contacts
+  // segment to segment: two bones can touch with their joints a bone's length apart
+  SELF.count = near.length; const lim = SELF.lim = 2 * R.r + R.L0 * 1.05, lim2 = lim * lim;
+  const skip = Math.max(3, Math.round(0.08 / R.L0));   // neighbours along the rope are not contacts
   for (const i of near) { const p = R.pos[i]; const cx = Math.floor(p.x * inv), cy = Math.floor(p.y * inv), cz = Math.floor(p.z * inv);
     for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) for (let oz = -1; oz <= 1; oz++) { const b = _sh.get(((cx + ox) * 73856093) ^ ((cy + oy) * 19349663) ^ ((cz + oz) * 83492791)); if (!b) continue;
       const pi = !all && R.pins.has(i);
       for (const j of b) { if (j <= i + skip || (pi && R.pins.has(j))) continue; const q = R.pos[j]; const dx = q.x - p.x, dy = q.y - p.y, dz = q.z - p.z; if (dx * dx + dy * dy + dz * dz < lim2) SELF.pairs.push(i, j); } } }
+  const np = SELF.pairs.length >> 1; if (SELF.nrm.length < np * 3) SELF.nrm = new Float32Array(np * 3 + 96); const N = SELF.nrm;
+  for (let k = 0; k < np; k++) { const was = _nkey.get(SELF.pairs[k * 2] * 65536 + SELF.pairs[k * 2 + 1]), o = k * 3;
+    if (was) { N[o] = was[0]; N[o + 1] = was[1]; N[o + 2] = was[2]; } else { N[o] = N[o + 1] = N[o + 2] = 0; } }   // 0 = a new pair: it takes the side it is on now
 }
 const _sp = new THREE.Vector3(), _sq = new THREE.Vector3();
+/* ── rope on rope, with the rope having volume (M0.21) ──
+   This used to keep the JOINTS apart: a sphere of the rope's radius at each particle. At an inch
+   spacing on half-inch rope those spheres sit four radii apart, so there is a half-inch hole between
+   every pair of them — wider than the rope — and another strand threads straight through it. That is
+   the pulling-through-itself. A cube at the joint does not close it, because the hole is not at the
+   joint; it is between joints, and a cube big enough to fill it would make half-inch rope collide like
+   a one-inch bar. What closes it is giving the BONE the volume instead of the joint: each segment is a
+   capsule, and two capsules are kept a rope's width apart at their closest approach, wherever along
+   them that falls. No holes, and the rope collides at exactly its own diameter. */
+const _q1 = new THREE.Vector3(), _q2 = new THREE.Vector3(), _d1 = new THREE.Vector3(), _d2 = new THREE.Vector3(), _r12 = new THREE.Vector3();
+const _cst = { s: 0, t: 0 };
+/* closest approach of two segments (Ericson): the parameters along each, clamped to the ends */
+function closest2(a0, a1, b0, b1, q1, q2) {
+  _d1.copy(a1).sub(a0); _d2.copy(b1).sub(b0); _r12.copy(a0).sub(b0);
+  const A = _d1.dot(_d1), E = _d2.dot(_d2), F = _d2.dot(_r12);
+  let sc, tc;
+  if (A < 1e-12 && E < 1e-12) { sc = tc = 0; }
+  else if (A < 1e-12) { sc = 0; tc = Math.max(0, Math.min(1, F / E)); }
+  else { const C = _d1.dot(_r12);
+    if (E < 1e-12) { tc = 0; sc = Math.max(0, Math.min(1, -C / A)); }
+    else { const B = _d1.dot(_d2), den = A * E - B * B;
+      sc = den > 1e-12 ? Math.max(0, Math.min(1, (B * F - C * E) / den)) : 0;
+      tc = (B * sc + F) / E;
+      if (tc < 0) { tc = 0; sc = Math.max(0, Math.min(1, -C / A)); }
+      else if (tc > 1) { tc = 1; sc = Math.max(0, Math.min(1, (B - C) / A)); } } }
+  q1.copy(a0).addScaledVector(_d1, sc); q2.copy(b0).addScaledVector(_d2, tc);
+  _cst.s = sc; _cst.t = tc; return _cst;
+}
 function ropeSelfSolve() {
   const P = SELF.pairs; if (!P.length) return; const minD = 2 * R.r * 0.98, MU = 0.5;
+  const keepD = minD + R.L0 * 0.5, memD = minD + R.L0, sides = !window.NO_CCD, lim = SELF.lim;   // when the pair's contact normal is written, and when it is forgotten
+  const n1 = R.n - 1, slp = _asleep.length === R.n, tch = _touched.length === R.n;
   for (let k = 0; k < P.length; k += 2) {
-    const i = P[k], j = P[k + 1]; if (_asleep.length === R.n && _asleep[i] && _asleep[j]) continue;   // a settled pile is left alone
-    const a = R.pos[i], b = R.pos[j]; _sp.copy(b).sub(a); let d = _sp.length(); if (d >= minD) continue;
-    const pa = _pinned[i], pb = _pinned[j]; if (pa && pb) continue; const wa = pa ? 0 : pb ? 1 : 0.5, wb = pb ? 0 : pa ? 1 : 0.5;
-    if (d < 1e-6) { _sp.set(1, 0, 0); d = 1e-6; } else _sp.multiplyScalar(1 / d); const push = minD - d;   // dead on top of each other: pick a side
-    if (_touched.length === R.n) { _touched[i] = 3; _touched[j] = 3; }   // 3 = rope on rope. It counts as resting (ropeRest) and, like a bar, it is allowed to bend the rope tighter than the rope would bend on its own
-    a.addScaledVector(_sp, -push * wa); b.addScaledVector(_sp, push * wb);
-    R.prev[i].addScaledVector(_sp, -push * wa * 0.8); R.prev[j].addScaledVector(_sp, push * wb * 0.8);   // mostly inelastic: strands settle against each other instead of trembling
-    // friction between the strands: the sliding of one over the other this step is cut by μ·push
-    _sq.copy(b).sub(R.prev[j]).sub(a).add(R.prev[i]); const vn = _sq.dot(_sp); _sq.addScaledVector(_sp, -vn); const t = _sq.length(); if (t < 1e-9) continue;
-    const f = t < _stickStep ? 1 : Math.min(1, MU * push / t);
-    R.prev[i].addScaledVector(_sq, -f * wa); R.prev[j].addScaledVector(_sq, f * wb);   // slower relative slide, as if each grabbed the other
+    const i = P[k], j = P[k + 1]; if (i >= n1 || j >= n1) continue;
+    if (slp && _asleep[i] && _asleep[j] && _asleep[i + 1] && _asleep[j + 1]) continue;   // a settled pile is left alone
+    const a0 = R.pos[i], a1 = R.pos[i + 1], b0 = R.pos[j], b1 = R.pos[j + 1];
+    const cst = closest2(a0, a1, b0, b1, _q1, _q2), sc = cst.s, tc = cst.t;
+    _sp.copy(_q2).sub(_q1); let d = _sp.length();
+    // which side of the other bone this one is on. Keeping the strands a rope's width apart is not
+    // enough on its own: under a hard pull the closest point can step clean past the other strand in
+    // one substep, and from there the same constraint shoves it further out the far side — that is the
+    // rope pulling through itself. So every pair remembers the direction it was last held apart in
+    // (carried across frames in ropeSelfBuild), and a separation that has flipped against that memory
+    // is put back on the side it came from. A normal that turns gradually is one strand sliding around
+    // another, which is allowed; one that reverses inside a substep is a strand that went through.
+    const o = (k >> 1) * 3, N = SELF.nrm; let push, crossed = false;
+    if (sides && (N[o] || N[o + 1] || N[o + 2])) {
+      const along = _sp.x * N[o] + _sp.y * N[o + 1] + _sp.z * N[o + 2];
+      // a flip, but no further through than a substep could carry it — anything deeper is a stale
+      // memory of a contact that has long since let go, not a strand caught in the act
+      if (along < 0 && along > -lim) { crossed = true; _sp.set(N[o], N[o + 1], N[o + 2]); push = minD - along; } }
+    if (!crossed) {
+      // the memory is a contact normal, not a direction to any old neighbour: it is written while the
+      // strands are within half a bone of touching and forgotten once they are clear of each other
+      if (d > memD) { N[o] = N[o + 1] = N[o + 2] = 0; }
+      else if (d > 1e-6 && d < keepD) { const u = 1 / d; N[o] = _sp.x * u; N[o + 1] = _sp.y * u; N[o + 2] = _sp.z * u; }
+      if (d >= minD) continue;
+      if (d < 1e-6) _sp.set(1, 0, 0); else _sp.multiplyScalar(1 / d);
+      push = minD - d; }
+    // the correction is shared out to the four joints by where along each bone the contact fell
+    const wa0 = (1 - sc), wa1 = sc, wb0 = (1 - tc), wb1 = tc;
+    const fa0 = _pinned[i] ? 0 : wa0, fa1 = _pinned[i + 1] ? 0 : wa1, fb0 = _pinned[j] ? 0 : wb0, fb1 = _pinned[j + 1] ? 0 : wb1;
+    const sA = fa0 * fa0 + fa1 * fa1, sB = fb0 * fb0 + fb1 * fb1, tot = sA + sB; if (tot < 1e-9) continue;
+    const kA = push * (sA / tot) / (sA || 1), kB = push * (sB / tot) / (sB || 1);
+    if (tch) { _touched[i] = 3; _touched[i + 1] = 3; _touched[j] = 3; _touched[j + 1] = 3; }   // 3 = rope on rope: it counts as resting, and it may bend the rope tighter than the rope bends on its own
+    a0.addScaledVector(_sp, -kA * fa0); a1.addScaledVector(_sp, -kA * fa1);
+    b0.addScaledVector(_sp, kB * fb0); b1.addScaledVector(_sp, kB * fb1);
+    // mostly inelastic: strands settle against each other instead of trembling
+    R.prev[i].addScaledVector(_sp, -kA * fa0 * 0.8); R.prev[i + 1].addScaledVector(_sp, -kA * fa1 * 0.8);
+    R.prev[j].addScaledVector(_sp, kB * fb0 * 0.8); R.prev[j + 1].addScaledVector(_sp, kB * fb1 * 0.8);
+    // friction between the strands, at the contact: the sliding of one over the other this step is cut by μ·push
+    _sq.set(0, 0, 0)
+      .addScaledVector(R.pos[j], wb0).addScaledVector(R.pos[j + 1], wb1)
+      .addScaledVector(R.prev[j], -wb0).addScaledVector(R.prev[j + 1], -wb1)
+      .addScaledVector(R.pos[i], -wa0).addScaledVector(R.pos[i + 1], -wa1)
+      .addScaledVector(R.prev[i], wa0).addScaledVector(R.prev[i + 1], wa1);
+    const vn = _sq.dot(_sp); _sq.addScaledVector(_sp, -vn); const t2 = _sq.length(); if (t2 < 1e-9) continue;
+    const f = t2 < _stickStep ? 1 : Math.min(1, MU * push / t2);
+    R.prev[i].addScaledVector(_sq, -f * kA * fa0 / (push || 1)); R.prev[i + 1].addScaledVector(_sq, -f * kA * fa1 / (push || 1));
+    R.prev[j].addScaledVector(_sq, f * kB * fb0 / (push || 1)); R.prev[j + 1].addScaledVector(_sq, f * kB * fb1 / (push || 1));
   }
 }
 /* a hard pull can leave a segment stretched to twice its length for a step or two — energy that
@@ -1657,16 +1731,77 @@ function ropePointAt(s, t, out) {
   out.z = 0.5 * ((2 * p1.z) + (-p0.z + p2.z) * t + (2 * p0.z - 5 * p1.z + 4 * p2.z - p3.z) * t2 + (-p0.z + 3 * p1.z - 3 * p2.z + p3.z) * t3);
   return out;
 }
+/* ── the frame each bone is drawn in (M0.20) ──
+   A bone oriented on its own — the shortest rotation from +Y to wherever it points — has an arbitrary
+   roll about its own axis, and that roll jumps around as the rope moves. On a six-sided tube you see it
+   as every segment spinning in place. A rope does not do that: the orientation of one bone is carried
+   from the one before it, so the rope BENDS without SPINNING. That is a parallel-transported (Bishop)
+   frame, and it is carried in time as well as along the rope, so a rope hanging still is still.
+   It is also what makes the twist field visible: the material frame is the carried frame rolled by the
+   turns in the rope, so a rope you have wound visibly turns along its length. */
+const _fT = new THREE.Vector3(), _fTp = new THREE.Vector3(), _fAx = new THREE.Vector3(), _fN = new THREE.Vector3(), _fB = new THREE.Vector3(), _fX = new THREE.Vector3(), _fY = new THREE.Vector3(), _fZ = new THREE.Vector3();
+function ropeFrames() {
+  const n = R.n; if (!R.fn || R.fn.length !== n * 3) { R.fn = new Float32Array(n * 3); R.fseed = false; R.ft0 = null; }
+  const fn = R.fn;
+  for (let s = 0; s < n - 1; s++) {
+    _fT.copy(R.pos[s + 1]).sub(R.pos[s]); const l = _fT.length(); if (l < 1e-9) { _fT.set(0, 1, 0); } else _fT.multiplyScalar(1 / l);
+    if (s === 0) {
+      if (!R.fseed) { _fN.set(0, 1, 0); if (Math.abs(_fT.y) > 0.9) _fN.set(1, 0, 0); R.ft0 = new THREE.Vector3().copy(_fT); }
+      else {
+        // the root bone is carried in TIME the same way the rest are carried along the rope: rotate last
+        // frame's normal by however the root turned since. Re-squaring it instead (the obvious thing)
+        // injects spin at the root and the whole rope inherits it.
+        _fN.set(fn[0], fn[1], fn[2]);
+        _fAx.crossVectors(R.ft0, _fT); const sn0 = _fAx.length(), cs0 = R.ft0.dot(_fT);
+        if (sn0 > 1e-9) { _fAx.multiplyScalar(1 / sn0); const th = Math.atan2(sn0, cs0), c = Math.cos(th), si = Math.sin(th);
+          _fB.crossVectors(_fAx, _fN); const d = _fAx.dot(_fN);
+          _fN.multiplyScalar(c).addScaledVector(_fB, si).addScaledVector(_fAx, d * (1 - c)); }
+        R.ft0.copy(_fT);
+      }
+    } else {
+      _fN.set(fn[(s - 1) * 3], fn[(s - 1) * 3 + 1], fn[(s - 1) * 3 + 2]);
+      // carry it round the bend: rotate by the turn from the previous bone to this one
+      _fAx.crossVectors(_fTp, _fT); const sn = _fAx.length(), cs = _fTp.dot(_fT);
+      if (sn > 1e-9) { _fAx.multiplyScalar(1 / sn); const th = Math.atan2(sn, cs), c = Math.cos(th), si = Math.sin(th);
+        _fB.crossVectors(_fAx, _fN); const d = _fAx.dot(_fN);
+        _fN.multiplyScalar(c).addScaledVector(_fB, si).addScaledVector(_fAx, d * (1 - c)); }
+    }
+    _fN.addScaledVector(_fT, -_fN.dot(_fT));                                  // keep it square to the bone
+    let ln = _fN.length(); if (ln < 1e-6) { _fN.set(0, 1, 0); if (Math.abs(_fT.y) > 0.9) _fN.set(1, 0, 0); _fN.addScaledVector(_fT, -_fN.dot(_fT)); ln = _fN.length() || 1; }
+    _fN.multiplyScalar(1 / ln);
+    fn[s * 3] = _fN.x; fn[s * 3 + 1] = _fN.y; fn[s * 3 + 2] = _fN.z;
+    _fTp.copy(_fT);
+  }
+  R.fseed = true;
+}
 function ropeRender() {
   ropeGroup.visible = R.alive;
   if (!R.alive) { knotMesh.visible = false; return; }
   const m = R.renderSub; let k = 0;
+  const carried = (SETTINGS.ropeFrame === undefined ? 1 : SETTINGS.ropeFrame) > 0;
+  if (carried) ropeFrames();
+  const tw = R.tw, twOn = tw && tw.length === R.n && ropeParam('ropeTwist') > 0;
+  let phi = 0;
   for (let s = 0; s < R.n - 1; s++) {
+    if (twOn) phi += tw[s];                                   // the turns in the rope, rolled into the frame
     for (let j = 0; j < m; j++) {
       if (m === 1) { _ca.copy(R.pos[s]); _cb.copy(R.pos[s + 1]); } else { ropePointAt(s, j / m, _ca); ropePointAt(s, (j + 1) / m, _cb); }
       _rd.copy(_cb).sub(_ca); const len = _rd.length() || 1e-4; _rd.multiplyScalar(1 / len);
-      _rq.setFromUnitVectors(_up, _rd); _rmid.copy(_ca).add(_cb).multiplyScalar(0.5); _rs.set(R.r, len * 1.06, R.r);
-      _rm.compose(_rmid, _rq, _rs); ropeInst.setMatrixAt(k++, _rm);
+      _rmid.copy(_ca).add(_cb).multiplyScalar(0.5);
+      if (carried) {
+        _fY.copy(_rd);
+        _fX.set(R.fn[s * 3], R.fn[s * 3 + 1], R.fn[s * 3 + 2]);
+        _fX.addScaledVector(_fY, -_fX.dot(_fY)); if (_fX.lengthSq() < 1e-12) _fX.set(1, 0, 0); _fX.normalize();
+        if (twOn && phi) { _fZ.crossVectors(_fY, _fX); const c = Math.cos(phi), si = Math.sin(phi); _fX.multiplyScalar(c).addScaledVector(_fZ, si).normalize(); }
+        _fZ.crossVectors(_fX, _fY).normalize();
+        _fX.multiplyScalar(R.r); _fY.multiplyScalar(len * 1.06); _fZ.multiplyScalar(R.r);
+        _rm.makeBasis(_fX, _fY, _fZ);
+        const e = _rm.elements; e[12] = _rmid.x; e[13] = _rmid.y; e[14] = _rmid.z;
+        ropeInst.setMatrixAt(k++, _rm);
+      } else {
+        _rq.setFromUnitVectors(_up, _rd); _rs.set(R.r, len * 1.06, R.r);
+        _rm.compose(_rmid, _rq, _rs); ropeInst.setMatrixAt(k++, _rm);
+      }
     }
   }
   ropeInst.instanceMatrix.needsUpdate = true;
@@ -3795,7 +3930,7 @@ renderer.setAnimationLoop((time, frame) => {
 /* debug / test hooks: drive the flow without a headset */
 
 /* debug / test hooks: drive the flow without a headset */
-window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, balance, SELF, RAIL_Y, RAIL_Z, S, STEEL, steelBuild, steelHookOn, steelFoulCheck, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, findLoop, bowlineStage, loopHintTick, loopGeom, loopDisc, twistTick, handRoll, jointLimit, ropeJointLimit, pinchMark, bightGrab, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos, crew, falling, groundRigger, grabEnd, grabStart, quitToArch, startFall, crewDodge, nextPoint, railKnot, railKnotTick, CWX, LL_Y, railPostX, startGroundFloor, groundTick, startGroundCarry, groundStatus, HX, THEMES, THEME_IDS, TH, applyTheme, pedestals, setPause, barBlock, heldRopeBlocked };
+window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, balance, SELF, RAIL_Y, RAIL_Z, S, STEEL, steelBuild, steelHookOn, steelFoulCheck, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, findLoop, bowlineStage, loopHintTick, loopGeom, loopDisc, twistTick, handRoll, jointLimit, jointRadiusIn, ropeJointLimit, ropeFrames, pinchMark, bightGrab, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos, crew, falling, groundRigger, grabEnd, grabStart, quitToArch, startFall, crewDodge, nextPoint, railKnot, railKnotTick, CWX, LL_Y, railPostX, startGroundFloor, groundTick, startGroundCarry, groundStatus, HX, THEMES, THEME_IDS, TH, applyTheme, pedestals, setPause, barBlock, heldRopeBlocked };
 </script>
 </body>
 </html>
