@@ -16,6 +16,36 @@
     --display:'Antonio', 'Arial Narrow', sans-serif;
     --body:'Titillium Web', 'Segoe UI', sans-serif;
   }
+
+  /* ——— house themes ———
+     The holodeck's LCARS palette is the default. The others are the buildings and the crews this
+     trainer is actually for: the Rose Quarter's own arena, the two teams that play in it, and the
+     union whose people hang the shows. Colours only — every one of these owns its own marks. */
+  body[data-theme="moda"]{
+    --void:#040a14; --panel:#08101c; --edge:#16273a;
+    --grid:#7fd3f0; --amber:#0a84d8; --lav:#8fb2cc; --pale:#cbe9f7;
+    --alert:#ff6b5a; --ok:#5ad38a; --ink:#eaf3f9; --dim:#7b93a8;
+  }
+  body[data-theme="fire"]{
+    --void:#100604; --panel:#180b07; --edge:#3a201a;
+    --grid:#f0563c; --amber:#d93a2b; --lav:#f584ae; --pale:#5aa9e6;
+    --alert:#ffd23f; --ok:#7fd18a; --ink:#f7ece6; --dim:#a8806e;
+  }
+  body[data-theme="blazers"]{
+    --void:#08090a; --panel:#101214; --edge:#23272b;
+    --grid:#ffffff; --amber:#e03a3e; --lav:#c4ced4; --pale:#e8edf0;
+    --alert:#ffb020; --ok:#5ad38a; --ink:#f2f4f5; --dim:#8b9298;
+  }
+  body[data-theme="iatse"]{
+    --void:#0a0906; --panel:#131109; --edge:#2b2617;
+    --grid:#e8b923; --amber:#c8901a; --lav:#a89357; --pale:#f2dd93;
+    --alert:#e5484d; --ok:#7fbf5a; --ink:#f4efe0; --dim:#8a8067;
+  }
+  body[data-theme="blazers"] button.lcars,body[data-theme="blazers"] a.lcars{color:#fff}
+  body[data-theme="fire"] button.lcars,body[data-theme="fire"] a.lcars{color:#fff5f0}
+  body[data-theme="moda"] button.lcars,body[data-theme="moda"] a.lcars{color:#f2fbff}
+  body[data-theme="iatse"] .rail span{border-radius:4px 0 0 4px}
+  body[data-theme="blazers"] .rail span{border-radius:0}
   *{box-sizing:border-box}
   [hidden]{display:none!important}
   html,body{height:100%}
@@ -200,6 +230,15 @@
         <div class="racklist" hidden>
         </div>
         <p class="hint">Rope within about five feet of either hand is kept a rope's width apart from itself, with friction between the strands. Elsewhere it is free to pass through itself, which keeps the headset happy.</p>
+        <h2>Look</h2>
+        <div class="racklist">
+          <label><input type="radio" name="theme" value="holodeck"> Holodeck &mdash; LCARS</label>
+          <label><input type="radio" name="theme" value="moda"> Moda Center</label>
+          <label><input type="radio" name="theme" value="fire"> Portland Fire</label>
+          <label><input type="radio" name="theme" value="blazers"> Trail Blazers</label>
+          <label><input type="radio" name="theme" value="iatse"> IATSE</label>
+        </div>
+        <p class="hint">The colour of the interface &mdash; the lobby, the HUD, the boards in the arena and the pause card. The steel, the rope and the room do not change. In the headset: pause, thumbstick right, and it is the last row.</p>
         <h2>Radio</h2>
         <div class="racklist">
           <label><input type="radio" name="voice" value="auto"> Browser speech if it has a voice, radio babble if not</label>
@@ -236,8 +275,8 @@
 
       <ol class="steps">
         <li><b>Gear</b> — pockets empty, then the harness: shoulders, chest clip, belt, leg clips. Helmet on. Everything else clipped into the harness. Radio check. Grab the rope and go.</li>
-        <li><b>Rope</b> — deploy it to the floor, clove hitch and a half hitch on the catwalk rail. Clip your 6' double lanyard to the lifeline or the top rail before you touch the beam.</li>
-        <li><b>PCD</b> — untie, keep hold of the rope (or stand on it), walk out to the sling, hang the PCD, feed the rope the right way.</li>
+        <li><b>Rope</b> — send it down whenever you like, even before you gear up; something has to hold the working end after that. A clove hitch and a half hitch on the catwalk rail frees your hands. Clip your 6' double lanyard to the lifeline or the top rail before you touch the beam.</li>
+        <li><b>PCD</b> — untie if you tied off, keep hold of the rope (or stand on it), walk out to the sling, hang the PCD, feed the rope the right way.</li>
         <li><b>Haul</b> — on the ground rigger's call: leg to the apex, together to the hook eye, then the load, matching the other rigger's pace.</li>
         <li><b>Beam</b> — burlap out, wrap the beam, mate it (Pin · Rope · Cable · Shackle), burlap under, steel down, square up, check for fouls.</li>
         <li><b>Point check</b> — radio down.</li>
@@ -256,7 +295,7 @@
         <dt>Feet</dt><dd>Where the headset says they are. Stand on the rope to hold it; step off the beam and gravity has you</dd>
         <dt>Desktop</dt><dd>Mouse look · WASD walk · <b>left mouse = grip</b> · right mouse / F = trigger · mouse wheel wraps a knot or hauls · E reach · R radio · P pause</dd>
       </dl>
-      <p class="footnote">M0.13 &mdash; the Moda Center at size, one up-rigging section with both points, drops that land on the floor or on the ground rigger, the hitch read off the rope on the rail, the lifeline and posts as colliders, a rope card in the pause menu, a grip that turns with the wrist and a reach clamp. On Quest, open this page in the headset browser.
+      <p class="footnote">M0.14 &mdash; house themes (Moda Center, Portland Fire, Trail Blazers, IATSE) under Settings &rarr; Look, a held rope that cannot be dragged through the steel, and a rope you can send down whenever you like &mdash; tying it off is optional. On Quest, open this page in the headset browser.
         If the Enter button stays unavailable inside an embedded viewer, open the page in its own tab.</p>
       <p class="footnote" id="diag" style="font-family:monospace;font-size:11px;color:#6a6a5c;line-height:1.6"></p>
     </div>
@@ -333,10 +372,57 @@ const WORLD = {
   lanyard: 6 * FT,
   g: 9.81,
 };
-const DEFAULTS = { body: true, edge: 0.1, haul: 3, pace: 0.9, turns: 2, dom: 'right', vol: 0.7, moveRef: 'controller', loadScale: 1, chainDown: true, fatigue: 1, ropePhys: 1, ropeDetail: 1, feet: 'planted', selfCollide: 'deck', voice: 'auto' };
+const DEFAULTS = { theme: 'holodeck', body: true, edge: 0.1, haul: 3, pace: 0.9, turns: 2, dom: 'right', vol: 0.7, moveRef: 'controller', loadScale: 1, chainDown: true, fatigue: 1, ropePhys: 1, ropeDetail: 1, feet: 'planted', selfCollide: 'deck', voice: 'auto' };
 const SETTINGS = Object.assign({}, DEFAULTS);
 try { Object.assign(SETTINGS, JSON.parse(localStorage.getItem('uprigger.settings') || '{}')); } catch (e) {}
 function saveSettings() { try { localStorage.setItem('uprigger.settings', JSON.stringify(SETTINGS)); } catch (e) {} }
+
+/* ───────────────────── house themes ─────────────────────
+   The interface takes the colours of the building or the crew, and nothing else does: the steel, the
+   rope, the deck and the room stay what they are. Every panel, board and label reads its colour from
+   TH at draw time, so a change is live. Colours only — no marks, no logos, no wordmarks. */
+const THEMES = {
+  holodeck: { label: 'Holodeck', eyebrow: 'Holodeck · Training Program',
+    gold: '#f2c14e', amber: '#ff9c00', lav: '#cc99cc', pale: '#99ccff', alert: '#e5484d', ok: '#5ad38a',
+    ink: '#e8e4d8', dim: '#8d8a7b', dim2: '#b8b4a8', panel: 'rgba(12,12,19,0.92)', sel: 'rgba(204,153,204,0.16)', track: '#3a3140',
+    voidHex: 0x07070c, emit: 0xff9c00 },
+  moda: { label: 'Moda Center', eyebrow: 'Moda Center · Rose Quarter · Training',
+    gold: '#7fd3f0', amber: '#0a84d8', lav: '#8fb2cc', pale: '#cbe9f7', alert: '#ff6b5a', ok: '#5ad38a',
+    ink: '#eaf3f9', dim: '#7b93a8', dim2: '#a9c2d4', panel: 'rgba(8,16,28,0.92)', sel: 'rgba(143,178,204,0.18)', track: '#1d3348',
+    voidHex: 0x040a14, emit: 0x0a84d8 },
+  fire: { label: 'Portland Fire', eyebrow: 'Portland Fire · Rose Quarter · Training',
+    gold: '#f0563c', amber: '#d93a2b', lav: '#f584ae', pale: '#5aa9e6', alert: '#ffd23f', ok: '#7fd18a',
+    ink: '#f7ece6', dim: '#a8806e', dim2: '#c9a696', panel: 'rgba(24,11,7,0.92)', sel: 'rgba(245,121,159,0.18)', track: '#3a201a',
+    voidHex: 0x100604, emit: 0xd93a2b },
+  blazers: { label: 'Trail Blazers', eyebrow: 'Trail Blazers · Rose Quarter · Training',
+    gold: '#ffffff', amber: '#e03a3e', lav: '#c4ced4', pale: '#e8edf0', alert: '#ffb020', ok: '#5ad38a',
+    ink: '#f2f4f5', dim: '#8b9298', dim2: '#aeb5ba', panel: 'rgba(16,18,20,0.92)', sel: 'rgba(196,206,212,0.16)', track: '#2b3034',
+    voidHex: 0x08090a, emit: 0xe03a3e },
+  iatse: { label: 'IATSE', eyebrow: 'IATSE · Stage Rigging · Training',
+    gold: '#e8b923', amber: '#c8901a', lav: '#a89357', pale: '#f2dd93', alert: '#e5484d', ok: '#7fbf5a',
+    ink: '#f4efe0', dim: '#8a8067', dim2: '#c0b48c', panel: 'rgba(19,17,9,0.92)', sel: 'rgba(168,147,87,0.18)', track: '#2b2617',
+    voidHex: 0x0a0906, emit: 0xe8b923 },
+};
+const THEME_IDS = Object.keys(THEMES);
+if (!THEMES[SETTINGS.theme]) SETTINGS.theme = DEFAULTS.theme;
+const TH = Object.assign({}, THEMES[SETTINGS.theme]);
+document.body.dataset.theme = SETTINGS.theme;   // the CSS half can be set now; the scene's half waits for the scene (applyTheme, called at the end of the file)
+const LABELS = [];   // every canvas label in the world, with the palette role it was drawn in
+function applyTheme(id, save) {
+  if (!THEMES[id]) id = 'holodeck';
+  SETTINGS.theme = id; Object.assign(TH, THEMES[id]);
+  document.body.dataset.theme = id;
+  const eb = document.querySelector('#lobby .eyebrow'); if (eb) eb.textContent = TH.eyebrow;
+  LABELS.forEach(l => l.paint());
+  pedestals.forEach(p => { const u = p.userData; if (u.ring) u.ring.material.color.set(TH[u.colourRole] || TH.amber); });
+  if (scene.background && game.phase !== 'arena') scene.background.set(TH.voidHex);
+  const ge = holodeck.getObjectByName('Holodeck_GridEmitters'); if (ge && ge.material) ge.material.color.set(TH.emit);
+  if (MAT.void) MAT.void.color.set(TH.voidHex);
+  hudDirty = true; boardsDirty = true; knots.boardDirty = true; panelWasVisible = false;
+  document.querySelectorAll('input[name=theme]').forEach(r => { r.checked = r.value === id; });
+  if (save) saveSettings();
+}
+
 
 /* ─── tiny synth: every sound is WebAudio, no assets ─── */
 const AudioKit = (() => {
@@ -531,30 +617,36 @@ loadHolodeckOBJ();
 
 /* program pedestals: two builds and a settings post, standing in front of the arch */
 const pedestals = [];
-function makeLabel(text, w, h, big, colour) {
+function makeLabel(text, w, h, big, role) {
   const c = document.createElement('canvas'); c.width = 512; c.height = Math.round(512 * h / w);
-  const x = c.getContext('2d'); x.fillStyle = 'rgba(12,12,19,0.85)'; x.fillRect(0, 0, c.width, c.height);
-  x.fillStyle = colour || '#ff9c00'; x.fillRect(0, 0, 14, c.height);
-  x.fillStyle = '#e8e4d8'; x.font = (big ? '700 ' + Math.round(c.height * 0.42) : '400 ' + Math.round(c.height * 0.18)) + 'px Antonio, Arial Narrow, sans-serif';
-  const lines = String(text).split('\n'); const lh = big ? c.height * 0.5 : c.height * 0.22;
-  lines.forEach((l, i) => x.fillText(l, 36, c.height * (big ? 0.62 : 0.3) + i * lh));
   const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding;
+  const paint = () => {
+    const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height);
+    x.fillStyle = TH.panel; x.fillRect(0, 0, c.width, c.height);
+    x.fillStyle = TH[role] || role || TH.amber; x.fillRect(0, 0, 14, c.height);
+    x.fillStyle = TH.ink; x.font = (big ? '700 ' + Math.round(c.height * 0.42) : '400 ' + Math.round(c.height * 0.18)) + 'px Antonio, Arial Narrow, sans-serif';
+    const lines = String(text).split('\n'); const lh = big ? c.height * 0.5 : c.height * 0.22;
+    lines.forEach((l, i) => x.fillText(l, 36, c.height * (big ? 0.62 : 0.3) + i * lh));
+    t.needsUpdate = true;
+  };
+  paint();
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, transparent: true, name: 'Mat_Label' }));
-  m.name = 'Label_' + String(text).split('\n')[0].replace(/\W+/g, '_'); m.userData.canvas = c; m.userData.tex = t; return m;
+  m.name = 'Label_' + String(text).split('\n')[0].replace(/\W+/g, '_'); m.userData.canvas = c; m.userData.tex = t; m.userData.paint = paint;
+  LABELS.push({ mesh: m, paint }); return m;
 }
-function makePedestal(x, z, title, prog, colour) {
+function makePedestal(x, z, title, prog, colour) {   // colour is a palette role ('gold', 'lav', …), so the pedestals follow the theme
   const p = new THREE.Group(); p.name = 'Pedestal_' + prog; p.position.set(x, 0, z);
   const stem = cyl(0.06, 1.0, MAT.archDark, 'Pedestal_Stem'); stem.position.y = 0.5; p.add(stem);
   const top = box(0.5, 0.04, 0.3, MAT.archFrame, 'Pedestal_Top'); top.position.y = 1.02; top.rotation.x = -0.4; p.add(top);
   const face = makeLabel(title, 0.46, 0.22, true, colour); face.position.set(0, 1.043, -0.01); face.rotation.set(1.17, Math.PI, 0); p.add(face);   // lies on the tilted top, reading toward the arch
-  const ring = torus(0.14, 0.012, new THREE.MeshBasicMaterial({ color: colour || 0xff9c00, name: 'Mat_PedestalRing' }), 'Pedestal_Ring'); ring.rotation.x = Math.PI / 2; ring.position.y = 0.02; p.add(ring);
-  p.userData = { prog, hot: false, ring };
+  const ring = torus(0.14, 0.012, new THREE.MeshBasicMaterial({ color: TH[colour] || TH.amber, name: 'Mat_PedestalRing' }), 'Pedestal_Ring'); ring.rotation.x = Math.PI / 2; ring.position.y = 0.02; p.add(ring);
+  p.userData = { prog, hot: false, ring, colourRole: colour };
   holodeck.add(p); pedestals.push(p); return p;
 }
-makePedestal(-2.1, -2.2, 'KNOTS', 'knots', '#f2c14e');
-makePedestal(0, -2.4, 'UP-RIGGING', 'uprig', '#cc99cc');   // one section, two points: the split 15, then the 10 basket
-makePedestal(2.1, -2.2, 'GROUND RIGGING', 'ground', '#8d8a7b');
-const archSign = makeLabel('UP-RIGGER · BRIDLE TRAINING\nPoint at a build and pull the trigger.\nGravity is the opponent.', 2.0, 0.6, false, '#f2c14e');
+makePedestal(-2.1, -2.2, 'KNOTS', 'knots', 'gold');
+makePedestal(0, -2.4, 'UP-RIGGING', 'uprig', 'lav');   // one section, two points: the split 15, then the 10 basket
+makePedestal(2.1, -2.2, 'GROUND RIGGING', 'ground', 'dim');
+const archSign = makeLabel('UP-RIGGER · BRIDLE TRAINING\nPoint at a build and pull the trigger.\nGravity is the opponent.', 2.0, 0.6, false, 'gold');
 archSign.position.set(0, 2.1, -1.4); archSign.rotation.y = Math.PI; holodeck.add(archSign);   // over the pedestals, facing the arch
 /* ───────────────────── the arena ─────────────────────
    Catwalk along X at z ∈ [0, 1.2] at beam height. Beam A (yours) runs from the catwalk edge
@@ -606,7 +698,7 @@ function buildArena() {
     const r = cyl(0.025, pd, MAT.railYellow, 'Prep_SideRail'); r.rotation.x = Math.PI / 2; r.position.set(x + (i ? -0.06 : 0.06), H + WORLD.railHeight, pcz); arena.add(r); });
   const prepRail = cyl(0.025, pw, MAT.railYellow, 'Prep_BackRail'); prepRail.rotation.z = Math.PI / 2; prepRail.position.set(pcx, H + WORLD.railHeight, PREP.z1 - 0.06); arena.add(prepRail);
   const prepStripe = box(pw, 0.01, 0.08, MAT.railYellow, 'Prep_Threshold'); prepStripe.position.set(pcx, H + 0.005, PREP.z0); arena.add(prepStripe);
-  const prepSign = makeLabel('PREP AREA', 1.2, 0.3, false, '#ff9c00'); prepSign.position.set(pcx, H + 2.45, PREP.z1 - 0.06);   // above the checklist board, not on top of it prepSign.rotation.y = Math.PI; arena.add(prepSign);
+  const prepSign = makeLabel('PREP AREA', 1.2, 0.3, false, 'amber'); prepSign.position.set(pcx, H + 2.45, PREP.z1 - 0.06);   // above the checklist board, not on top of it prepSign.rotation.y = Math.PI; arena.add(prepSign);
   const kick = box(2 * CWX, 0.15, 0.03, MAT.railYellow, 'Catwalk_KickPlate'); kick.position.set(GAP / 2, H + 0.075, 0.015); arena.add(kick);
   RAIL_SEGS.forEach(([a, b]) => {
     const r = cyl(0.025, b - a, MAT.railYellow, 'Catwalk_TopRail'); r.rotation.z = Math.PI / 2; r.position.set((a + b) / 2, H + WORLD.railHeight, 0.02); arena.add(r);
@@ -679,7 +771,7 @@ const TABLE_Z = PREP.z1 - 0.7;   // the table stands against the prep area's bac
 const tableTop = box(2.4, 0.04, 0.6, MAT.steelDark, 'GearTable_Top'); tableTop.position.set(GEAR_X, H + 0.9, TABLE_Z); gearTable.add(tableTop);
 [-1.1, 1.1].forEach(x => { const l = box(0.05, 0.9, 0.5, MAT.steelDark, 'GearTable_Leg'); l.position.set(GEAR_X + x, H + 0.45, TABLE_Z); gearTable.add(l); });
 const binMesh = box(0.34, 0.3, 0.34, MAT.concrete, 'PocketBin'); binMesh.position.set(GEAR_X - 1.7, H + 0.15, TABLE_Z - 0.3); gearTable.add(binMesh);
-const binLabel = makeLabel('BUCKET', 0.34, 0.1, false, '#99ccff'); binLabel.position.set(GEAR_X - 1.7, H + 0.36, TABLE_Z - 0.3); binLabel.rotation.x = -Math.PI / 2; gearTable.add(binLabel);
+const binLabel = makeLabel('BUCKET', 0.34, 0.1, false, 'pale'); binLabel.position.set(GEAR_X - 1.7, H + 0.36, TABLE_Z - 0.3); binLabel.rotation.x = -Math.PI / 2; gearTable.add(binLabel);
 
 const grabbables = [];          // {mesh, kind, r, held, ...}
 function registerGrab(mesh, kind, r, extra) { const g = Object.assign({ mesh, kind, r: r || 0.14, held: null, home: mesh.position.clone(), homeParent: mesh.parent }, extra || {}); grabbables.push(g); mesh.userData.grab = g; return g; }
@@ -1444,8 +1536,11 @@ function ropeTick(dt) {
         if (over < 0.3 && ropeLen > 0.02) { _rv.copy(pin.target).sub(h.pos).multiplyScalar(over / dist); h.pos.add(_rv); h.clamped = Math.max(h.clamped, over); }   // the hand stops where the rope stops
         else if (dist > ropeLen * 1.03 + 0.05 && over > worst) { worst = over; slipTo = i + Math.sign(i - j) * Math.ceil(over / R.L0); } }   // more rope has to be between them: the grip slides AWAY from the anchor along the rope
     });
+    const pin0 = R.pins.get(i);
+    const blocked = heldRopeBlocked(h, pin0.from || pin0.target);   // steel the held rope cannot be pulled through
+    if (blocked > 0.0005) { h.clamped = Math.max(h.clamped, blocked); if (!h.barToast || game.t - h.barToast > 3) { h.barToast = game.t; toast('The rope is against the steel — take it over or under'); } }
     if (h.clamped > 0) { h.mesh.position.copy(h.pos); haptic(h, Math.min(1, 0.3 + h.clamped * 2), 20); }
-    R.pins.get(i).target.copy(h.pos);
+    pin0.target.copy(h.pos);
     R.pins.forEach(p => { if (p.kind === 'hand' && p.hand === h.index && p.loc) p.target.copy(p.loc).applyQuaternion(h.quat).add(h.pos); });   // the grip's neighbours and a bight's second strand turn with the wrist
     if (worst > 0 && (slipTo < 0 || slipTo >= R.n || (rope.coilNext !== undefined && slipTo >= rope.coilNext))) {   // the end ran through the hand (or the rope is still in the coil past it): nothing left to hold
       ropeRelease(h); h.ropeLost = true; haptic(h, 1.0, 120); AudioKit.rope(); toast('THE END RAN THROUGH YOUR HAND', true); continue; }
@@ -1564,6 +1659,48 @@ function handLoadTick(dt) {
     } else h.fatigue = Math.max(0, h.fatigue - dt / 6);
   }
   hudDirty = true;
+}
+/* ── a held rope cannot be dragged through steel (M0.14) ──
+   A pinned particle is exempt from the colliders — its position is dictated by the hand — so a hard
+   pull put the strand in the fist straight through the top rail, and the rest of the rope followed it.
+   The hand is what stops instead: the move from where the rope is to where the controller has gone is
+   swept against each bar, and a move that would cross one is cut off at the bar's surface, on the side
+   the rope is already on. Only the radial part is touched, so sliding along the rail, and taking the
+   rope over it or under it, are untouched — it is going THROUGH that is impossible. */
+const _bkp = new THREE.Vector3(), _bkq = new THREE.Vector3();
+function barBlock(from, to, ax, ay, az, dx, dy, dz, rc) {
+  _bkp.set(to.x - ax, to.y - ay, to.z - az); let t = _bkp.x * dx + _bkp.y * dy + _bkp.z * dz; _bkp.x -= t * dx; _bkp.y -= t * dy; _bkp.z -= t * dz;
+  _bkq.set(from.x - ax, from.y - ay, from.z - az); t = _bkq.x * dx + _bkq.y * dy + _bkq.z * dz; _bkq.x -= t * dx; _bkq.y -= t * dy; _bkq.z -= t * dz;
+  const d = _bkp.length(), dq = _bkq.length(); if (dq < 1e-6) return 0;
+  if (d >= rc && _bkp.dot(_bkq) > 0) return 0;                       // same side of the bar and clear of it: nothing to do
+  if (dq > rc) {   // it started outside: only a path whose closest approach is inside the bar is a crossing
+    const ex = _bkp.x - _bkq.x, ey = _bkp.y - _bkq.y, ez = _bkp.z - _bkq.z, L2 = ex * ex + ey * ey + ez * ez;
+    const u = L2 > 1e-12 ? Math.max(0, Math.min(1, -(_bkq.x * ex + _bkq.y * ey + _bkq.z * ez) / L2)) : 0;
+    const cx = _bkq.x + ex * u, cy = _bkq.y + ey * u, cz = _bkq.z + ez * u;
+    if (cx * cx + cy * cy + cz * cz >= rc * rc) return 0;
+  }
+  _bkq.multiplyScalar(rc / dq);   // the surface point on the rope's side, at the same place along the bar
+  const bx = _bkq.x - _bkp.x, by = _bkq.y - _bkp.y, bz = _bkq.z - _bkp.z;
+  to.x += bx; to.y += by; to.z += bz; return Math.hypot(bx, by, bz);
+}
+/* every bar within reach of this hand, cheapest first */
+function heldRopeBlocked(h, from) {
+  if (R.world === 'knots') { let b = 0; const to = h.pos;
+    if (to.x > KB.pipeX0 - 0.3 && to.x < KB.pipeX1 + 0.3) b = Math.max(b, barBlock(from, to, 0, KB.pipeY, KB.pipeZ, 1, 0, 0, KB.pipeR + R.r));
+    if (to.y < KB.postH + 0.2) b = Math.max(b, barBlock(from, to, KB.postX, 0, KB.postZ, 0, 1, 0, KB.postR + R.r));
+    return b; }
+  if (game.phase !== 'arena') return 0;
+  const to = h.pos; let b = 0; const r = R.r;
+  if (!inCatwalkGap(to.x) && Math.abs(to.x - GAP / 2) < CWX && Math.abs(to.z - RAIL_Z) < 0.6) {
+    b = Math.max(b, barBlock(from, to, 0, RAIL_Y, RAIL_Z, 1, 0, 0, 0.03 + r));                       // the top rail
+    b = Math.max(b, barBlock(from, to, 0, H + WORLD.railHeight / 2, RAIL_Z, 1, 0, 0, 0.025 + r));    // the mid rail
+    const px = railPostX(to.x); if (px !== null && to.y > H - 0.1 && to.y < RAIL_Y + 0.15) b = Math.max(b, barBlock(from, to, px, 0, RAIL_Z, 0, 1, 0, 0.035 + r));
+  }
+  if (Math.abs(to.y - LL_Y) < 0.4 && to.z < 1.0 && to.z > -BL - 0.6) {                                // the lifelines over both beams
+    if (Math.abs(to.x) < 0.4) b = Math.max(b, barBlock(from, to, 0, LL_Y, 0, 0, 0, 1, 0.008 + r));
+    else if (Math.abs(to.x - GAP) < 0.4) b = Math.max(b, barBlock(from, to, GAP, LL_Y, 0, 0, 0, 1, 0.008 + r));
+  }
+  return b;
 }
 /* grabbing the rope: the nearest particle to the hand becomes a soft pin */
 function ropeGrab(h) {
@@ -2559,14 +2696,14 @@ function knotUntie(hp) {
 }
 function drawKnotBoard() {
   const b = boardKnots, c = b.userData.c, x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height);
-  x.fillStyle = 'rgba(12,12,19,0.92)'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#cc99cc'; x.fillRect(0, 0, 12, c.height);
-  x.fillStyle = '#f2c14e'; x.font = '700 44px Antonio, Arial Narrow, sans-serif'; x.fillText('KNOTS · THE BENCH', 34, 60);
-  x.fillStyle = '#e8e4d8'; x.font = '300 20px Titillium Web, Segoe UI, sans-serif'; wrapText(x, 'Red end is the standing part. White end is the working end. Tie it for real; when the shape is a knot it locks and takes load. Trigger beside a tied knot to untie it. Close your hand on two strands lying together to take a bight.', 700, 25, 34, 92, 3);
+  x.fillStyle = TH.panel; x.fillRect(0, 0, c.width, c.height); x.fillStyle = TH.lav; x.fillRect(0, 0, 12, c.height);
+  x.fillStyle = TH.gold; x.font = '700 44px Antonio, Arial Narrow, sans-serif'; x.fillText('KNOTS · THE BENCH', 34, 60);
+  x.fillStyle = TH.ink; x.font = '300 20px Titillium Web, Segoe UI, sans-serif'; wrapText(x, 'Red end is the standing part. White end is the working end. Tie it for real; when the shape is a knot it locks and takes load. Trigger beside a tied knot to untie it. Close your hand on two strands lying together to take a bight.', 700, 25, 34, 92, 3);
   let y = 178;
-  KNOT_EXERCISES.forEach(e => { const ok = knots.done[e.id]; x.fillStyle = ok ? '#7CFC9A' : '#99ccff'; x.font = '700 24px Antonio, Arial Narrow, sans-serif'; x.fillText((ok ? '✓  ' : '○  ') + e.title.toUpperCase(), 34, y); y += 26;
-    x.fillStyle = '#b8b4a8'; x.font = '300 19px Titillium Web, Segoe UI, sans-serif'; y = wrapText(x, e.how, 700, 22, 58, y, 2) + 10; });
-  x.fillStyle = knots.lock ? '#7CFC9A' : '#f2c14e'; x.font = '600 24px Antonio, Arial Narrow, sans-serif'; wrapText(x, (knots.status || '').toUpperCase(), 700, 28, 34, c.height - 70, 2);
-  if (knots.hint) { x.fillStyle = '#99ccff'; x.font = '400 19px Titillium Web, Segoe UI, sans-serif'; wrapText(x, knots.hint, 700, 22, 34, c.height - 24, 1); }
+  KNOT_EXERCISES.forEach(e => { const ok = knots.done[e.id]; x.fillStyle = ok ? TH.ok : TH.pale; x.font = '700 24px Antonio, Arial Narrow, sans-serif'; x.fillText((ok ? '✓  ' : '○  ') + e.title.toUpperCase(), 34, y); y += 26;
+    x.fillStyle = TH.dim2; x.font = '300 19px Titillium Web, Segoe UI, sans-serif'; y = wrapText(x, e.how, 700, 22, 58, y, 2) + 10; });
+  x.fillStyle = knots.lock ? TH.ok : TH.gold; x.font = '600 24px Antonio, Arial Narrow, sans-serif'; wrapText(x, (knots.status || '').toUpperCase(), 700, 28, 34, c.height - 70, 2);
+  if (knots.hint) { x.fillStyle = TH.pale; x.font = '400 19px Titillium Web, Segoe UI, sans-serif'; wrapText(x, knots.hint, 700, 22, 34, c.height - 24, 1); }
   b.userData.tex.needsUpdate = true;
 }
 function knotBoardTick() { if (game.phase !== 'knots') return; if (knots.boardDirty) { knots.boardDirty = false; drawKnotBoard(); } }
@@ -2748,13 +2885,14 @@ const STEPS = [
       { t: 'Harness — shoulders', ok: harness.stage >= 1 }, { t: 'Harness — chest clip', ok: harness.stage >= 2 }, { t: 'Harness — belt', ok: harness.stage >= 3 }, { t: 'Harness — leg clips', ok: harness.worn },
       { t: 'Helmet on', ok: gear.helmet.worn }],
       CLIPPABLE.filter(id => id !== 'rope').map(id => ({ t: gear[id].def.label + (gear[id].ring ? ' · ' + RINGS[gear[id].ring].label : ''), ok: gear[id].worn })),
-      [{ t: 'Radio check', ok: game.radioChecked }, { t: 'Rope in hand', ok: ropeInHand() }]),
+      [{ t: 'Radio check', ok: game.radioChecked }, { t: 'Rope in hand (or already down)', ok: ropeInHand() || rope.state !== 'coil' }]),
     done: () => gearReady() },
-  { title: 'Deploy and tie off', body: 'Hold the coil out over the rail and pull the trigger to send it down — the rope pays out of your hand. Keep hold of the end. Tie it to the top rail: circle your hand around the rail twice, trigger for the clove hitch, one more turn and trigger for the half hitch. Take a lanyard hook off your shoulder strap and clip it to the top rail or the lifeline before you touch the beam.',
-    list: () => [{ t: 'Rope deployed to the floor', ok: rope.landed }, { t: 'Clove hitch on the rail', ok: rope.knot === 'clove' || rope.knot === 'clove+half', bad: rope.knot === 'wrap' }, { t: 'Half hitch finish', ok: rope.knot === 'clove+half' }, { t: 'Fall arrest clipped', ok: lanyard.clipped }],
-    done: () => rope.state === 'deployed' && rope.knot === 'clove+half' && lanyard.clipped && rope.landed },
-  { title: 'Out to the sling', body: 'Hold the rope beside the knot and trigger to untie. Now nothing holds the rope but you — keep it in a hand or stand on it. Walk out to the sling (the blue loop overhead, 46 feet out; the board there has this list). Hang the PCD on it, then bring the rope to the PCD and pull the trigger. Feed it from the load side — the white arrow.',
-    list: () => [{ t: 'Hitch untied', ok: rope.knot === 'none' && rope.landed }, { t: 'PCD on the sling', ok: pcd.hung }, { t: 'Rope fed through the PCD', ok: rope.pcdFed }],
+  { title: 'Deploy and clip in', body: 'Hold the coil out over the rail and pull the trigger to send it down — the rope pays out of your hand. Now something has to hold the working end: your hand, your boot, or a hitch on the top rail (two turns round the rail with the end tucked under the crossing is a clove hitch; a turn round the standing part, tucked, finishes it with a half hitch). Tie it off and your hands are free. Take a lanyard hook off your shoulder strap and clip it to the top rail or the lifeline before you touch the beam.',
+    list: () => [{ t: 'Rope deployed to the floor', ok: rope.landed }, { t: 'Something holding the end — hand, boot or hitch', ok: !!rope.anchor, bad: rope.landed && !rope.anchor },
+      { t: 'Hitch on the rail (optional — frees your hands)', ok: rope.knot === 'clove' || rope.knot === 'clove+half', bad: rope.knot === 'wrap' }, { t: 'Fall arrest clipped', ok: lanyard.clipped }],
+    done: () => rope.state === 'deployed' && rope.landed && lanyard.clipped },
+  { title: 'Out to the sling', body: 'If you tied it off, hold the rope beside the knot and trigger to untie. Now nothing holds the rope but you — keep it in a hand or stand on it. Walk out to the sling (the blue loop overhead, 46 feet out; the board there has this list). Hang the PCD on it, then bring the rope to the PCD and pull the trigger. Feed it from the load side — the white arrow.',
+    list: () => [{ t: 'Rope off the rail and in hand', ok: rope.knot === 'none' && rope.landed }, { t: 'PCD on the sling', ok: pcd.hung }, { t: 'Rope fed through the PCD', ok: rope.pcdFed }],
     done: () => rope.knot === 'none' && pcd.hung && rope.pcdFed },
   { title: 'Haul', body: 'The ground rigger is tying you into your leg. When they say ready, key the radio and take it up: grip the rope below the PCD and pull down, hand over hand. Slack first, then the leg, then on TOGETHER the apex, and on CONTINUE the motor — and its chain, paying out behind it, so it gets heavier all the way up. Squeeze the trigger harder as it does or the rope slips. Match the other rigger; get ahead and your leg takes more of the weight, then it fouls at the apex shackle. Rest on the cam when your hand shakes.',
     list: () => [{ t: 'Tied in (bowline)', ok: rope.bowline }, { t: 'Leg at the apex', ok: rope.hauled >= bridle.legLen - R.L0 * 1.1 }, { t: 'Together — to the hook', ok: bridle.continueCalled }, { t: 'Load to the beam', ok: bridle.arrived }, { t: 'Drift: ' + (bridle.drift * 3.281).toFixed(1) + ' ft', ok: Math.abs(bridle.drift) < 0.7, bad: Math.abs(bridle.drift) > 1.5 }, { t: 'On your rope: ' + Math.round(bridle.loadA * 2.205) + ' lb' + (bridle.loadW ? ' (' + Math.round(bridle.shareA * 100) + '% of ' + Math.round(bridle.loadW * 2.205) + ' lb)' : ''), ok: bridle.loadA < MAX_LOAD * 0.9, bad: bridle.loadA >= MAX_LOAD * 0.9 }],
@@ -2792,7 +2930,7 @@ function triggerAction(h) {
     dressKnot(hp, h.index); return;
   }
   if (held) {
-    if (held.kind === 'gear' && held.id === 'rope' && rope.state === 'coil') { if (hp.z < 0.3 && game.step >= 2) deployRope(h.index); else if (game.step < 2) toast('Finish gearing up first'); else toast('Hold it out over the rail first'); return; }
+    if (held.kind === 'gear' && held.id === 'rope' && rope.state === 'coil') { if (hp.z < 0.3) deployRope(h.index); else toast('Hold it out over the rail first'); return; }
     if (held.kind === 'gear' && held.id === 'harness' && !harness.worn) { if (chestZone(hp)) shoulderHarness(); else toast('Bring it up to your chest'); return; }
     if (held.kind === 'gear' && held.id === 'helmet' && !gear.helmet.worn) { if (headZone(hp)) putOnHelmet(); else toast('It goes on your head'); return; }
     if (held.kind === 'gear' && held.id === 'pcd') { if (hp.distanceTo(SLING_POINT) < 0.4) hangPCD(); else toast('Reach up to the sling'); return; }
@@ -2845,7 +2983,7 @@ function resetWorld() {
 }
 function enterHolodeck(mode) {
   game.mode = mode; game.phase = 'lobby'; game.running = true; game.paused = false; game.over = false;
-  holodeck.visible = true; arena.visible = false; scene.background.set(0x07070c); hemi.intensity = 0.9; key.intensity = 0.4;
+  holodeck.visible = true; arena.visible = false; scene.background.set(TH.voidHex); hemi.intensity = 0.9; key.intensity = 0.4;
   playerRig.position.set(0, mode === 'vr' && refTypeUsed === 'local' ? 1.6 : 0, -HD.size / 2 + 0.9); // stand in the arch, facing into the room
   playerRig.rotation.y = mode === 'vr' ? Math.PI : 0;
   if (mode === 'desk') { camera.position.set(0, 1.6, 0); player.yaw = Math.PI; player.pitch = 0; camera.rotation.set(0, 0, 0); }
@@ -2969,16 +3107,16 @@ const boardSling = makeBoard('Board_Sling', 0.84, 0.7); boardSling.position.set(
 const boardHanger = cyl(0.006, 1.0, MAT.wireRope, 'Board_Sling_Hanger'); boardHanger.position.set(SLING_X + 0.55, H + 2.3, WORLD.slingZ + 0.15); arena.add(boardHanger);
 function drawBoard(b) {
   const c = b.userData.c, x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height);
-  x.fillStyle = 'rgba(12,12,19,0.92)'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#ff9c00'; x.fillRect(0, 0, 12, c.height);
+  x.fillStyle = TH.panel; x.fillRect(0, 0, c.width, c.height); x.fillStyle = TH.amber; x.fillRect(0, 0, 12, c.height);
   const st = STEPS[game.step];
-  x.fillStyle = '#cc99cc'; x.font = '400 22px Antonio, Arial Narrow, sans-serif';
+  x.fillStyle = TH.lav; x.font = '400 22px Antonio, Arial Narrow, sans-serif';
   x.fillText(((game.prog === 'split15' ? 'SPLIT 15' : '10 BASKET') + ' · ' + Math.round(_head.y * 3.281) + ' FT · ' + (lanyard.clipped ? 'CLIPPED' : 'NOT CLIPPED') + ' · ROPE ' + hRope.textContent + ' · LOAD ' + hLoad.textContent + ' · ARM ' + hArm.textContent + ' · DROPS ' + game.drops).toUpperCase(), 34, 40);
-  x.fillStyle = '#f2c14e'; x.font = '700 44px Antonio, Arial Narrow, sans-serif'; x.fillText(st ? ('STEP ' + game.step + ' · ' + st.title).toUpperCase() : 'UP-RIGGER', 34, 92);
-  x.fillStyle = '#e8e4d8'; x.font = '300 21px Titillium Web, Segoe UI, sans-serif';
+  x.fillStyle = TH.gold; x.font = '700 44px Antonio, Arial Narrow, sans-serif'; x.fillText(st ? ('STEP ' + game.step + ' · ' + st.title).toUpperCase() : 'UP-RIGGER', 34, 92);
+  x.fillStyle = TH.ink; x.font = '300 21px Titillium Web, Segoe UI, sans-serif';
   let y = st ? wrapText(x, st.body, 700, 26, 34, 128, 7) : 140;
-  if (st) { x.font = '400 21px Titillium Web, Segoe UI, sans-serif'; const items = st.list(); const cols = items.length > 9 ? 2 : 1; const colW = cols === 2 ? 350 : 700; items.forEach((i, n) => { const cx = 34 + (cols === 2 ? (n % 2) * colW : 0); const cy = y + Math.floor(n / cols) * 26; x.fillStyle = i.ok ? '#5ad38a' : i.bad ? '#e5484d' : '#8d8a7b'; x.fillText((i.ok ? '✓ ' : i.bad ? '✕ ' : '· ') + i.t, cx, cy); }); y += Math.ceil(items.length / cols) * 26; }
-  if (radioLines.length) { x.fillStyle = '#99ccff'; x.font = '400 20px Titillium Web, Segoe UI, sans-serif'; const l = radioLines[radioLines.length - 1]; wrapText(x, '📻 ' + l.who + ': ' + l.text, 700, 24, 34, c.height - 60, 2); }
-  if (lastToast && perfNow() - lastToast.t < 3) { x.fillStyle = lastToast.bad ? '#e5484d' : '#99ccff'; x.font = '600 26px Antonio, Arial Narrow, sans-serif'; x.fillText(lastToast.msg.toUpperCase(), 34, c.height - 96); }
+  if (st) { x.font = '400 21px Titillium Web, Segoe UI, sans-serif'; const items = st.list(); const cols = items.length > 9 ? 2 : 1; const colW = cols === 2 ? 350 : 700; items.forEach((i, n) => { const cx = 34 + (cols === 2 ? (n % 2) * colW : 0); const cy = y + Math.floor(n / cols) * 26; x.fillStyle = i.ok ? TH.ok : i.bad ? TH.alert : TH.dim; x.fillText((i.ok ? '✓ ' : i.bad ? '✕ ' : '· ') + i.t, cx, cy); }); y += Math.ceil(items.length / cols) * 26; }
+  if (radioLines.length) { x.fillStyle = TH.pale; x.font = '400 20px Titillium Web, Segoe UI, sans-serif'; const l = radioLines[radioLines.length - 1]; wrapText(x, '📻 ' + l.who + ': ' + l.text, 700, 24, 34, c.height - 60, 2); }
+  if (lastToast && perfNow() - lastToast.t < 3) { x.fillStyle = lastToast.bad ? TH.alert : TH.pale; x.font = '600 26px Antonio, Arial Narrow, sans-serif'; x.fillText(lastToast.msg.toUpperCase(), 34, c.height - 96); }
   b.userData.tex.needsUpdate = true;
 }
 /* the radio's screen: the last line on the channel, for 7 s */
@@ -2989,8 +3127,8 @@ function radioDisplayTick() {
   d.visible = !!show; if (!show) return;
   if (radioShown === Radio.lineAt) return; radioShown = Radio.lineAt;
   const c = d.userData.canvas, x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height);
-  x.fillStyle = 'rgba(8,20,12,0.92)'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#7CFC9A'; x.fillRect(0, 0, 6, c.height);
-  const l = radioLines[radioLines.length - 1]; x.fillStyle = '#7CFC9A'; x.font = '700 30px Antonio, Arial Narrow, sans-serif'; x.fillText(l.who.toUpperCase(), 18, 38);
+  x.fillStyle = 'rgba(8,20,12,0.92)'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = TH.ok; x.fillRect(0, 0, 6, c.height);
+  const l = radioLines[radioLines.length - 1]; x.fillStyle = TH.ok; x.font = '700 30px Antonio, Arial Narrow, sans-serif'; x.fillText(l.who.toUpperCase(), 18, 38);
   x.font = '400 28px Titillium Web, Segoe UI, sans-serif'; wrapText(x, l.text, 480, 34, 18, 78, 2); d.userData.tex.needsUpdate = true;
 }
 function boardsTick() {
@@ -3005,7 +3143,7 @@ vrPanel.name = 'VR_PauseCard'; vrPanel.visible = false; scene.add(vrPanel);
 /* the pause card has a second page: the rope settings. Thumbstick right opens it; up / down picks a
    row, left / right nudges it; the last row goes back. Trigger resumes from either page. */
 const panelUI = { page: 0, row: 0 };
-function panelRows() { return ROPE_PARAMS.length + 3; }   // the parameters, rope-on-rope, defaults, back
+function panelRows() { return ROPE_PARAMS.length + 4; }   // the parameters, rope-on-rope, the theme, defaults, back
 function panelNav(axis, dir) {
   if (game.over) return;
   if (panelUI.page === 0) { if (axis === 'x' && dir > 0) { panelUI.page = 1; panelUI.row = 0; AudioKit.click(); } return; }
@@ -3014,39 +3152,41 @@ function panelNav(axis, dir) {
   const r = panelUI.row;
   if (r < ROPE_PARAMS.length) { const p = ROPE_PARAMS[r]; SETTINGS[p.key] = Math.round(Math.max(p.min, Math.min(p.max, SETTINGS[p.key] + dir * p.step)) / p.step) * p.step; SETTINGS[p.key] = +SETTINGS[p.key].toFixed(4); saveSettings(); AudioKit.ack(); }
   else if (r === ROPE_PARAMS.length) { const modes = ['deck', 'hands', 'off']; SETTINGS.selfCollide = modes[(modes.indexOf(SETTINGS.selfCollide) + (dir > 0 ? 1 : 2)) % 3]; saveSettings(); AudioKit.ack(); }
-  else if (r === ROPE_PARAMS.length + 1) { ROPE_PARAMS.forEach(p => { SETTINGS[p.key] = p.def; }); saveSettings(); AudioKit.ack(); }
+  else if (r === ROPE_PARAMS.length + 1) { const k = THEME_IDS.indexOf(SETTINGS.theme); applyTheme(THEME_IDS[(k + (dir > 0 ? 1 : THEME_IDS.length - 1) + THEME_IDS.length) % THEME_IDS.length], true); AudioKit.ack(); }
+  else if (r === ROPE_PARAMS.length + 2) { ROPE_PARAMS.forEach(p => { SETTINGS[p.key] = p.def; }); saveSettings(); AudioKit.ack(); }
   else { panelUI.page = 0; AudioKit.click(); }
   if (typeof ropeCardsRefresh === 'function') ropeCardsRefresh();
 }
 function drawVRRopePage(x) {
-  x.fillStyle = 'rgba(12,12,19,0.92)'; x.fillRect(0, 0, 768, 512); x.fillStyle = '#cc99cc'; x.fillRect(0, 0, 10, 512);
-  x.fillStyle = '#cc99cc'; x.font = '400 20px Antonio, Arial Narrow, sans-serif'; x.fillText('SETTINGS · ROPE CHARACTER', 30, 36);
+  x.fillStyle = TH.panel; x.fillRect(0, 0, 768, 512); x.fillStyle = TH.lav; x.fillRect(0, 0, 10, 512);
+  x.fillStyle = TH.lav; x.font = '400 20px Antonio, Arial Narrow, sans-serif'; x.fillText('SETTINGS · ROPE AND LOOK', 30, 36);
   const n = panelRows(); let y = 72; const rowH = 38;
   for (let r = 0; r < n; r++) {
-    const sel = r === panelUI.row; if (sel) { x.fillStyle = 'rgba(204,153,204,0.16)'; x.fillRect(20, y - 26, 728, rowH - 4); }
-    x.font = (sel ? '700 ' : '400 ') + '22px Antonio, Arial Narrow, sans-serif'; x.fillStyle = sel ? '#f2c14e' : '#e8e4d8';
+    const sel = r === panelUI.row; if (sel) { x.fillStyle = TH.sel; x.fillRect(20, y - 26, 728, rowH - 4); }
+    x.font = (sel ? '700 ' : '400 ') + '22px Antonio, Arial Narrow, sans-serif'; x.fillStyle = sel ? TH.gold : TH.ink;
     if (r < ROPE_PARAMS.length) { const p = ROPE_PARAMS[r]; x.fillText(p.label.toUpperCase(), 34, y);
-      const f = (SETTINGS[p.key] - p.min) / (p.max - p.min); x.fillStyle = '#3a3140'; x.fillRect(330, y - 14, 280, 10); x.fillStyle = sel ? '#ff9c00' : '#cc99cc'; x.fillRect(330, y - 14, 280 * Math.max(0, Math.min(1, f)), 10);
-      x.fillStyle = sel ? '#f2c14e' : '#e8e4d8'; x.textAlign = 'right'; x.fillText(p.fmt(SETTINGS[p.key]), 740, y); x.textAlign = 'left'; }
+      const f = (SETTINGS[p.key] - p.min) / (p.max - p.min); x.fillStyle = TH.track; x.fillRect(330, y - 14, 280, 10); x.fillStyle = sel ? TH.amber : TH.lav; x.fillRect(330, y - 14, 280 * Math.max(0, Math.min(1, f)), 10);
+      x.fillStyle = sel ? TH.gold : TH.ink; x.textAlign = 'right'; x.fillText(p.fmt(SETTINGS[p.key]), 740, y); x.textAlign = 'left'; }
     else if (r === ROPE_PARAMS.length) { x.fillText('ROPE ON ROPE', 34, y); x.textAlign = 'right'; x.fillText(({ deck: 'UP AT THE STEEL', hands: 'NEAR THE HANDS', off: 'OFF' })[SETTINGS.selfCollide] || 'UP AT THE STEEL', 740, y); x.textAlign = 'left'; }
-    else if (r === ROPE_PARAMS.length + 1) x.fillText('ROPE DEFAULTS  (left or right)', 34, y);
+    else if (r === ROPE_PARAMS.length + 1) { x.fillText('LOOK', 34, y); x.textAlign = 'right'; x.fillText(TH.label.toUpperCase(), 740, y); x.textAlign = 'left'; }
+    else if (r === ROPE_PARAMS.length + 2) x.fillText('ROPE DEFAULTS  (left or right)', 34, y);
     else x.fillText('BACK TO THE PAUSE CARD  (left or right)', 34, y);
     y += rowH;
   }
-  const hint = panelUI.row < ROPE_PARAMS.length ? ROPE_PARAMS[panelUI.row].hint : panelUI.row === ROPE_PARAMS.length ? 'Where the rope collides with itself. Up at the steel reads knots on the rail; the pile on the arena floor is never simulated against itself.' : '';
-  x.fillStyle = '#b8b4a8'; x.font = '300 19px Titillium Web, Segoe UI, sans-serif'; wrapText(x, hint, 700, 24, 30, y + 6, 2);
-  x.fillStyle = '#99ccff'; x.font = '600 19px Antonio, Arial Narrow, sans-serif'; x.fillText('STICK ↑ ↓ ROW · ← → ADJUST · TRIGGER RESUMES · LIVE', 30, 496);
+  const hint = panelUI.row < ROPE_PARAMS.length ? ROPE_PARAMS[panelUI.row].hint : panelUI.row === ROPE_PARAMS.length ? 'Where the rope collides with itself. Up at the steel reads knots on the rail; the pile on the arena floor is never simulated against itself.' : panelUI.row === ROPE_PARAMS.length + 1 ? 'The colour of the interface — this card, the HUD and the boards in the arena. The steel and the room do not change.' : '';
+  x.fillStyle = TH.dim2; x.font = '300 19px Titillium Web, Segoe UI, sans-serif'; wrapText(x, hint, 700, 24, 30, y + 6, 2);
+  x.fillStyle = TH.pale; x.font = '600 19px Antonio, Arial Narrow, sans-serif'; x.fillText('STICK ↑ ↓ ROW · ← → ADJUST · TRIGGER RESUMES · LIVE', 30, 496);
 }
 function drawVRPanel() {
   const x = panelCanvas.getContext('2d'); x.clearRect(0, 0, 768, 512);
   if (panelUI.page === 1 && game.paused && !game.over) { drawVRRopePage(x); panelTex.needsUpdate = true; return; }
-  x.fillStyle = 'rgba(12,12,19,0.9)'; x.fillRect(0, 0, 768, 512); x.fillStyle = '#ff9c00'; x.fillRect(0, 0, 10, 512);
-  x.fillStyle = '#cc99cc'; x.font = '400 20px Antonio, Arial Narrow, sans-serif'; x.fillText(document.getElementById('p-eyebrow').textContent.toUpperCase(), 30, 36);
-  x.fillStyle = game.over && !game.result ? '#e5484d' : '#f2c14e'; x.font = '700 40px Antonio, Arial Narrow, sans-serif'; x.fillText(document.getElementById('p-title').textContent.toUpperCase(), 30, 84);
-  x.fillStyle = '#e8e4d8'; x.font = '300 21px Titillium Web, Segoe UI, sans-serif'; let y = wrapText(x, document.getElementById('p-body').textContent || 'Trigger resumes. A / X returns to the arch. Thumbstick right: the rope settings.', 700, 27, 30, 122, 5);
-  if (game.over) { x.fillStyle = '#8d8a7b'; x.font = '400 20px Titillium Web, Segoe UI, sans-serif'; Array.from(document.querySelectorAll('#p-stats dt')).forEach((dt) => { x.fillText(dt.textContent + ': ' + dt.nextElementSibling.textContent, 30, y); y += 26; });
-    x.fillStyle = '#99ccff'; x.font = '600 22px Antonio, Arial Narrow, sans-serif'; x.fillText('A / X — RUN IT AGAIN', 30, 480); }
-  if (game.phase === 'lobby' && !game.paused) { x.fillStyle = '#e8e4d8'; x.font = '300 21px Titillium Web, Segoe UI, sans-serif'; wrapText(x, cBody.textContent, 700, 27, 30, 122, 4); }
+  x.fillStyle = TH.panel; x.fillRect(0, 0, 768, 512); x.fillStyle = TH.amber; x.fillRect(0, 0, 10, 512);
+  x.fillStyle = TH.lav; x.font = '400 20px Antonio, Arial Narrow, sans-serif'; x.fillText(document.getElementById('p-eyebrow').textContent.toUpperCase(), 30, 36);
+  x.fillStyle = game.over && !game.result ? TH.alert : TH.gold; x.font = '700 40px Antonio, Arial Narrow, sans-serif'; x.fillText(document.getElementById('p-title').textContent.toUpperCase(), 30, 84);
+  x.fillStyle = TH.ink; x.font = '300 21px Titillium Web, Segoe UI, sans-serif'; let y = wrapText(x, document.getElementById('p-body').textContent || 'Trigger resumes. A / X returns to the arch. Thumbstick right: the rope settings.', 700, 27, 30, 122, 5);
+  if (game.over) { x.fillStyle = TH.dim; x.font = '400 20px Titillium Web, Segoe UI, sans-serif'; Array.from(document.querySelectorAll('#p-stats dt')).forEach((dt) => { x.fillText(dt.textContent + ': ' + dt.nextElementSibling.textContent, 30, y); y += 26; });
+    x.fillStyle = TH.pale; x.font = '600 22px Antonio, Arial Narrow, sans-serif'; x.fillText('A / X — RUN IT AGAIN', 30, 480); }
+  if (game.phase === 'lobby' && !game.paused) { x.fillStyle = TH.ink; x.font = '300 21px Titillium Web, Segoe UI, sans-serif'; wrapText(x, cBody.textContent, 700, 27, 30, 122, 4); }
   panelTex.needsUpdate = true;
 }
 const _pf = new THREE.Vector3(), _pq = new THREE.Quaternion(); let panelWasVisible = false;
@@ -3179,6 +3319,8 @@ document.querySelectorAll('.prog').forEach(b => b.addEventListener('click', () =
     : b.dataset.prog === 'ground' ? 'The ground rigger\'s side of the same point — tying in, watching the steel, calling the pulls. It arrives with the crew build (network mode), where the up-riggers are other people.'
     : b.dataset.prog === 'uprig' ? 'Two points on the same beam, 108 feet over the Moda Center floor. First a split 15 — a 5 and a 10 shackled together, the 5 wraps the beam, the 10 swings under and mates to the eye of the 5. Then a 10 basket — one 10 around the beam, both eyes in the bow. Gear up once; the rope comes back up between points.'
     : 'One 10-foot wire rope. One eye is in the shackle with the ground rigger\'s 3-foot bowline; the other swings over the beam, under, and back to mate in the same shackle.'; }));
+document.getElementsByName('theme').forEach(r => { r.checked = r.value === SETTINGS.theme; r.addEventListener('change', () => applyTheme(r.value, true)); });
+applyTheme(SETTINGS.theme, false);
 document.getElementById('btn-settings').addEventListener('click', e => { const s = document.getElementById('settings'); s.hidden = !s.hidden; e.currentTarget.setAttribute('aria-expanded', String(!s.hidden)); });
 function bindRange(id, key, fmt) { const el = document.getElementById(id), out = document.getElementById('o-' + id.slice(2)); const show = () => { el.value = SETTINGS[key]; out.textContent = fmt(SETTINGS[key]); };
   el.addEventListener('input', () => { SETTINGS[key] = parseFloat(el.value); out.textContent = fmt(SETTINGS[key]); saveSettings(); if (key === 'vol') AudioKit.setVol(SETTINGS.vol); }); show(); return show; }
@@ -3254,7 +3396,7 @@ renderer.setAnimationLoop((time, frame) => {
 /* debug / test hooks: drive the flow without a headset */
 
 /* debug / test hooks: drive the flow without a headset */
-window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, balance, SELF, RAIL_Y, RAIL_Z, S, STEEL, steelBuild, steelHookOn, steelFoulCheck, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos, crew, falling, groundRigger, grabEnd, grabStart, quitToArch, startFall, crewDodge, nextPoint, railKnot, railKnotTick, CWX, LL_Y, railPostX };
+window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, balance, SELF, RAIL_Y, RAIL_Z, S, STEEL, steelBuild, steelHookOn, steelFoulCheck, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos, crew, falling, groundRigger, grabEnd, grabStart, quitToArch, startFall, crewDodge, nextPoint, railKnot, railKnotTick, CWX, LL_Y, railPostX, THEMES, THEME_IDS, TH, applyTheme, pedestals, setPause, barBlock, heldRopeBlocked };
 </script>
 </body>
 </html>
