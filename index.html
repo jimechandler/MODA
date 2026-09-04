@@ -295,7 +295,7 @@
         <dt>Feet</dt><dd>Where the headset says they are. Stand on the rope to hold it; step off the beam and gravity has you</dd>
         <dt>Desktop</dt><dd>Mouse look · WASD walk · <b>left mouse = grip</b> · right mouse / F = trigger · mouse wheel wraps a knot or hauls · E reach · R radio · P pause</dd>
       </dl>
-      <p class="footnote">M0.18 &mdash; the rope carries turns. Roll your wrist and the turn goes in, travels along it, comes back out of a free end, and piles up against a knot or your other fist; too many in slack rope and it hockles. The board and the HUD count them. On Quest, open this page in the headset browser.
+      <p class="footnote">M0.19 &mdash; the mate between two bones of the rope has an angular limit that scales with the spacing: 15&deg; a joint at 1&nbsp;inch, 165&deg; at a foot &mdash; the same rope, a four-inch minimum bend radius, however finely it is chopped. Steel and knots override it; free rope obeys it. On Quest, open this page in the headset browser.
         If the Enter button stays unavailable inside an embedded viewer, open the page in its own tab.</p>
       <p class="footnote" id="diag" style="font-family:monospace;font-size:11px;color:#6a6a5c;line-height:1.6"></p>
     </div>
@@ -992,7 +992,23 @@ function holdingRadio() { return hands.some(h => { const g = heldOf(h.index); re
    Index 0 is the end that went down; index n-1 is the tail that stays with you. */
 const rope = { pinch: null, state: 'coil', anchor: null, knot: 'none', acc: 0, turns: 0, hitchX: -1.5, hitchIdx: -1, pcdFed: false, pcdDir: 'ok', pcdIdx: -1, hauled: 0,
   bowline: false, looseT: 0, droppedIn: false, deployT: -1, landed: false, groundCarry: false, runBackFired: false, tail: new THREE.Vector3(), groundEnd: new THREE.Vector3() };
-const R = { n: 0, L0: 0, pos: [], prev: [], pins: new Map(), alive: false, r: 0.012, mesh: null, tension: [], tw: null, substeps: 8, iters: 2, inches: 0, renderInches: 0, renderSub: 1 };
+/* ── the joint between two bones (M0.19) ──
+   The rope is a chain of bones and the mate between each pair has an angular limit. That limit belongs
+   to the ROPE, not to how finely we chopped it: chop the same rope twice as fine and each joint may
+   close half as far, because the bend is shared between twice as many of them. The rule is the user's,
+   two points and a straight line between them — 15° at 1 inch, 165° at a foot — and the reason it is
+   the right rule is what those two points have in common: a minimum bend radius of about four inches
+   (7.6 diameters at an inch, 8.3 at a foot) whichever way the rope is cut up. Half-inch rope bent
+   tighter than four inches is rope you are damaging.
+   Contact still wins: the colliders and rope-on-rope run after this in the substep, so a rope forced
+   round a bar or through a knot bends as tight as the steel makes it. This is what the rope does on
+   its own. */
+function jointLimit(L0) {
+  const inch = L0 / 0.0254;
+  const deg = 15 + (inch - 1) * (150 / 11);
+  return Math.max(4, Math.min(170, deg)) * Math.PI / 180;
+}
+const R = { n: 0, L0: 0, jointMax: 0.26, pos: [], prev: [], pins: new Map(), alive: false, r: 0.012, mesh: null, tension: [], tw: null, substeps: 8, iters: 2, inches: 0, renderInches: 0, renderSub: 1 };
 const ropeGroup = new THREE.Group(); ropeGroup.name = 'Rope'; scene.add(ropeGroup);   // in the scene, not the arena: the knot bench in the holodeck uses the same rope
 let ropeInst = null;
 /* (re)build the chain at a particle spacing in inches, and the instanced tube at a render spacing */
@@ -1005,6 +1021,7 @@ function ropeBuild(inches, renderInches, lenM) {
   for (let i = 0; i < R.n; i++) { R.pos.push(new THREE.Vector3()); R.prev.push(new THREE.Vector3()); R.tension.push(1); }
   // small steps, one sweep each; the coarse chain (ropeCoarse) does the long-range work
   R.tw = new Float32Array(R.n);   // twist carried by the rope at each particle, radians (M0.18)
+  R.jointMax = jointLimit(R.L0);   // how far the joint between two bones may close, radians (M0.19)
   R.substeps = Math.max(4, Math.min(20, Math.round(3 + 0.22 * Math.sqrt(R.n)))); R.iters = 1;   // the coarse level carries the tension now; substeps only need to keep the fine chain and the collisions honest
   R.renderSub = Math.max(1, Math.round(inches / renderInches));
   if (ropeInst) { ropeGroup.remove(ropeInst); ropeInst.geometry.dispose(); }
@@ -1086,7 +1103,7 @@ let _pinned = new Uint8Array(0);   // the pin map as a flat array, rebuilt each 
    the program resumes. The resolution (particles per foot) applies when a program starts. */
 const ROPE_PARAMS = [
   { key: 'ropeStretch', label: 'Stretch', hint: 'How far a segment may be pulled past its length before it is hauled back, inelastically. Low is a stiff rope; high is a bungee.', min: 1.05, max: 1.5, step: 0.05, def: 1.2, fmt: v => Math.round((v - 1) * 100) + '%' },
-  { key: 'ropeBend', label: 'Kink limit', hint: 'The tightest bend the rope will take, in rope diameters. Zero is a chain that folds flat; three is a stiff laid rope. It is only felt in a bend tighter than this — a wrap on a rail is looser.', min: 0, max: 3, step: 0.25, def: 1.5, fmt: v => v.toFixed(2) + ' dia' },
+  { key: 'ropeJoint', label: 'Joint limit', hint: 'How far the mate between two bones of the rope may close, as a fraction of the standard curve — 15° per joint at 1 inch, 165° at a foot, which is a four-inch minimum bend radius at any resolution. Contact overrides it: rope forced round a bar or through a knot bends as tight as the steel makes it.', min: 0, max: 1.6, step: 0.05, def: 1, fmt: v => v <= 0 ? 'off' : Math.round(v * 100) + '% · ' + Math.round(jointLimit(R.L0 || 0.0254) * v * 57.2958) + '°/joint' },
   { key: 'ropeVisc', label: 'Internal friction', hint: 'The rope\'s own damping of ripples along it. Low and it wiggles; high and it goes dead.', min: 0, max: 0.6, step: 0.05, def: 0.25, fmt: v => v.toFixed(2) },
   { key: 'ropeAir', label: 'Air drag', hint: 'Per second. Low falls like a rope; high falls like a feather.', min: 0, max: 1.0, step: 0.04, def: 0.12, fmt: v => v.toFixed(2) },
   { key: 'ropeBody', label: 'Body', hint: 'How much the whole rope resists being bent — the difference between a rope and a chain. It does NOT hold a loop open (a bending spring pulls toward straight, which flattens a loop rather than keeping it round); what it gives you is a rope that lies and hangs like rope. Costs a little on a headset.', min: 0, max: 1, step: 0.05, def: 0.15, fmt: v => Math.round(v * 100) + '%' },
@@ -1102,13 +1119,67 @@ function ropeParam(key) { const v = SETTINGS[key]; return v === undefined ? ROPE
    wrap on a rail, a coil on the deck — all looser than that — cost nothing; a hairpin is pushed open.
    Only ever pushes apart, a fraction per step, and leaves a settled pile alone. */
 const _bs = new THREE.Vector3();
-function ropeBendStiff(dia, i0, i1, kk) {
-  if (dia <= 0) return; const Rmin = dia * 2 * R.r, th = R.L0 / Rmin; if (th > 2.4) return;   // coarse rope: the limit is below a segment's own angle
+const _jt = new THREE.Vector3(); let _hardMem = null, _hardWin = null;
+/* The limit, enforced. Clamping each mate on its own is the obvious way and it does not work: at an
+   inch, opening one bend needs a dozen joints to give at once, and a local projection walked along the
+   chain takes hundreds of sweeps to arrange that (the same conditioning wall the tension solve hit in
+   M0.7). The same law stated at the scale it actually lives at is one constraint and converges at once:
+   the rope's minimum bend radius means a fixed CHORD across a fixed length of rope. Take the particle
+   m ahead and m behind — about four inches of rope either way — and hold them at least as far apart as
+   an arc of that length bent to the limit would put them. At an inch m is 4 particles and the constraint
+   spans the whole bend; at four inches m is 1 and it IS the mate; at a foot it is inactive, which is
+   correct, because a foot of rope may fold to 165° on its own. */
+function ropeJointLimit(scale, iters) {
+  if (scale <= 0) return;
+  const th = (R.jointMax || jointLimit(R.L0)) * scale; if (th >= 2.9) return;   // a foot of rope folds nearly flat: nothing to enforce
+  const Rmin = R.L0 / th;                                    // the minimum bend radius this limit implies
+  const m = Math.max(1, Math.round(0.105 / R.L0));           // ±4 inches of rope, or one bone if the bones are longer
+  const arc = 2 * m * R.L0, half = Math.min(Math.PI / 2, arc / (2 * Rmin));
+  const cmin = 2 * Rmin * Math.sin(half);                    // the chord an arc that long makes at the limit
+  const end = rope.coilNext !== undefined && rope.coilNext < R.n ? rope.coilNext - 1 : R.n;
+  const sl = _asleep.length === R.n, tch = _touched.length === R.n;
+  // Which rope is being held in a bend by something. Two things this has to get right, both learned the
+  // hard way: it is not enough to ask about the three particles the constraint touches — a knot's contact
+  // may be anywhere in the four inches between them — and contact has to be REMEMBERED, because a knot
+  // laid into the world has not touched anything yet and would be straightened out before it ever did.
+  if (!_hardMem || _hardMem.length !== R.n) _hardMem = new Uint8Array(R.n);
+  if (!_hardWin || _hardWin.length !== R.n) _hardWin = new Uint8Array(R.n);
+  if (tch) for (let i = 0; i < R.n; i++) { if (_touched[i] >= 2) _hardMem[i] = 24; else if (_hardMem[i]) _hardMem[i]--; }
+  let run = 0;
+  for (let i = 0; i < R.n; i++) { if (_hardMem[i]) run = 2 * m + 1; _hardWin[i] = run > 0 ? 1 : 0; if (run) run--; }
+  run = 0;
+  for (let i = R.n - 1; i >= 0; i--) { if (_hardMem[i]) run = 2 * m + 1; if (run > 0) _hardWin[i] = 1; if (run) run--; }
+  const passes = iters || (window.JOINT_ITERS !== undefined ? window.JOINT_ITERS : (R.n > 800 ? 1 : 2));
+  const cmin2 = cmin * cmin;
+  for (let it = 0; it < passes; it++) {
+    for (let i = m; i < end - m; i++) {
+      const j = i - m, k2 = i + m;
+      // rope forced round something bends as tight as the thing makes it — the limit is what the rope
+      // does on its OWN. A bar (2) or another strand (3) anywhere in this window is exempt; lying on the
+      // floor or the deck (1) is not, or a rope in a heap would have no shape at all.
+      if (_hardWin[i]) continue;
+      if (sl && _asleep[j] && _asleep[k2]) continue;
+      const a = R.pos[j], c = R.pos[k2];
+      const dx = c.x - a.x, dy = c.y - a.y, dz = c.z - a.z, d2 = dx * dx + dy * dy + dz * dz;
+      if (d2 >= cmin2 || d2 < 1e-18) continue;               // straight enough: the usual case, and no square root paid for it
+      const pa = _pinned[j], pc = _pinned[k2]; if (pa && pc) continue;
+      const d = Math.sqrt(d2), push = (cmin - d) / d * 0.45;
+      const wa = pa ? 0 : pc ? 1 : 0.5, wc = pc ? 0 : pa ? 1 : 0.5;
+      a.x -= dx * push * wa; a.y -= dy * push * wa; a.z -= dz * push * wa;
+      c.x += dx * push * wc; c.y += dy * push * wc; c.z += dz * push * wc;
+    }
+  }
+  // the chord says how far the rope may bend over four inches; it does not say the bend is shared out
+  // evenly, and one joint can still take most of it. A soft push toward the mate's own limit spreads it,
+  // on alternate substeps — it is a tidying pass, and it does not need to run twelve times a frame.
+  if (m > 1 && (R.stepNo & 1)) ropeBendStiff(scale, 1, end, 0.45);
+}
+/* kept for the softer uses (the body of the rope, the held end): a chord push toward straight */
+function ropeBendStiff(scale, i0, i1, kk) {
+  if (scale <= 0) return; const th = Math.min(3.0, (R.jointMax || jointLimit(R.L0)) * scale);
   const ct = Math.cos(th / 2), k = kk || 0.35, end = Math.min(i1 === undefined ? R.n : i1, rope.coilNext !== undefined && rope.coilNext < R.n ? rope.coilNext - 1 : R.n), sl = _asleep.length === R.n;
   for (let i = Math.max(1, i0 || 1); i < end - 1; i++) {
-    // measured against the rope that is actually there, not its rest length — a strand under tension is
-    // longer than L0, and comparing a chord to 2·L0 quietly turned this off wherever the rope was taut
-    const rest = (R.pos[i].distanceTo(R.pos[i - 1]) + R.pos[i + 1].distanceTo(R.pos[i])) * ct;
+    const rest = 2 * R.L0 * ct;   // the two bones are held at L0 by the length solve; close enough, and no square roots
     const a = R.pos[i - 1], c = R.pos[i + 1]; _bs.copy(c).sub(a); const d = _bs.length(); if (d >= rest || d < 1e-6) continue;
     const pa = _pinned[i - 1] || (sl && _asleep[i - 1]), pc = _pinned[i + 1] || (sl && _asleep[i + 1]); if (pa && pc) continue; const wa = pa ? 0 : pc ? 1 : 0.5, wc = pc ? 0 : pa ? 1 : 0.5;
     const push = (rest - d) / d * k; a.addScaledVector(_bs, -push * wa); c.addScaledVector(_bs, push * wc);
@@ -1184,6 +1255,7 @@ function ropeStep(dt, frac) {
   let _snapQ = null;
   const PF = window.ROPE_PROF; let _pt = PF ? performance.now() : 0; const prof = (k) => { if (!PF) return; const t = performance.now(); PF[k] = (PF[k] || 0) + t - _pt; _pt = t; };
   if (!window.NO_COARSE) ropeCoarse(); dbgPhase('coarse'); prof('coarse');
+  ropeJointLimit(ropeParam('ropeJoint')); prof('joint');   // the mate limits first; the length sweep below tidies up after them
   for (let it = 0; it < R.iters; it++) {
     const fwd = (it + R.stepNo) % 2 === 0;   // one sweep per small step, direction alternating step to step
     for (let s = 0; s < R.n - 1; s++) {
@@ -1198,7 +1270,7 @@ function ropeStep(dt, frac) {
       a.addScaledVector(v, diff * wa); b.addScaledVector(v, -diff * wb);
     }
   }
-  ropeBendStiff(ropeParam('ropeBend')); ropeBody(); ropeStiffEnd(); prof('bendstiff');
+  ropeBody(); ropeStiffEnd(); prof('bendstiff');
   if (!window.NO_LONG) ropeLongDamp(); prof('longdamp');
   dbgPhase('fine');
   prof('fine'); if ((R.stepNo & 1) && !window.NO_STRAIN) ropeStrainLimit(); prof('strain'); if (_touched.length !== R.n) _touched = new Uint8Array(R.n); else _touched.fill(0); ropeSelfSolve(); dbgPhase('self'); prof('self'); pcdStrands(); dbgPhase('strands');
@@ -1301,7 +1373,7 @@ function ropeSelfSolve() {
     const a = R.pos[i], b = R.pos[j]; _sp.copy(b).sub(a); let d = _sp.length(); if (d >= minD) continue;
     const pa = _pinned[i], pb = _pinned[j]; if (pa && pb) continue; const wa = pa ? 0 : pb ? 1 : 0.5, wb = pb ? 0 : pa ? 1 : 0.5;
     if (d < 1e-6) { _sp.set(1, 0, 0); d = 1e-6; } else _sp.multiplyScalar(1 / d); const push = minD - d;   // dead on top of each other: pick a side
-    if (_touched.length === R.n) { _touched[i] = _touched[i] || 1; _touched[j] = _touched[j] || 1; }   // rope resting on rope is resting on something: it may sleep (ropeRest)
+    if (_touched.length === R.n) { _touched[i] = 3; _touched[j] = 3; }   // 3 = rope on rope. It counts as resting (ropeRest) and, like a bar, it is allowed to bend the rope tighter than the rope would bend on its own
     a.addScaledVector(_sp, -push * wa); b.addScaledVector(_sp, push * wb);
     R.prev[i].addScaledVector(_sp, -push * wa * 0.8); R.prev[j].addScaledVector(_sp, push * wb * 0.8);   // mostly inelastic: strands settle against each other instead of trembling
     // friction between the strands: the sliding of one over the other this step is cut by μ·push
@@ -3723,7 +3795,7 @@ renderer.setAnimationLoop((time, frame) => {
 /* debug / test hooks: drive the flow without a headset */
 
 /* debug / test hooks: drive the flow without a headset */
-window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, balance, SELF, RAIL_Y, RAIL_Z, S, STEEL, steelBuild, steelHookOn, steelFoulCheck, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, findLoop, bowlineStage, loopHintTick, loopGeom, loopDisc, twistTick, handRoll, pinchMark, bightGrab, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos, crew, falling, groundRigger, grabEnd, grabStart, quitToArch, startFall, crewDodge, nextPoint, railKnot, railKnotTick, CWX, LL_Y, railPostX, startGroundFloor, groundTick, startGroundCarry, groundStatus, HX, THEMES, THEME_IDS, TH, applyTheme, pedestals, setPause, barBlock, heldRopeBlocked };
+window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, balance, SELF, RAIL_Y, RAIL_Z, S, STEEL, steelBuild, steelHookOn, steelFoulCheck, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, findLoop, bowlineStage, loopHintTick, loopGeom, loopDisc, twistTick, handRoll, jointLimit, ropeJointLimit, pinchMark, bightGrab, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos, crew, falling, groundRigger, grabEnd, grabStart, quitToArch, startFall, crewDodge, nextPoint, railKnot, railKnotTick, CWX, LL_Y, railPostX, startGroundFloor, groundTick, startGroundCarry, groundStatus, HX, THEMES, THEME_IDS, TH, applyTheme, pedestals, setPause, barBlock, heldRopeBlocked };
 </script>
 </body>
 </html>
