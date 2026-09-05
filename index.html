@@ -285,17 +285,19 @@
       <dl class="legend">
         <dt>Grip</dt><dd>Hold the grip button to hold things &mdash; gear, any part of the rope, a leg of steel. Let go over the void and it goes in</dd>
         <dt>Harness</dt><dd>Bring it to your chest to shoulder it, then trigger at the <b>chest</b>, the <b>belly</b>, and each <b>thigh</b> to clip it. Seven rings: back, chest, belly, both hips, both rear. Gear clips to any ring; the lanyard hangs off the back ring and its hooks park on the shoulder straps</dd>
-        <dt>Hooks</dt><dd>Grip a hook and the <b>trigger works its gate</b>: near the rail or the lifeline it clips; already clipped, it comes off in your hand. Six feet of webbing is six feet &mdash; it tugs you back on the deck, and in a fall it is what the <b>blowout pack</b> pays out of: about six feet of free fall, two feet of pack, then you hang and swing in</dd>
+        <dt>Gates</dt><dd>A locking carabiner does not open because you squeezed something near it. <b>Both triggers and a top button, together</b> &mdash; index trigger, grip and A/X or B/Y &mdash; swings the gate, and you watch it swing. Let go and it snaps shut. That is how the two lockers come off a ring, how a lanyard hook clips and unclips, and how the device goes on the sling. Desktop: <b>left mouse + right mouse + G</b></dd>
+        <dt>Hooks</dt><dd>Grip a hook, then work its gate: near the rail or the lifeline it clips; already clipped, it comes off in your hand. Six feet of webbing is six feet &mdash; it tugs you back on the deck, and in a fall it is what the <b>blowout pack</b> pays out of: about six feet of free fall, two feet of pack, then you hang and swing in</dd>
         <dt>Rope</dt><dd>It is real: 150 feet of it, every foot simulated. Hold it anywhere, let it swing, feel it go taut. Pull too hard against a taut line and it <b>slips through your hand</b></dd>
         <dt>Trigger</dt><dd>Act on what is under your hand: pick a program, dress a knot, hang the PCD, mate a shackle</dd>
         <dt>Knots</dt><dd>Hold the rope end at the rail and <b>circle your hand around the rail</b> &mdash; the game counts the turns. Trigger to dress it</dd>
-        <dt>Haul</dt><dd>Grip the rope below the PCD and <b>pull down</b>, hand over hand. The heavier it gets, the harder you have to <b>squeeze</b> (trigger or grip) or it slips; hold weight too long and your hand shakes, then lets go &mdash; rest it on the cam</dd>
+        <dt>Haul</dt><dd>Grip the pull side of the rope and <b>draw it away from the device</b> &mdash; down, out, over your shoulder &mdash; hand over hand; the cam holds every inch between strokes. The heavier it gets, the harder you have to <b>squeeze</b> (trigger or grip) or it slips; hold weight too long and your hand shakes, then lets go &mdash; rest it on the cam. While the load is in the air <b>nothing comes off your harness</b> and the only thing a hand can close on is the rope</dd>
+        <dt>Losing it</dt><dd>The working end going over the edge is not the end of the exercise. It runs, and <b>anything that takes hold of it stops it</b> &mdash; a hand back on it, a boot on it, a hitch, the device. Only when the whole rope is on the floor is the run over</dd>
         <dt>B / Y</dt><dd>Key the radio &mdash; with the <b>radio in your hand</b>. Listen first: everybody in the building is on this channel, and keying up over someone is stepping on their call</dd>
         <dt>Thumbstick</dt><dd>Push it and you walk where that <b>controller</b> points (or where you look &mdash; Settings). <b>Hold A / X 0.6&thinsp;s to pause</b></dd>
         <dt>Feet</dt><dd>Where the headset says they are. Stand on the rope to hold it; step off the beam and gravity has you</dd>
         <dt>Desktop</dt><dd>Mouse look · WASD walk · <b>left mouse = grip</b> · right mouse / F = trigger · mouse wheel wraps a knot or hauls · E reach · R radio · P pause</dd>
       </dl>
-      <p class="footnote">M0.21 &mdash; the rope has volume along the bone, not just at the joint: two strands are held apart at a rope&rsquo;s width wherever they come closest, and each contact remembers which side of the other it is on, so a hard pull no longer drags the rope through itself. The separate stiffness on the last few feet is gone &mdash; the joint limit does that job now. On Quest, open this page in the headset browser.
+      <p class="footnote">M0.22 &mdash; carabiners are real hardware now: a spine, a hinged gate and a locking sleeve, opened by both triggers and a top button together and animated as they swing. The device carries one top and bottom. The rope keeps only its own skeleton, physics and joint limits &mdash; the loop-finding aids are gone, and a bight is two strands actually touching. Hauling locks your harness, and losing the rope only ends the run once all of it is down. On Quest, open this page in the headset browser.
         If the Enter button stays unavailable inside an embedded viewer, open the page in its own tab.</p>
       <p class="footnote" id="diag" style="font-family:monospace;font-size:11px;color:#6a6a5c;line-height:1.6"></p>
     </div>
@@ -555,6 +557,41 @@ const MAT = {
 function box(w, h, d, mat, name) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.name = name || 'Box'; return m; }
 function cyl(r, h, mat, name, seg) { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg || 12), mat); m.name = name || 'Cyl'; return m; }
 function torus(r, t, mat, name) { const m = new THREE.Mesh(new THREE.TorusGeometry(r, t, 8, 24), mat); m.name = name || 'Torus'; return m; }
+
+/* ───────────────────── carabiners ─────────────────────
+   A carabiner is a C of aluminium with a gate across the gap, and the gate is on a hinge. Built as
+   real named parts on a real pivot — spine, gate, locking sleeve — so opening one is an animation of
+   the part that moves, not a colour change on the part that does not. Every gate in the world is
+   registered so one tick animates all of them and one gesture works whichever is under your hand. */
+function makeBiner(name, r, t, mat) {
+  const g = new THREE.Group(); g.name = name;
+  const half = 0.42;   // half the mouth, in radians — the gap the gate closes
+  const spine = new THREE.Mesh(new THREE.TorusGeometry(r, t, 8, 30, Math.PI * 2 - 2 * half), mat || MAT.carabiner);
+  spine.name = name + '_Spine'; spine.rotation.z = half; g.add(spine);
+  const hinge = new THREE.Object3D(); hinge.name = name + '_GateHinge';
+  hinge.position.set(r * Math.cos(-half), r * Math.sin(-half), 0); g.add(hinge);
+  const len = 2 * r * Math.sin(half);   // hinge to nose is a straight chord: the gate's length
+  const gate = cyl(t * 0.8, len, MAT.steelDark, name + '_Gate'); gate.position.y = len / 2; hinge.add(gate);
+  const sleeve = cyl(t * 1.45, len * 0.3, MAT.steel, name + '_LockSleeve'); sleeve.position.y = len * 0.6; hinge.add(sleeve);
+  g.userData.gate = { hinge, len };
+  return g;
+}
+const GATES = [];   // {mesh, hinge, at (0 shut … 1 open), want, label, act}
+const GATE_SWING = 0.95;   // radians the gate swings in
+function registerGate(biner, label, act) {
+  const e = { mesh: biner, hinge: biner.userData.gate.hinge, at: 0, want: false, by: -1, label, act };
+  GATES.push(e); biner.userData.gateEntry = e; return e;
+}
+function gatesTick(dt) {
+  const sp = dt / 0.11;   // a gate takes about a tenth of a second to swing
+  for (const e of GATES) {
+    const to = e.want ? 1 : 0, was = e.at;
+    e.at = Math.abs(to - e.at) <= sp ? to : e.at + (to > e.at ? sp : -sp);
+    e.hinge.rotation.z = e.at * GATE_SWING;
+    if (was < 1 && e.at === 1) { AudioKit.click(); if (e.act) e.act(e); }   // the moment it stands fully open
+    else if (was > 0 && e.at === 0) AudioKit.click();                        // and the snap shut
+  }
+}
 
 /* lights: the holodeck is flat and even; the arena is show-lit from above */
 const hemi = new THREE.HemisphereLight(0xdfe6f0, 0x2a2420, 0.9); hemi.name = 'Light_Hemi'; scene.add(hemi);
@@ -838,9 +875,13 @@ const GEAR_DEFS = [
   { id: 'harness', label: '7-point harness', build: () => { const g = new THREE.Group(); const b = box(0.28, 0.16, 0.12, MAT.harness, 'Harness_Bundle'); g.add(b); const s = box(0.3, 0.04, 0.14, MAT.webbing, 'Harness_Strap'); s.position.y = 0.08; g.add(s); return g; } },
   { id: 'rope', label: '150\' × 1/2" rope', build: () => { const t = torus(0.14, 0.05, MAT.rope, 'Rope_Coil'); t.rotation.x = Math.PI / 2; const g = new THREE.Group(); g.add(t); return g; } },
   { id: 'pcd', label: 'Progress capture device', build: () => { const g = new THREE.Group(); const b = box(0.08, 0.18, 0.05, MAT.pcd, 'PCD_Body'); g.add(b); const cam = cyl(0.03, 0.06, MAT.steel, 'PCD_Cam'); cam.rotation.x = Math.PI / 2; cam.position.y = -0.02; g.add(cam);
-      const eye = torus(0.03, 0.008, MAT.steel, 'PCD_Eye'); eye.position.y = 0.12; g.add(eye); const arrow = box(0.02, 0.06, 0.005, MAT.helmet, 'PCD_ArrowUp'); arrow.position.set(0, 0.03, 0.028); g.add(arrow); return g; } },
-  { id: 'biner1', label: 'Triple-action locker #1', build: () => { const t = torus(0.05, 0.008, MAT.carabiner, 'Carabiner_Body'); const g = new THREE.Group(); g.add(t); const lock = cyl(0.012, 0.03, MAT.steelDark, 'Carabiner_Lock'); lock.position.set(0.05, -0.02, 0); g.add(lock); return g; } },
-  { id: 'biner2', label: 'Triple-action locker #2', build: () => { const t = torus(0.05, 0.008, MAT.carabiner, 'Carabiner_Body'); const g = new THREE.Group(); g.add(t); const lock = cyl(0.012, 0.03, MAT.steelDark, 'Carabiner_Lock'); lock.position.set(0.05, -0.02, 0); g.add(lock); return g; } },
+      const eye = torus(0.03, 0.008, MAT.steel, 'PCD_Eye'); eye.position.y = 0.12; g.add(eye); const arrow = box(0.02, 0.06, 0.005, MAT.helmet, 'PCD_ArrowUp'); arrow.position.set(0, 0.03, 0.028); g.add(arrow);
+      // one carabiner into the eye at the top — that is what hangs it on the sling — and one below it
+      const top = makeBiner('PCD_Carabiner_Top', 0.042, 0.007); top.position.y = 0.19; top.rotation.z = Math.PI; g.add(top);
+      const bot = makeBiner('PCD_Carabiner_Bottom', 0.042, 0.007); bot.position.y = -0.14; g.add(bot);
+      return g; } },
+  { id: 'biner1', label: 'Triple-action locker #1', build: () => makeBiner('Carabiner_Locker_1', 0.05, 0.008) },
+  { id: 'biner2', label: 'Triple-action locker #2', build: () => makeBiner('Carabiner_Locker_2', 0.05, 0.008) },
   { id: 'sling4', label: "4' sling", build: () => { const t = torus(0.09, 0.012, MAT.webbing, 'Sling_4ft'); const g = new THREE.Group(); g.add(t); return g; } },
   { id: 'sling6', label: "6' sling", build: () => { const t = torus(0.12, 0.012, MAT.webbingRed, 'Sling_6ft'); const g = new THREE.Group(); g.add(t); return g; } },
   { id: 'helmet', label: 'Helmet', build: () => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), MAT.helmet); m.name = 'Helmet_Shell'; const g = new THREE.Group(); g.add(m); return g; } },
@@ -863,6 +904,22 @@ GEAR_DEFS.forEach((def, i) => {
   const grab = registerGrab(mesh, 'gear', 0.16, { id: def.id });
   gear[def.id] = { def, mesh, grab, worn: false, ring: null };
 });
+/* the gates on the kit: the two lockers clip to and off a harness ring, and the device's top
+   carabiner is what puts it on the sling. Opening one is the gesture, not the trigger — see gateForHand. */
+['biner1', 'biner2'].forEach(id => registerGate(gear[id].mesh, gear[id].def.label, () => {
+  const g = gear[id];
+  if (g.worn) { unclipGear(id); const h = hands.find(x => x.active); if (h) { g.grab.held = h.index; } toast(g.def.label + ' — off the ring, gate open'); return; }
+  if (g.grab.held !== null && harness.worn) { const ring = nearestRing(hands[g.grab.held].pos, 0.22);
+    if (ring) { g.grab.held = null; clipGear(id, ring); return; }
+    toast('Nothing in the gate — bring it to a ring'); return; }
+  toast('Gate open');
+}));
+registerGate(gear.pcd.mesh.getObjectByName('PCD_Carabiner_Top'), 'device, top carabiner', () => {
+  if (pcd.hung) { unhangPCD(); return; }
+  const held = gear.pcd.grab.held; if (held === null) { toast('Gate open — take the device to the sling'); return; }
+  if (hands[held].pos.distanceTo(SLING_POINT) < 0.45) hangPCD(); else toast('Gate open — reach up to the sling with it');
+});
+registerGate(gear.pcd.mesh.getObjectByName('PCD_Carabiner_Bottom'), 'device, bottom carabiner', () => { toast('Bottom carabiner open — the load side hangs off this one'); });
 POCKET_DEFS.forEach((def) => {
   const mesh = def.build(); mesh.name = 'Pocket_' + def.id; mesh.position.copy(def.p); body.add(mesh);
   const grab = registerGrab(mesh, 'pocket', 0.12, { id: def.id });
@@ -1034,10 +1091,6 @@ function ropeBuild(inches, renderInches, lenM) {
 }
 ropeBuild(SETTINGS.ropePhys, SETTINGS.ropeDetail);
 const knotMesh = torus(0.05, 0.022, MAT.rope, 'Rope_Hitch'); knotMesh.visible = false; arena.add(knotMesh);
-/* the pinch: the two strands your fingers have closed on, marked, because holding a crossing is the
-   thing that actually holds a loop open and until M0.17 there was no way to tell you had it */
-const pinchMark = torus(0.045, 0.006, new THREE.MeshBasicMaterial({ color: 0xf2c14e, transparent: true, opacity: 0.8, name: 'Mat_Pinch' }), 'Rope_Pinch');
-pinchMark.visible = false; scene.add(pinchMark);
 // whipped ends: red is the standing part (the end that takes the load), white is the working end you tie with
 const ropeTipA = new THREE.Mesh(new THREE.SphereGeometry(0.016, 10, 8), new THREE.MeshStandardMaterial({ color: 0xd8302a, roughness: 0.6, name: 'Mat_RopeEnd_Standing' })); ropeTipA.name = 'Rope_StandingEnd'; ropeTipA.visible = false; ropeGroup.add(ropeTipA);
 const ropeTipB = new THREE.Mesh(new THREE.SphereGeometry(0.016, 10, 8), new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.6, name: 'Mat_RopeEnd_Working' })); ropeTipB.name = 'Rope_WorkingEnd'; ropeTipB.visible = false; ropeGroup.add(ropeTipB);
@@ -1663,7 +1716,9 @@ function ropeCollide() {
 }
 /* rope through the PCD: index k is the particle sitting in the device. Pulling the pull side taut
    passes rope through (k walks toward 0, the load side shortens and the eye rises). With the cam
-   the right way round that is all it ever does; backwards, the load runs it the other way. */
+   the right way round that is all it ever does; backwards, the load runs it the other way.
+   Either hand can pull, in any direction away from the device, so hauling hand over hand works the
+   way it does on a real rope — and the cam holds between the strokes. */
 function pcdSlideTick() {
   if (!rope.pcdFed || rope.pcdIdx < 1 || rope.pcdIdx >= R.n - 2 || !R.pins.has(rope.pcdIdx)) return;
   const k = rope.pcdIdx, P = R.pins.get(k).target;
@@ -1671,7 +1726,10 @@ function pcdSlideTick() {
   // the device taut. Each segment of hand travel (over the assist) passes a segment through.
   for (const h of hands) {
     const i = handPin(h.index); if (i <= k) continue;
-    if (h.pos.y > P.y - 0.05 || h.vel.y > -0.001) continue;
+    // a pull is a hand on the pull side moving AWAY from the device — down, out, or over your
+    // shoulder. That is all hand over hand is: this, then a regrip, then this again, and the cam
+    // holds what you gained in between, so the load never goes back down while you change hands.
+    _pd.copy(h.pos).sub(P); if (_pd.lengthSq() < 1e-8 || h.vel.dot(_pd) <= 1e-7) continue;
     // a boot standing on the strand you are hauling holds it dead. The rope will pull out from under it
     // in a moment (the strain rule above), but say so — "I pull and nothing happens" is the worst
     // thing this program can do to somebody.
@@ -1807,11 +1865,6 @@ function ropeRender() {
   ropeInst.instanceMatrix.needsUpdate = true;
   ropeInst.material = rope.looseT > 0.2 ? MAT.ropeHot : MAT.rope;
   ropeTipA.visible = ropeTipB.visible = R.world === 'knots'; if (ropeTipA.visible) { ropeTipA.position.copy(R.pos[0]); ropeTipB.position.copy(R.pos[R.n - 1]); }
-  // the pinch marker sits on the two strands in the fist
-  pinchMark.visible = !!(rope.pinch && R.pins.has(rope.pinch.a) && R.pins.has(rope.pinch.b));
-  if (pinchMark.visible) { const a = R.pos[rope.pinch.a], b = R.pos[rope.pinch.b];
-    pinchMark.position.copy(a).add(b).multiplyScalar(0.5); _rd.copy(b).sub(a); if (_rd.lengthSq() > 1e-8) { _rd.normalize(); _rq.setFromUnitVectors(_up, _rd); pinchMark.quaternion.copy(_rq); }
-    pinchMark.material.color.set(TH.gold); }
   knotMesh.visible = rope.knot !== 'none' && !rope.knotReal; if (knotMesh.visible) { knotMesh.position.copy(R.pins.get(rope.hitchIdx).target); knotMesh.rotation.y = Math.PI / 2; }
 }
 /* ───────────────────── twist (M0.18) ─────────────────────
@@ -1990,9 +2043,18 @@ function ropeTick(dt) {
   // landing
   if (!rope.landed && R.pos[0].y < 0.1) { rope.landed = true; rope.deployT = -1; AudioKit.thud(); radio('Ground', 'Rope\'s down. I\'ve got the end.', 1); pinSet(0, 'ground', R.pos[0]); flakeCoil(); crewGoto(R.pos[0].x + 0.4, R.pos[0].z + 0.3); }
   // the rope going in: it falls for real, and the program ends when it is on the floor — or on him
-  if (rope.droppedIn && !game.over) { rope.goneT = (rope.goneT || 0) + dt; const tail = R.pos[R.n - 1];
-    if (!crew.down) { const gp = groundRigger.position; for (let i = 0; i < R.n; i += 2) { const p = R.pos[i]; if (p.y < 1.9 && p.y > 1.0 && (p.y - R.prev[i].y) < -0.004 && Math.hypot(p.x - gp.x, p.z - gp.z) < 0.4) { crewStruck('rope'); break; } } }
-    if (tail.y < 0.3 || rope.goneT > 7) endProgram(false, crew.down ? 'The rope went in — on him' : 'The rope went in', 'Nothing was holding the working end. 108 feet of hanging rope took the rest over the edge' + (crew.down ? ', and the ground rigger was under it. ' : ' — and anyone under it is lucky. ') + 'Tie it off, stand on it, or keep it in your hand.'); }
+  // The rope getting away from you is not the end of the exercise — it is the moment the exercise is
+   // about. It runs, and it keeps running, and anything that takes hold of it stops it: a hand back on
+   // it, a boot on it, a hitch, the device. Only when the whole thing is on the floor is it over.
+  if (rope.droppedIn && !game.over) {
+    if (rope.anchor) { rope.droppedIn = false; rope.state = 'deployed'; rope.goneT = 0; rope.looseT = 0; AudioKit.ack();
+      toast(rope.anchor === 'foot' ? 'BOOT ON IT — you caught it' : 'CAUGHT IT — the rope is still yours'); hands.forEach(h => haptic(h, 0.8, 90)); }
+    else {
+      rope.goneT = (rope.goneT || 0) + dt;
+      if (!crew.down) { const gp = groundRigger.position; for (let i = 0; i < R.n; i += 2) { const p = R.pos[i]; if (p.y < 1.9 && p.y > 1.0 && (p.y - R.prev[i].y) < -0.004 && Math.hypot(p.x - gp.x, p.z - gp.z) < 0.4) { crewStruck('rope'); break; } } }
+      let hi = 0; for (let i = 0; i < R.n; i += 3) if (R.pos[i].y > hi) hi = R.pos[i].y;   // is any of it still up?
+      if (hi < 1.6) endProgram(false, crew.down ? 'The rope went in — on him' : 'The rope went in', 'Nothing was holding the working end, and the whole rope followed it down' + (crew.down ? ', onto the ground rigger. ' : ' — anyone under it is lucky. ') + 'Tie it off, stand on it, or get a hand back on it: while any of it is still up there you have not lost it.'); }
+  }
   if (rope.deployT >= 0) rope.deployT += dt;
   // what is holding the working end?
   const coilHeld = rope.coilNext !== undefined && rope.coilNext < R.n && rope.coilHand >= 0;
@@ -2123,7 +2185,7 @@ function ropeGrab(h) {
   if (pin && pin.kind !== 'foot' && pin.kind !== 'hitch') return false;   // the PCD, the eye and the ground rigger keep theirs
   if (pin && pin.kind === 'hitch') return false;                            // grab beside the knot, not the knot itself
   pinSet(i, 'hand', h.pos, { hand: h.index }); h.ropeLost = false; AudioKit.grab(); haptic(h, 0.5, 40); hudDirty = true;
-  if (bightGrab(h, i)) { toast(rope.pinch && knots.loop && (rope.pinch.a === knots.loop.a || rope.pinch.b === knots.loop.b) ? 'PINCHED — you have the crossing. The loop is yours.' : 'Pinched — both strands in hand'); }
+  if (bightGrab(h, i)) toast('Both strands in hand');
   else handGripSet(h, i);
   return true;
 }
@@ -2141,19 +2203,19 @@ function handGripSet(h, i) {
     pinSet(j, 'hand', R.pos[j], { hand: h.index, grip: true, loc }); R.prev[j].copy(R.pos[j]); });
 }
 function ropeRelease(h) { if (rope.pinch && rope.pinch.hand === h.index) rope.pinch = null; const mine = []; R.pins.forEach((p, i) => { if (p.kind === 'hand' && p.hand === h.index) mine.push(i); }); mine.forEach(i => { pinClear(i); if (R.prev[i] && R.pos[i]) R.prev[i].copy(R.pos[i]); }); h.clamped = 0; hudDirty = true; }   // let go (both strands of a bight, the whole grip): the rope keeps what its neighbours give it, not a throw
-/* a bight: the rope doubled over. Closing the hand on two strands that lie together takes both —
+/* a bight: the rope doubled over. Closing the hand on two strands that lie TOGETHER takes both —
    the way you hold a bight to push it under a wrap for a slipped hitch, or to tie in the middle of
-   a rope. The second strand rides with the hand at the offset it was taken at. */
+   a rope. Together means touching: the second strand has to be within a couple of rope diameters of
+   the first, measured rope to rope, not merely somewhere inside the fist. Two strands a hand's width
+   apart are two strands, and you get the one you reached for. The second rides with the hand at the
+   offset it was taken at. */
+const BIGHT_GAP = 2.2;   // rope diameters between the two strands: about an inch of daylight on half-inch rope
 function bightGrab(h, i) {
-  const near = game.mode === 'desk' ? 0.12 : 0.09; let best = -1, bd = near;
+  const near = game.mode === 'desk' ? 0.12 : 0.09;                  // how far from the palm a strand can be
+  const gap = BIGHT_GAP * 2 * R.r; let best = -1, bd = gap;         // how far the two strands can be from each other
   if (rope.pcdFed && Math.abs(i - rope.pcdIdx) < 60) return false;   // not at the device: the two strands there are the load and the pull, not a bight
-  // the crossing of a loop the rope has already made wins: that is the pinch a bowline is tied with,
-  // and it is worth catching even when another strand happens to lie a little nearer the palm
-  const L = knots.loop;
-  if (L) { const at = Math.abs(i - L.a) < 12 ? L.b : Math.abs(i - L.b) < 12 ? L.a : -1;
-    if (at >= 0 && !R.pins.has(at) && R.pos[at].distanceTo(h.pos) < near + 0.08) best = at; }
-  if (best < 0) for (let j = 0; j < R.n; j++) { if (Math.abs(j - i) < 8 || R.pins.has(j)) continue; if (rope.pcdFed && (j - rope.pcdIdx) * (i - rope.pcdIdx) < 0) continue;
-    const d = R.pos[j].distanceTo(R.pos[i]); if (d < bd && R.pos[j].distanceTo(h.pos) < near + 0.05) { bd = d; best = j; } }
+  for (let j = 0; j < R.n; j++) { if (Math.abs(j - i) < 8 || R.pins.has(j)) continue; if (rope.pcdFed && (j - rope.pcdIdx) * (i - rope.pcdIdx) < 0) continue;
+    const d = R.pos[j].distanceTo(R.pos[i]); if (d < bd && R.pos[j].distanceTo(h.pos) < near) { bd = d; best = j; } }
   if (best < 0) return false;
   rope.pinch = { a: Math.min(i, best), b: Math.max(i, best), hand: h.index };
   haptic(h, 1.0, 60); setTimeout(() => haptic(h, 1.0, 60), 90);   // two pulses: you have two strands
@@ -2268,6 +2330,14 @@ function hangPCD() {
   const m = gear.pcd.mesh; releaseAll(gear.pcd.grab); unclipGear('pcd'); arena.attach(m);
   m.position.set(SLING_X, SLING_POINT.y - 0.16, WORLD.slingZ); m.rotation.set(0, pcd.yaw, 0); m.visible = true;
   gear.pcd.grab.locked = true; gear.pcd.worn = true; AudioKit.chain(); toast('PCD on the sling — now feed the rope. Mind the arrow.'); hudDirty = true;
+}
+/* off the sling again: only while nothing is threaded through it */
+function unhangPCD() {
+  if (!pcd.hung) return;
+  if (rope.pcdFed) { toast('Not with the rope through it — take the rope out first', true); AudioKit.deny(); return; }
+  pcd.hung = false; gear.pcd.grab.locked = false; gear.pcd.worn = false;
+  const h = hands.find(x => x.active); if (h) { gear.pcd.grab.held = h.index; }
+  AudioKit.click(); toast('Device off the sling'); hudDirty = true;
 }
 function pcdLoadSide(out) { return (out || new THREE.Vector3()).set(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), pcd.yaw); }
 function feedPCD(hp, handIndex) {
@@ -2814,7 +2884,7 @@ function supported(x, z, tol) { return onCatwalk(x, z) || onBeam(x, z, tol); }
 const hands = [];
 function makeHand(i) {
   const h = { index: i, pos: new THREE.Vector3(), prevPos: new THREE.Vector3(), vel: new THREE.Vector3(), quat: new THREE.Quaternion(), grip: false, trig: false, prevGrip: false, prevTrig: false,
-    prevUpper: false, prevLower: false, lowerT: 0, lowerFired: false, src: null, active: false, mesh: null, ray: null, ropeLost: false,
+    prevUpper: false, prevLower: false, lowerT: 0, lowerFired: false, top: false, src: null, active: false, mesh: null, ray: null, ropeLost: false,
     effort: 0, load: 0, fatigue: 0, slipping: false, taut: false };
   const g = new THREE.Group(); g.name = 'Hand_' + i;
   const palm = box(0.07, 0.03, 0.1, MAT.skin, 'Hand_Palm'); g.add(palm);
@@ -2830,29 +2900,50 @@ function heldOf(i) { return grabbables.find(g => g.held === i) || null; }
 function releaseAll(g) { if (g.held !== null) g.held = null; }
 function haptic(h, i, ms) { try { const gp = h.src && h.src.gamepad; if (gp && gp.hapticActuators && gp.hapticActuators[0]) gp.hapticActuators[0].pulse(i, ms); } catch (e) {} }
 
+/* ── hands full (M0.22) ──
+   Hauling a load, you have one job and it is the rope. Nothing comes off the harness while the load
+   is in the air, and the only thing a hand can close on is the pull side of the rope — the end you
+   are actually using. Falling, nothing comes off at all: a man on the end of a lanyard does not
+   unclip himself, and he certainly does not go through his kit. */
+function hauling() { return rope.pcdFed && bridle.stage !== 'idle' && !bridle.arrived; }
+function gearLocked() { return player.falling || hauling(); }
+let _lockToast = 0;
+function gearLockedToast() { if (game.t - _lockToast < 2.5) return; _lockToast = game.t;
+  toast(player.falling ? 'NOT NOW — you are on the end of the lanyard' : 'NOT WHILE IT IS IN THE AIR — the rope is the only thing in your hands', true); AudioKit.deny(); }
 /* what a hand can pick up right now: the nearest grabbable, or the rope */
 function grabCandidate(h) {
   let best = null, bd = 1e9;
-  const reach = game.mode === 'desk' ? 0.45 : 0.22;
+  const reach = game.mode === 'desk' ? 0.45 : 0.22, locked = gearLocked();
   for (const g of grabbables) {
     if (g.held !== null || g.locked || !g.mesh.visible || !g.mesh.parent) continue;
+    if (locked && (g.kind === 'gear' || g.kind === 'pocket' || g.kind === 'hook')) continue;
     if (g.kind === 'conn' && !bridle.mated) continue;
     const p = new THREE.Vector3(); g.mesh.getWorldPosition(p);
     let d = p.distanceTo(h.pos); if (d < reach + g.r) { if (g.kind === 'hook') d -= 0.08;   // a lanyard hook wins a tie with the kit clipped beside it — you can clip in any time the harness is on
       if (d < bd) { bd = d; best = g; } }
   }
-  if (R.alive) { const i = nearestParticle(h.pos, reach); if (i >= 0 && R.pos[i].distanceTo(h.pos) < bd) { const pin = R.pins.get(i); if (!pin || pin.kind === 'foot') return { kind: 'rope', idx: i }; } }
+  if (R.alive && !player.falling) { const i = nearestParticle(h.pos, reach);
+    if (i >= 0 && R.pos[i].distanceTo(h.pos) < bd) { const pin = R.pins.get(i);
+      if (hauling() && i <= rope.pcdIdx) return null;   // the load side is the load's: you pull on your end
+      if (!pin || pin.kind === 'foot') return { kind: 'rope', idx: i }; } }
   return best;
 }
 function grabStart(h) {
-  const g = grabCandidate(h); if (!g) return;
+  const g = grabCandidate(h); if (!g) { if (gearLocked() && grabWouldHaveBeenGear(h)) gearLockedToast(); return; }
   if (g.kind === 'rope') { ropeGrab(h); return; }
   if (g.kind === 'gear' && g.id === 'rope' && rope.coilNext !== undefined && rope.coilNext < R.n) { rope.coilHand = h.index; AudioKit.grab(); return; }
   if (g.kind === 'hook') { const hk = lanyard.hooks[g.hook]; if (!harness.worn) return; hk.held = h.index; g.held = h.index; AudioKit.grab(); haptic(h, 0.5, 40); return; }
-  if (g.kind === 'gear' && gear[g.id].worn && g.id !== 'helmet' && g.id !== 'harness') unclipGear(g.id);   // clipped kit comes off its ring into the hand — the radio too, to talk
+  // clipped kit comes off its ring into the hand — the radio too, to talk. The two lockers are the
+  // exception: a triple-action carabiner cannot be pulled off a ring, it has to be opened, so those
+  // come off by the gate gesture and by nothing else.
+  if (g.kind === 'gear' && gear[g.id].worn && (g.id === 'biner1' || g.id === 'biner2')) { toast('Open its gate to take it off the ring'); AudioKit.deny(); return; }
+  if (g.kind === 'gear' && gear[g.id].worn && g.id !== 'helmet' && g.id !== 'harness') unclipGear(g.id);
   if (g.kind === 'pocket' && pocket[g.id].onBody) { pocket[g.id].onBody = false; hudDirty = true; }
   g.held = h.index; AudioKit.grab(); haptic(h, 0.5, 40); hudDirty = true;
 }
+/* was the thing the hand just closed on empty air, or kit it is not allowed to touch right now? */
+function grabWouldHaveBeenGear(h) { const reach = game.mode === 'desk' ? 0.45 : 0.22; const p = new THREE.Vector3();
+  return grabbables.some(g => (g.kind === 'gear' || g.kind === 'pocket' || g.kind === 'hook') && g.held === null && g.mesh.visible && g.mesh.parent && (g.mesh.getWorldPosition(p), p.distanceTo(h.pos) < reach + g.r)); }
 function grabEnd(h) {
   if (rope.coilNext !== undefined && rope.coilNext < R.n && rope.coilHand === h.index) { rope.coilHand = -1; const p = h.pos; if (supported(p.x, p.z, 0)) { /* the coil sits on the deck, still paying out */ } else coilDropped(); return; }
   if (handHoldsRope(h)) { ropeRelease(h); return; }
@@ -2880,9 +2971,8 @@ function onTable(p) { return Math.abs(p.x - GEAR_X) < 1.25 && Math.abs(p.z - TAB
    any hook on the steel — so you can move one while the other holds you. */
 const lanyard = { clipped: false, anchor: 'none', anchorPos: new THREE.Vector3(), taut: false, hooks: [] };
 function makeHook(i) {
-  const g = new THREE.Group(); g.name = 'Lanyard_SnapHook_' + (i ? 'B' : 'A');
-  const b = torus(0.045, 0.012, MAT.carabiner, 'SnapHook_Body'); g.add(b); const gate = box(0.02, 0.07, 0.02, MAT.steelDark, 'SnapHook_Gate'); gate.position.x = 0.045; g.add(gate);
-  g.visible = false; body.add(g);
+  const g = makeBiner('Lanyard_SnapHook_' + (i ? 'B' : 'A'), 0.045, 0.012); g.visible = false; body.add(g);
+  registerGate(g, 'lanyard hook ' + (i ? 'B' : 'A'), () => tryClip(lanyard.hooks[i].held !== null ? hands[lanyard.hooks[i].held].pos : g.getWorldPosition(new THREE.Vector3()), i));
   const line = cyl(0.01, 1, MAT.webbingRed, 'Lanyard_Line_' + (i ? 'B' : 'A')); line.visible = false; scene.add(line);
   const hk = { mesh: g, line, anchor: 'parked', anchorPos: new THREE.Vector3(), held: null, park: new THREE.Vector3(i ? 0.12 : -0.12, 1.32, -0.09) };
   registerGrab(g, 'hook', 0.14, { hook: i });
@@ -2894,7 +2984,9 @@ function nearAnchor(p) {
   if (Math.abs(p.y - RAIL_Y) < 0.3 && Math.abs(p.z - RAIL_Z) < 0.3 && p.x > GAP / 2 - CWX && p.x < GAP / 2 + CWX && !inCatwalkGap(p.x)) return { kind: 'rail', pos: new THREE.Vector3(p.x, RAIL_Y, RAIL_Z) };
   return null;
 }
-/* trigger on a hook: open the gate. Clipped → it comes off in your hand; in hand near steel → it clips. */
+/* the gate is standing open: clipped → it comes off into your hand; in hand at the steel → it clips.
+   Reached from the gate gesture (both triggers and a top button), not from the trigger alone — a snap
+   hook does not open because you squeezed something near it. */
 function tryClip(hp, hookIndex) {
   const hk = lanyard.hooks[hookIndex];
   if (hk.anchor !== 'parked') {
@@ -2937,6 +3029,30 @@ function lanyardTick() {
   });
   lanyardState();
 }
+
+/* ── the gate gesture (M0.22) ──
+   A locking carabiner does not open because you squeezed something. Both triggers and a top button,
+   together, is the three-action gesture: deliberate, needing the hand that is on the hardware, and
+   impossible to do by accident while hauling. Holding it holds the gate open; letting go snaps it shut. */
+function handGate(h) { return !!(h.grip && h.trig && h.top); }
+function gateForHand(h) {
+  const held = heldOf(h.index);
+  if (held && held.kind === 'hook') return lanyard.hooks[held.hook].mesh.userData.gateEntry;
+  if (held && held.kind === 'gear' && (held.id === 'biner1' || held.id === 'biner2')) return gear[held.id].mesh.userData.gateEntry;
+  // the device in your hand answers with its TOP carabiner — that is the one that goes on the sling,
+  // and it is the wrong moment to be reaching for the one underneath. Hung, either is under your hand.
+  if (held && held.kind === 'gear' && held.id === 'pcd') { const t = gear.pcd.mesh.getObjectByName('PCD_Carabiner_Top'); if (t) return t.userData.gateEntry; }
+  let best = null, bd = game.mode === 'desk' ? 0.45 : 0.22; const w = new THREE.Vector3();
+  for (const e of GATES) { if (!e.mesh.visible || !e.mesh.parent) continue;
+    e.mesh.getWorldPosition(w); const d = w.distanceTo(h.pos); if (d < bd) { bd = d; best = e; } }
+  return best;
+}
+function gatesDrive() {
+  for (const e of GATES) { e.want = false; e.by = -1; }
+  if (game.paused) return;
+  if (gearLocked()) { if (hands.some(h => h.active && handGate(h))) gearLockedToast(); return; }
+  for (const h of hands) { if (!h.active || !handGate(h)) continue; const e = gateForHand(h); if (e) { e.want = true; e.by = h.index; } }
+}
 /* ───────────────────── the knot bench ─────────────────────
    A holodeck program of its own: a 25-foot rope, a pipe on two stands, a post. The rope is the
    same rope as the arena's — every inch simulated, rope on rope everywhere here — and the knots are
@@ -2963,66 +3079,7 @@ const KNOT_EXERCISES = [
   { id: 'bowline', title: 'Bowline round the post', how: 'A small loop in the standing part. Working end round the post, up through the loop, round behind the standing part, back down through the loop.' },
   { id: 'twoHalf', title: 'Round the post, two half hitches on the rope', how: 'Round the post (a round turn is better), then two half hitches around the standing part — a clove hitch tied on the rope.' },
 ];
-const knots = { active: false, lock: null, armed: true, done: {}, status: 'Pick the rope up.', hint: '', lastCheck: 0, boardDirty: true, holdT: 0, tied: 0, loop: null, stage: '' };
-/* ── seeing the loop (M0.16) ──
-   Half of why a bowline is hard in a headset is that you cannot see the geometry: the loop you have
-   made is a thin line crossing another thin line, and the hole you are meant to push the end through
-   is edge-on to you as often as not. This finds the loop the rope has made with itself and puts a
-   translucent disc in it — the hole, drawn — with the stage you are at written on the board. It reads
-   the rope; it does not hold it, move it, or tie anything. */
-const loopDisc = new THREE.Mesh(new THREE.RingGeometry(0.02, 0.03, 40), new THREE.MeshBasicMaterial({ color: 0x99ccff, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, name: 'Mat_LoopDisc' }));
-loopDisc.name = 'Knot_LoopHint'; loopDisc.visible = false; scene.add(loopDisc);
-const _lc = new THREE.Vector3(), _ln = new THREE.Vector3(), _lq = new THREE.Quaternion(), _lz = new THREE.Vector3(0, 0, 1);
-/* the loop the rope has closed on itself: the earliest self-contact a loop's length apart, its centre,
-   its plane and the radius of the hole. Null when there is no loop worth pointing at. */
-function loopGeom(a, b) {
-  if (a < 0 || b <= a || b >= R.n) return null;
-  _lc.set(0, 0, 0); for (let i = a; i <= b; i++) _lc.add(R.pos[i]); _lc.multiplyScalar(1 / (b - a + 1));
-  _ln.set(0, 0, 0);
-  for (let i = a; i <= b; i++) { const p = R.pos[i], q = R.pos[i < b ? i + 1 : a];
-    _ln.x += (p.y - q.y) * (p.z + q.z); _ln.y += (p.z - q.z) * (p.x + q.x); _ln.z += (p.x - q.x) * (p.y + q.y); }
-  const area = _ln.length() / 2; if (area < 0.0015) return null; _ln.normalize();
-  let across = 1e9; const h = Math.floor((b - a) / 2);
-  for (let i = a; i + h <= b; i++) across = Math.min(across, R.pos[i].distanceTo(R.pos[i + h]));
-  return { a, b, centre: _lc.clone(), normal: _ln.clone(), radius: Math.max(0.03, across / 2 - R.r), area };
-}
-function findLoop() {
-  // a loop you are holding by its crossing has both strands pinned, and the self-collision list skips
-  // pinned pairs — so ask about the pinch first, or the disc would go out the moment you took hold of it
-  if (rope.pinch) { const L = loopGeom(rope.pinch.a, rope.pinch.b); if (L) return L; }
-  const minL = Math.round(0.12 / R.L0), maxL = Math.round(1.2 / R.L0), pairs = SELF.pairs; let best = null;
-  for (let k = 0; k < pairs.length; k += 2) { let a = pairs[k], b = pairs[k + 1]; if (a > b) { const t = a; a = b; b = t; }
-    const len = b - a; if (len < minL || len > maxL) continue;
-    if (R.pos[a].distanceTo(R.pos[b]) > 3 * R.r) continue;
-    if (!best || a < best.a) best = { a, b }; }
-  if (!best) return null;
-  return loopGeom(best.a, best.b);
-}
-/* which part of a bowline you are at, read off the rope */
-function bowlineStage() {
-  const bw = findBowline(true);
-  if (!bw) return { text: knots.loop ? 'Loop made. Bring the end UP through it — the disc is the hole.' : '', bw: null };
-  if (bw.threaded && bw.roundPost) return { text: 'That is a bowline — let go and it locks.', bw };
-  if (bw.threaded && !bw.roundPost) return { text: 'Bowline made, but it has to go round the post first.', bw };
-  if (bw.cross >= 1) return { text: 'End is through the loop. Now round behind the standing part, and back down through the loop.', bw };
-  return { text: 'Loop made. Bring the end UP through it — the disc is the hole.', bw };
-}
-function loopHintTick() {
-  if (!knots.active || knots.lock) { loopDisc.visible = false; knots.loop = null; return; }
-  const L = findLoop(); knots.loop = L;
-  loopDisc.visible = !!L;
-  if (!L) { if (knots.stage) { knots.stage = ''; knots.boardDirty = true; } return; }
-  loopDisc.position.copy(L.centre); _lq.setFromUnitVectors(_lz, L.normal); loopDisc.quaternion.copy(_lq);
-  const inner = Math.max(0.02, L.radius - 0.012); loopDisc.scale.setScalar(L.radius / 0.03);
-  loopDisc.material.opacity = 0.18 + 0.12 * Math.sin(game.t * 3);
-  // the crossing held in a fist is the thing that actually holds a loop open: say so, and turn the disc
-  const held = !!(rope.pinch && (Math.abs(rope.pinch.a - L.a) < 12 || Math.abs(rope.pinch.b - L.b) < 12));
-  loopDisc.material.color.set(held ? TH.gold : TH.pale);
-  const st = bowlineStage();
-  const text = held && !/through the loop|bowline/i.test(st.text) ? 'You have the crossing — the loop will hold while you thread it. End UP through the disc.' : st.text;
-  if (text !== knots.stage) { knots.stage = text; knots.boardDirty = true; }
-}
-
+const knots = { active: false, lock: null, armed: true, done: {}, status: 'Pick the rope up.', hint: '', lastCheck: 0, boardDirty: true, holdT: 0, tied: 0, stage: '' };
 function startKnots() {
   resetWorld(); game.prog = 'knots'; game.phase = 'knots'; holodeck.visible = true; arena.visible = false; knotBench.visible = true; knots.active = true; knots.lock = null; knots.armed = true; knots.tied = 0; knots.status = 'Pick the rope up — red is your standing part, white the working end.'; knots.hint = '';
   R.alive = false; R.pins.clear(); ropeBuild(SETTINGS.ropePhys, SETTINGS.ropeDetail, KB.ropeLen); R.world = 'knots';
@@ -3403,12 +3460,20 @@ function stepTick(dt) {
   wrapSlipTick(dt);
   if (s.done() && game.step < 6) setStep(game.step + 1);
 }
+/* what the trigger says when the thing under it opens with a gate instead */
+function gateHint(h) {
+  const e = gateForHand(h);
+  AudioKit.deny(); haptic(h, 0.3, 60);
+  toast(game.mode === 'desk' ? 'That is a locking carabiner — grip, trigger and G together open the gate'
+    : 'That is a locking carabiner — both triggers and a top button, together, open the gate', true);
+  return !!e;
+}
 /* trigger = act on what is in (or under) the hand */
 function triggerAction(h) {
   const hp = h.pos; const held = heldOf(h.index);
   if (game.phase === 'lobby') { pickProgramWithRay(h); return; }
   if (game.phase === 'knots') { knotUntie(hp); return; }   // the bench: trigger by a tied knot unties it; grip is how you hold rope
-  if (held && held.kind === 'hook') { tryClip(hp, held.hook); return; }   // a hook in the hand comes first, rope or no rope
+  if (held && held.kind === 'hook') { gateHint(h); return; }   // a hook in the hand comes first, rope or no rope
   if (handHoldsRope(h)) {
     if (pcd.hung && hp.distanceTo(gear.pcd.mesh.position) < 0.4) { if (!rope.pcdFed) feedPCD(hp, h.index); else if (rope.hauled < 0.2) unfeedPCD(h.index); return; }
     if (rope.turns >= 1 && nearHitchRail(hp)) { dressKnot(hp, h.index); return; }   // turns on the rail: dress them
@@ -3419,8 +3484,8 @@ function triggerAction(h) {
     if (held.kind === 'gear' && held.id === 'rope' && rope.state === 'coil') { if (hp.z < 0.3) deployRope(h.index); else toast('Hold it out over the rail first'); return; }
     if (held.kind === 'gear' && held.id === 'harness' && !harness.worn) { if (chestZone(hp)) shoulderHarness(); else toast('Bring it up to your chest'); return; }
     if (held.kind === 'gear' && held.id === 'helmet' && !gear.helmet.worn) { if (headZone(hp)) putOnHelmet(); else toast('It goes on your head'); return; }
-    if (held.kind === 'gear' && held.id === 'pcd') { if (hp.distanceTo(SLING_POINT) < 0.4) hangPCD(); else toast('Reach up to the sling'); return; }
-    if (held.kind === 'hook') { tryClip(hp, held.hook); return; }
+    if (held.kind === 'gear' && held.id === 'pcd') { if (hp.distanceTo(SLING_POINT) < 0.4) gateHint(h); else toast('Reach up to the sling'); return; }
+    if (held.kind === 'hook') { gateHint(h); return; }
     if (held.kind === 'wrap') { tryMate(hp); return; }
     if (held.kind === 'burlap') { tryBurlapUnder(hp); return; }
     if (held.kind === 'conn') { if (!bridle.steelDown) trySteelDown(hp); else if (bridle.twist) clearTwist(); return; }
@@ -3770,7 +3835,7 @@ function desktopTick(dt) {
   }
   if (!game.paused && !player.falling && game.phase === 'arena') railCollide();
   // the desktop hand: a point out along the gaze
-  const h = hands[0]; h.active = true; h.mesh.visible = false; h.effort = h.trig ? 1 : 0;
+  const h = hands[0]; h.active = true; h.mesh.visible = false; h.effort = h.trig ? 1 : 0; h.top = !!keys.KeyG;   // the desktop stand-in for a top button: grip + trigger + G opens a gate
   if (!window.RIG_PIN_HAND) { camera.getWorldQuaternion(h.quat); camera.getWorldPosition(h.pos); h.pos.addScaledVector(new THREE.Vector3(0, 0, -1).applyQuaternion(h.quat), deskReach); h.pos.y -= 0.12; }
   hands[1].active = false;
   document.getElementById('reticle').classList.toggle('hit', !!grabCandidate(h) || heldOf(0) !== null);
@@ -3808,9 +3873,14 @@ function vrTick(dt) {
       h.lowerFired = true;
     } else {
       h.stickX = h.stickY = 0;
-      if (lower && !h.prevLower) { h.lowerT = perfNow(); h.lowerFired = false; }
-      if (lower && !h.lowerFired && perfNow() - h.lowerT > 0.6) { h.lowerFired = true; setPause(true); }
-      if (upper && !h.prevUpper) keyRadio();
+      // both triggers held turns either top button into the gate gesture — it can then neither key
+      // the radio nor open the pause card, which is what makes it safe to use while hauling
+      h.top = (lower || upper) && h.grip && h.trig;
+      if (!h.top) {
+        if (lower && !h.prevLower) { h.lowerT = perfNow(); h.lowerFired = false; }
+        if (lower && !h.lowerFired && perfNow() - h.lowerT > 0.6) { h.lowerFired = true; setPause(true); }
+        if (upper && !h.prevUpper) keyRadio();
+      } else h.lowerFired = true;
       // thumbstick: walk where this controller points (or where you look — a setting)
       if ((Math.abs(ax) > 0.2 || Math.abs(ay) > 0.2) && !player.falling) {
         const ref = SETTINGS.moveRef === 'head' ? camera.getWorldQuaternion(new THREE.Quaternion()) : h.quat;
@@ -3914,14 +3984,14 @@ renderer.setAnimationLoop((time, frame) => {
   const now = perfNow(); const dt = Math.min(0.05, now - lastT); lastT = now;
   if (game.running && !game.paused) game.t += dt;
   if (game.running) {
-    desktopTick(dt); vrTick(dt); bodyTick(); handsTick(dt);
+    desktopTick(dt); vrTick(dt); bodyTick(); handsTick(dt); gatesDrive(); gatesTick(dt);
     if (!game.paused) {
       if (game.phase === 'lobby') lobbyTick();
       else if (game.phase === 'ground') { groundTick(dt); radioTick(dt); }
       else { playerTick(dt); lanyardTick(); const _t0 = performance.now(); ropeTick(dt); const _t1 = performance.now(); ropeRender(); const _t2 = performance.now(); game.perfSim = game.perfSim * 0.95 + (_t1 - _t0) * 0.05; game.perfDraw = game.perfDraw * 0.95 + (_t2 - _t1) * 0.05; steelTick(dt); bridleTick(dt); steelRender(); fallingTick(dt); stepTick(dt); radioTick(dt); }
     }
     if (renderer.xr.isPresenting) feetTick(frame || (renderer.xr.getFrame && renderer.xr.getFrame()), dt); else feetTick(null, dt);
-    hudTick(); boardsTick(); if (game.phase === 'knots' && !game.paused) loopHintTick(); knotBoardTick(); radioDisplayTick(); vrPanelTick(dt);
+    hudTick(); boardsTick(); knotBoardTick(); radioDisplayTick(); vrPanelTick(dt);
     if (programFade > 0) { programFade = Math.max(0, programFade - dt * 1.4); if (gridFlash && gridFlash.material) gridFlash.material.opacity = 0.85 + programFade * 0.15; }
   }
   renderer.render(scene, camera);
@@ -3930,7 +4000,7 @@ renderer.setAnimationLoop((time, frame) => {
 /* debug / test hooks: drive the flow without a headset */
 
 /* debug / test hooks: drive the flow without a headset */
-window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, balance, SELF, RAIL_Y, RAIL_Z, S, STEEL, steelBuild, steelHookOn, steelFoulCheck, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, findLoop, bowlineStage, loopHintTick, loopGeom, loopDisc, twistTick, handRoll, jointLimit, jointRadiusIn, ropeJointLimit, ropeFrames, pinchMark, bightGrab, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos, crew, falling, groundRigger, grabEnd, grabStart, quitToArch, startFall, crewDodge, nextPoint, railKnot, railKnotTick, CWX, LL_Y, railPostX, startGroundFloor, groundTick, startGroundCarry, groundStatus, HX, THEMES, THEME_IDS, TH, applyTheme, pedestals, setPause, barBlock, heldRopeBlocked };
+window.RIG = { game, rope, R, bridle, lanyard, harness, gear, pocket, pcd, hands, player, SETTINGS, WORLD, RINGS, enterHolodeck, startProgram, setStep, wearGear, clipGear, unclipGear, putOnHelmet, shoulderHarness, harnessClipAt, clearPocket, deployRope, dressKnot, untieKnot, hangPCD, unhangPCD, haulAllowed, feedPCD, unfeedPCD, haulBy, keyRadio, tryMate, tryBurlapUnder, trySteelDown, tryClip, groundTiesIn, endProgram, STEPS, grabbables, grabCandidate, ropeGrab, ropeRelease, pcdLoadSide, feetCool, MASS, gripNeeded, MAX_LOAD, bridleTick, fall, FALL, fallStart, tetherAnchor, ropeBuild, Radio, radio, radioBusy, holdingRadio, nearestParticle, pinSet, pinClear, handPin, pinsOfKind, feetStill, balance, SELF, RAIL_Y, RAIL_Z, S, STEEL, steelBuild, steelHookOn, steelFoulCheck, startKnots, layRopeAlong, knots, KB, benchTick, knotUntie, twistTick, handRoll, jointLimit, jointRadiusIn, ropeJointLimit, ropeFrames, bightGrab, ropeSelfBuild, contactRuns, findBowline, halfHitchesOn, standingAxis, windingAround, playerRig, camera, scene, holodeck, arena, feetPos, crew, falling, groundRigger, grabEnd, grabStart, quitToArch, startFall, crewDodge, nextPoint, railKnot, railKnotTick, CWX, LL_Y, railPostX, startGroundFloor, groundTick, startGroundCarry, groundStatus, HX, THEMES, THEME_IDS, TH, applyTheme, pedestals, setPause, barBlock, heldRopeBlocked, GATES, gatesTick, gatesDrive, gateForHand, handGate, makeBiner, hauling, gearLocked };
 </script>
 </body>
 </html>
